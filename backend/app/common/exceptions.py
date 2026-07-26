@@ -25,3 +25,10 @@ class UnitNameAlreadyExistsError(Exception):
 
 class UnitSymbolAlreadyExistsError(Exception):
     pass
+
+#Excepciones relacionadas a SUPPLIERS
+class SupplierNameAlreadyExistsError(Exception):
+    pass
+
+class SupplierTaxIdAlreadyExistsError(Exception):
+    pass

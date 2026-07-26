@@ -1,15 +1,16 @@
-from fastapi import Request
-from fastapi.responses import JSONResponse
-
 from app.common.exceptions import (
+    CategoryNameAlreadyExistsError,
     CategoryNotFoundError,
     RawMaterialCodeAlreadyExistsError,
-    UnitNotFoundError,
     RawMaterialNotFoundError,
-    CategoryNameAlreadyExistsError,
+    SupplierNameAlreadyExistsError,
+    SupplierTaxIdAlreadyExistsError,
     UnitNameAlreadyExistsError,
-    UnitSymbolAlreadyExistsError
+    UnitNotFoundError,
+    UnitSymbolAlreadyExistsError,
 )
+from fastapi import Request
+from fastapi.responses import JSONResponse
 
 
 async def raw_material_code_already_exists_handler(
@@ -47,4 +48,13 @@ async def unit_already_exists_handler(
     return JSONResponse(
         status_code=409,
         content={"detail": str(error)},
+    )
+
+async def supplier_already_exists_handler(
+        request: Request,
+        error: SupplierNameAlreadyExistsError | SupplierTaxIdAlreadyExistsError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=409,
+        content={"detail": str(error)}
     )

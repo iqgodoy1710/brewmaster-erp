@@ -27,7 +27,7 @@ def clean_database():
         connection.execute(
             text(
                 "TRUNCATE TABLE "
-                "raw_materials, raw_material_categories, units "
+                "raw_materials, raw_material_categories, units, suppliers "
                 "RESTART IDENTITY CASCADE"
             )
         )
