@@ -33,3 +33,8 @@ class RawMaterial(BaseModel):
     category = relationship("Category", back_populates="raw_materials")
 
     unit = relationship("Unit", back_populates="raw_materials")
+
+    stock_movements = relationship(
+        "RawMaterialStockMovement",
+        back_populates="raw_material",
+    )

@@ -1,9 +1,12 @@
 from app.common.exceptions import (
     CategoryNameAlreadyExistsError,
     CategoryNotFoundError,
+    InsufficientStockError,
+    InvalidStockMovementError,
     RawMaterialCodeAlreadyExistsError,
     RawMaterialNotFoundError,
     SupplierNameAlreadyExistsError,
+    SupplierNotFoundError,
     SupplierTaxIdAlreadyExistsError,
     UnitNameAlreadyExistsError,
     UnitNotFoundError,
@@ -25,7 +28,7 @@ async def raw_material_code_already_exists_handler(
 
 async def related_resource_not_found_handler(
     request: Request,
-    error: CategoryNotFoundError | UnitNotFoundError | RawMaterialNotFoundError ,
+    error: CategoryNotFoundError | UnitNotFoundError | RawMaterialNotFoundError | SupplierNotFoundError ,
 ) -> JSONResponse:
     return JSONResponse(
         status_code=404,
@@ -57,4 +60,23 @@ async def supplier_already_exists_handler(
     return JSONResponse(
         status_code=409,
         content={"detail": str(error)}
+    )
+
+async def insufficient_stock_handler(
+    request: Request,
+    error: InsufficientStockError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=409,
+        content={"detail": str(error)},
+    )
+
+
+async def invalid_stock_movement_handler(
+    request: Request,
+    error: InvalidStockMovementError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=400,
+        content={"detail": str(error)},
     )

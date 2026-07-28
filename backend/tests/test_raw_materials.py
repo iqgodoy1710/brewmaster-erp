@@ -24,7 +24,6 @@ def test_create_raw_material(client):
             "name": "Pale Ale Malt",
             "category_id": category_id,
             "unit_id": unit_id,
-            "current_stock": 100,
             "minimum_stock": 20,
             "current_cost": 2.5,
             "description": "Base malt.",

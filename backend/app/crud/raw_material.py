@@ -1,7 +1,8 @@
-from sqlalchemy.orm import Session
-from app.schemas.raw_material import RawMaterialCreate, RawMaterialUpdate
-from app.models.raw_material import RawMaterial
+from decimal import Decimal
 
+from app.models.raw_material import RawMaterial
+from app.schemas.raw_material import RawMaterialCreate, RawMaterialUpdate
+from sqlalchemy.orm import Session
 
 
 def get_raw_materials(db: Session):
@@ -48,5 +49,27 @@ def deactivate_raw_material(
 
     db.commit()
     db.refresh(raw_material)
+
+    return raw_material
+
+def get_raw_material_by_id(
+    db: Session,
+    raw_material_id: int,
+) -> RawMaterial | None:
+    return (
+        db.query(RawMaterial)
+        .filter(RawMaterial.id == raw_material_id)
+        .first()
+    )
+
+
+def update_raw_material_stock(
+    db: Session,
+    raw_material: RawMaterial,
+    current_stock: Decimal,
+) -> RawMaterial:
+    raw_material.current_stock = current_stock
+
+    db.flush()
 
     return raw_material

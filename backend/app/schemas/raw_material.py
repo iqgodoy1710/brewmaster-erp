@@ -10,7 +10,6 @@ class RawMaterialBase(BaseModel):
     category_id: int
     unit_id: int
 
-    current_stock: Decimal = Field(default=0, ge=0)
     minimum_stock: Decimal = Field(default=0, ge=0)
     current_cost: Decimal = Field(default=0, ge=0)
 
@@ -18,7 +17,7 @@ class RawMaterialBase(BaseModel):
 
 
 class RawMaterialCreate(RawMaterialBase):
-    pass
+    model_config = ConfigDict(extra="forbid")
 
 
 class RawMaterialResponse(RawMaterialBase):
@@ -28,8 +27,10 @@ class RawMaterialResponse(RawMaterialBase):
 
     created_at: datetime
     updated_at: datetime
+    current_stock: Decimal
 
     model_config = ConfigDict(from_attributes=True)
+
 
 class RawMaterialUpdate(BaseModel):
     code: Optional[str] = None
@@ -38,11 +39,8 @@ class RawMaterialUpdate(BaseModel):
     category_id: Optional[int] = None
     unit_id: Optional[int] = None
 
-    current_stock: Optional[Decimal] = Field(default=None, ge=0)
     minimum_stock: Optional[Decimal] = Field(default=None, ge=0)
-    current_cost: Optional[Decimal] = Field(default=None, ge=0)
 
     description: Optional[str] = None
 
-class RawMaterialDesactivate(BaseModel):
-    pass
+    model_config = ConfigDict(extra="forbid")

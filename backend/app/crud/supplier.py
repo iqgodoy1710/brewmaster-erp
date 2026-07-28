@@ -38,3 +38,13 @@ def create_supplier(
     db.refresh(supplier)
 
     return supplier
+
+def get_supplier_by_id(
+    db: Session,
+    supplier_id: int,
+) -> Supplier | None:
+    return (
+        db.query(Supplier)
+        .filter(Supplier.id == supplier_id)
+        .first()
+    )

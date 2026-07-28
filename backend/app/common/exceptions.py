@@ -32,3 +32,15 @@ class SupplierNameAlreadyExistsError(Exception):
 
 class SupplierTaxIdAlreadyExistsError(Exception):
     pass
+
+#Excepciones relacionadas a RAW MATERIAL STOCK MOVEMENT
+class SupplierNotFoundError(Exception):
+    pass
+
+
+class InsufficientStockError(Exception):
+    pass
+
+
+class InvalidStockMovementError(Exception):
+    pass
