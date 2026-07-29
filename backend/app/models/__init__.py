@@ -3,3 +3,4 @@ from app.models.raw_material import RawMaterial
 from app.models.supplier import Supplier
 from app.models.unit import Unit
 from app.models.raw_material_stock_movement import RawMaterialStockMovement
+from app.models.beer import Beer

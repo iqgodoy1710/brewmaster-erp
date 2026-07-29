@@ -11,6 +11,8 @@ from app.common.exceptions import (
     UnitNameAlreadyExistsError,
     UnitNotFoundError,
     UnitSymbolAlreadyExistsError,
+    BeerCodeAlreadyExistsError,
+    BeerNameAlreadyExistsError,
 )
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -78,5 +80,14 @@ async def invalid_stock_movement_handler(
 ) -> JSONResponse:
     return JSONResponse(
         status_code=400,
+        content={"detail": str(error)},
+    )
+
+async def beer_already_exists_handler(
+    request: Request,
+    error: BeerCodeAlreadyExistsError | BeerNameAlreadyExistsError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=409,
         content={"detail": str(error)},
     )

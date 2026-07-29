@@ -7,9 +7,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 if TEST_DATABASE_URL is None:
-    raise RuntimeError(
-        "TEST_DATABASE_URL must be configured to run tests."
-    )
+    raise RuntimeError("TEST_DATABASE_URL must be configured to run tests.")
 
 
 test_engine = create_engine(TEST_DATABASE_URL)
@@ -27,7 +25,8 @@ def clean_database():
         connection.execute(
             text(
                 "TRUNCATE TABLE "
-                "raw_materials, raw_material_categories, units, suppliers, raw_material_stock_movements "
+                "raw_materials, raw_material_categories, units, suppliers, "
+                "raw_material_stock_movements, beers "
                 "RESTART IDENTITY CASCADE"
             )
         )
@@ -38,7 +37,8 @@ def clean_database():
         connection.execute(
             text(
                 "TRUNCATE TABLE "
-                "raw_materials, raw_material_categories, units, suppliers, raw_material_stock_movements "
+                "raw_materials, raw_material_categories, units, suppliers, "
+                "raw_material_stock_movements, beers "
                 "RESTART IDENTITY CASCADE"
             )
         )

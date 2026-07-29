@@ -44,3 +44,11 @@ class InsufficientStockError(Exception):
 
 class InvalidStockMovementError(Exception):
     pass
+
+# Exceptions related to BEERS
+class BeerCodeAlreadyExistsError(Exception):
+    pass
+
+
+class BeerNameAlreadyExistsError(Exception):
+    pass
