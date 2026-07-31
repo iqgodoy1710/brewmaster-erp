@@ -26,7 +26,7 @@ def clean_database():
             text(
                 "TRUNCATE TABLE "
                 "raw_materials, raw_material_categories, units, suppliers, "
-                "raw_material_stock_movements, beers "
+                "raw_material_stock_movements, beers, recipes "
                 "RESTART IDENTITY CASCADE"
             )
         )
@@ -38,7 +38,7 @@ def clean_database():
             text(
                 "TRUNCATE TABLE "
                 "raw_materials, raw_material_categories, units, suppliers, "
-                "raw_material_stock_movements, beers "
+                "raw_material_stock_movements, beers, recipes "
                 "RESTART IDENTITY CASCADE"
             )
         )

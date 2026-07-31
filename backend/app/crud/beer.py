@@ -45,3 +45,14 @@ def create_beer(
     db.refresh(beer)
 
     return beer
+
+
+def get_beer_by_id(
+    db: Session,
+    beer_id: int,
+) -> Beer | None:
+    return (
+        db.query(Beer)
+        .filter(Beer.id == beer_id)
+        .first()
+    )

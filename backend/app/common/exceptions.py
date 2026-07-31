@@ -52,3 +52,14 @@ class BeerCodeAlreadyExistsError(Exception):
 
 class BeerNameAlreadyExistsError(Exception):
     pass
+
+# Exceptions related to RECIPES
+class BeerNotFoundError(Exception):
+    pass
+
+
+class RecipeVersionAlreadyExistsError(Exception):
+    pass
+
+class InactiveBeerError(Exception):
+    pass

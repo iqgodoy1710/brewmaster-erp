@@ -1,0 +1,40 @@
+from sqlalchemy.orm import Session
+
+from app.models.recipe import Recipe
+from app.schemas.recipe import RecipeCreate
+
+
+def get_recipes(db: Session) -> list[Recipe]:
+    return (
+        db.query(Recipe)
+        .filter(Recipe.active.is_(True))
+        .all()
+    )
+
+
+def get_recipe_by_beer_id_and_version(
+    db: Session,
+    beer_id: int,
+    version: int,
+) -> Recipe | None:
+    return (
+        db.query(Recipe)
+        .filter(
+            Recipe.beer_id == beer_id,
+            Recipe.version == version,
+        )
+        .first()
+    )
+
+
+def create_recipe(
+    db: Session,
+    recipe_data: RecipeCreate,
+) -> Recipe:
+    recipe = Recipe(**recipe_data.model_dump())
+
+    db.add(recipe)
+    db.commit()
+    db.refresh(recipe)
+
+    return recipe
