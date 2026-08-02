@@ -7,6 +7,7 @@ from app.api.exception_handlers import (
     invalid_stock_movement_handler,
     raw_material_code_already_exists_handler,
     recipe_creation_conflict_handler,
+    recipe_ingredient_conflict_handler,
     related_resource_not_found_handler,
     supplier_already_exists_handler,
     unit_already_exists_handler,
@@ -17,6 +18,7 @@ from app.api.v1.endpoints.raw_material_stock_movements import (
     router as raw_material_stock_movements_router,
 )
 from app.api.v1.endpoints.raw_materials import router as raw_materials_router
+from app.api.v1.endpoints.recipe_ingredients import router as recipe_ingredients_router
 from app.api.v1.endpoints.recipes import router as recipe_router
 from app.api.v1.endpoints.suppliers import router as supplier_router
 from app.api.v1.endpoints.units import router as unit_router
@@ -27,10 +29,14 @@ from app.common.exceptions import (
     CategoryNameAlreadyExistsError,
     CategoryNotFoundError,
     InactiveBeerError,
+    InactiveRawMaterialError,
+    InactiveRecipeError,
     InsufficientStockError,
     InvalidStockMovementError,
     RawMaterialCodeAlreadyExistsError,
     RawMaterialNotFoundError,
+    RecipeIngredientAlreadyExistsError,
+    RecipeNotFoundError,
     RecipeVersionAlreadyExistsError,
     SupplierNameAlreadyExistsError,
     SupplierNotFoundError,
@@ -90,6 +96,25 @@ app.add_exception_handler(BeerNotFoundError, related_resource_not_found_handler)
 
 app.add_exception_handler(InactiveBeerError, recipe_creation_conflict_handler)
 
+app.add_exception_handler(
+    RecipeNotFoundError,
+    related_resource_not_found_handler,
+)
+
+app.add_exception_handler(
+    InactiveRecipeError,
+    recipe_ingredient_conflict_handler,
+)
+
+app.add_exception_handler(
+    InactiveRawMaterialError,
+    recipe_ingredient_conflict_handler,
+)
+
+app.add_exception_handler(
+    RecipeIngredientAlreadyExistsError,
+    recipe_ingredient_conflict_handler,
+)
 
 @app.get("/")
 def home():
@@ -109,3 +134,5 @@ app.include_router(raw_material_stock_movements_router)
 app.include_router(beer_router)
 
 app.include_router(recipe_router)
+
+app.include_router(recipe_ingredients_router)

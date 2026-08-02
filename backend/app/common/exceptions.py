@@ -63,3 +63,19 @@ class RecipeVersionAlreadyExistsError(Exception):
 
 class InactiveBeerError(Exception):
     pass
+
+# Exceptions related to RECIPE INGREDIENTS
+class RecipeNotFoundError(Exception):
+    pass
+
+
+class InactiveRecipeError(Exception):
+    pass
+
+
+class InactiveRawMaterialError(Exception):
+    pass
+
+
+class RecipeIngredientAlreadyExistsError(Exception):
+    pass

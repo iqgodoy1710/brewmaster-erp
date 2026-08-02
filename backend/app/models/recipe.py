@@ -47,3 +47,8 @@ class Recipe(BaseModel):
         "Beer",
         back_populates="recipes",
     )
+
+    ingredients = relationship(
+        "RecipeIngredient",
+        back_populates="recipe",
+    )

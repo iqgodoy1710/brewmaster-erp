@@ -38,3 +38,8 @@ class RawMaterial(BaseModel):
         "RawMaterialStockMovement",
         back_populates="raw_material",
     )
+
+    recipe_ingredients = relationship(
+        "RecipeIngredient",
+        back_populates="raw_material",
+    )

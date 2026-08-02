@@ -5,10 +5,14 @@ from app.common.exceptions import (
     CategoryNameAlreadyExistsError,
     CategoryNotFoundError,
     InactiveBeerError,
+    InactiveRawMaterialError,
+    InactiveRecipeError,
     InsufficientStockError,
     InvalidStockMovementError,
     RawMaterialCodeAlreadyExistsError,
     RawMaterialNotFoundError,
+    RecipeIngredientAlreadyExistsError,
+    RecipeNotFoundError,
     RecipeVersionAlreadyExistsError,
     SupplierNameAlreadyExistsError,
     SupplierNotFoundError,
@@ -37,7 +41,8 @@ async def related_resource_not_found_handler(
     | UnitNotFoundError
     | RawMaterialNotFoundError
     | SupplierNotFoundError
-    | BeerNotFoundError,
+    | BeerNotFoundError
+    | RecipeNotFoundError,
 ) -> JSONResponse:
     return JSONResponse(
         status_code=404,
@@ -105,6 +110,19 @@ async def beer_already_exists_handler(
 async def recipe_creation_conflict_handler(
     request: Request,
     error: InactiveBeerError | RecipeVersionAlreadyExistsError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=409,
+        content={"detail": str(error)},
+    )
+
+async def recipe_ingredient_conflict_handler(
+    request: Request,
+    error: (
+        InactiveRawMaterialError
+        | InactiveRecipeError
+        | RecipeIngredientAlreadyExistsError
+    ),
 ) -> JSONResponse:
     return JSONResponse(
         status_code=409,
