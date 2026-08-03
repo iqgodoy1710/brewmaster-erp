@@ -52,3 +52,8 @@ class Recipe(BaseModel):
         "RecipeIngredient",
         back_populates="recipe",
     )
+
+    production_batches = relationship(
+        "ProductionBatch",
+        back_populates="recipe",
+    )

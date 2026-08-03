@@ -6,7 +6,7 @@ from app.schemas.raw_material_stock_movement import (
 from app.services.raw_material_stock_movement_service import (
     RawMaterialStockMovementService,
 )
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 router = APIRouter(
@@ -15,7 +15,7 @@ router = APIRouter(
 )
 
 
-@router.post("/", response_model=RawMaterialStockMovementResponse)
+@router.post("/", response_model=RawMaterialStockMovementResponse, status_code=status.HTTP_201_CREATED,)
 def create_raw_material_stock_movement(
     movement: RawMaterialStockMovementCreate,
     db: Session = Depends(get_db),

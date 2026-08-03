@@ -9,8 +9,10 @@ from app.common.exceptions import (
     InactiveRecipeError,
     InsufficientStockError,
     InvalidStockMovementError,
+    ProductionBatchCodeAlreadyExistsError,
     RawMaterialCodeAlreadyExistsError,
     RawMaterialNotFoundError,
+    RecipeHasNoIngredientsError,
     RecipeIngredientAlreadyExistsError,
     RecipeNotFoundError,
     RecipeVersionAlreadyExistsError,
@@ -122,6 +124,18 @@ async def recipe_ingredient_conflict_handler(
         InactiveRawMaterialError
         | InactiveRecipeError
         | RecipeIngredientAlreadyExistsError
+    ),
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=409,
+        content={"detail": str(error)},
+    )
+
+async def production_batch_creation_conflict_handler(
+    request: Request,
+    error: (
+        ProductionBatchCodeAlreadyExistsError
+        | RecipeHasNoIngredientsError
     ),
 ) -> JSONResponse:
     return JSONResponse(

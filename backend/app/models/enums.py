@@ -9,3 +9,9 @@ class RawMaterialMovementType(StrEnum):
     EXPIRATION = "expiration"
     INVENTORY_ADJUSTMENT_IN = "inventory_adjustment_in"
     INVENTORY_ADJUSTMENT_OUT = "inventory_adjustment_out"
+
+class ProductionBatchStatus(StrEnum):
+    PLANNED = "planned"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"

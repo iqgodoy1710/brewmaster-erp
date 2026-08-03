@@ -6,3 +6,4 @@ from app.models.recipe import Recipe
 from app.models.recipe_ingredient import RecipeIngredient
 from app.models.supplier import Supplier
 from app.models.unit import Unit
+from app.models.production_batch import ProductionBatch

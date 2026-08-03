@@ -47,7 +47,7 @@ def test_purchase_receipt_increases_raw_material_stock(client):
         },
     )
 
-    assert movement_response.status_code == 200
+    assert movement_response.status_code == 201
 
     movement = movement_response.json()
 

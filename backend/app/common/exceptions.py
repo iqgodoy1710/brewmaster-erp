@@ -79,3 +79,10 @@ class InactiveRawMaterialError(Exception):
 
 class RecipeIngredientAlreadyExistsError(Exception):
     pass
+
+# Exceptions related to PRODUCTION BATCHES
+class ProductionBatchCodeAlreadyExistsError(Exception):
+    pass
+
+class RecipeHasNoIngredientsError(Exception):
+    pass

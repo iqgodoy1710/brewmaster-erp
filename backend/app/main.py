@@ -5,6 +5,7 @@ from app.api.exception_handlers import (
     category_name_already_exists_handler,
     insufficient_stock_handler,
     invalid_stock_movement_handler,
+    production_batch_creation_conflict_handler,
     raw_material_code_already_exists_handler,
     recipe_creation_conflict_handler,
     recipe_ingredient_conflict_handler,
@@ -14,6 +15,7 @@ from app.api.exception_handlers import (
 )
 from app.api.v1.endpoints.beers import router as beer_router
 from app.api.v1.endpoints.categories import router as category_router
+from app.api.v1.endpoints.production_batches import router as production_batch_router
 from app.api.v1.endpoints.raw_material_stock_movements import (
     router as raw_material_stock_movements_router,
 )
@@ -33,8 +35,10 @@ from app.common.exceptions import (
     InactiveRecipeError,
     InsufficientStockError,
     InvalidStockMovementError,
+    ProductionBatchCodeAlreadyExistsError,
     RawMaterialCodeAlreadyExistsError,
     RawMaterialNotFoundError,
+    RecipeHasNoIngredientsError,
     RecipeIngredientAlreadyExistsError,
     RecipeNotFoundError,
     RecipeVersionAlreadyExistsError,
@@ -116,6 +120,16 @@ app.add_exception_handler(
     recipe_ingredient_conflict_handler,
 )
 
+app.add_exception_handler(
+    ProductionBatchCodeAlreadyExistsError,
+    production_batch_creation_conflict_handler,
+)
+
+app.add_exception_handler(
+    RecipeHasNoIngredientsError,
+    production_batch_creation_conflict_handler,
+)
+
 @app.get("/")
 def home():
     return {"message": "Bienvenido a BrewMaster ERP"}
@@ -136,3 +150,5 @@ app.include_router(beer_router)
 app.include_router(recipe_router)
 
 app.include_router(recipe_ingredients_router)
+
+app.include_router(production_batch_router)
