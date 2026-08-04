@@ -2,9 +2,13 @@ from app.common.exceptions import (
     BeerCodeAlreadyExistsError,
     BeerNameAlreadyExistsError,
     BeerNotFoundError,
+    BeerPresentationAlreadyExistsError,
+    BeerPresentationCodeAlreadyExistsError,
+    BeerPresentationNameAlreadyExistsError,
     CategoryNameAlreadyExistsError,
     CategoryNotFoundError,
     InactiveBeerError,
+    InactivePackagingFormatError,
     InactiveRawMaterialError,
     InactiveRecipeError,
     InsufficientStockError,
@@ -12,6 +16,7 @@ from app.common.exceptions import (
     InvalidStockMovementError,
     PackagingFormatCodeAlreadyExistsError,
     PackagingFormatNameAlreadyExistsError,
+    PackagingFormatNotFoundError,
     ProductionBatchCodeAlreadyExistsError,
     ProductionBatchNotFoundError,
     RawMaterialCodeAlreadyExistsError,
@@ -49,7 +54,8 @@ async def related_resource_not_found_handler(
     | SupplierNotFoundError
     | BeerNotFoundError
     | RecipeNotFoundError
-    | ProductionBatchNotFoundError,
+    | ProductionBatchNotFoundError
+    | PackagingFormatNotFoundError,
 ) -> JSONResponse:
     return JSONResponse(
         status_code=404,
@@ -123,6 +129,7 @@ async def recipe_creation_conflict_handler(
         content={"detail": str(error)},
     )
 
+
 async def recipe_ingredient_conflict_handler(
     request: Request,
     error: (
@@ -136,17 +143,16 @@ async def recipe_ingredient_conflict_handler(
         content={"detail": str(error)},
     )
 
+
 async def production_batch_creation_conflict_handler(
     request: Request,
-    error: (
-        ProductionBatchCodeAlreadyExistsError
-        | RecipeHasNoIngredientsError
-    ),
+    error: (ProductionBatchCodeAlreadyExistsError | RecipeHasNoIngredientsError),
 ) -> JSONResponse:
     return JSONResponse(
         status_code=409,
         content={"detail": str(error)},
     )
+
 
 async def production_batch_completion_conflict_handler(
     request: Request,
@@ -157,11 +163,26 @@ async def production_batch_completion_conflict_handler(
         content={"detail": str(error)},
     )
 
+
 async def packaging_format_already_exists_handler(
     request: Request,
     error: (
-        PackagingFormatCodeAlreadyExistsError
-        | PackagingFormatNameAlreadyExistsError
+        PackagingFormatCodeAlreadyExistsError | PackagingFormatNameAlreadyExistsError
+    ),
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=409,
+        content={"detail": str(error)},
+    )
+
+
+async def beer_presentation_conflict_handler(
+    request: Request,
+    error: (
+        InactivePackagingFormatError
+        | BeerPresentationAlreadyExistsError
+        | BeerPresentationCodeAlreadyExistsError
+        | BeerPresentationNameAlreadyExistsError
     ),
 ) -> JSONResponse:
     return JSONResponse(

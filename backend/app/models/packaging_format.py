@@ -5,6 +5,7 @@ from sqlalchemy import (
     String,
     Text,
 )
+from sqlalchemy.orm import relationship
 
 from app.common.base_model import BaseModel
 
@@ -26,3 +27,8 @@ class PackagingFormat(BaseModel):
         nullable=False,
     )
     description = Column(Text)
+
+    beer_presentations = relationship(
+        "BeerPresentation",
+        back_populates="packaging_format",
+    )

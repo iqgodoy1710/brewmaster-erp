@@ -1,4 +1,5 @@
 from app.models.beer import Beer
+from app.models.beer_presentation import BeerPresentation
 from app.models.category import Category
 from app.models.packaging_format import PackagingFormat
 from app.models.production_batch import ProductionBatch

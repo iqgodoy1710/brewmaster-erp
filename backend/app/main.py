@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from app.api.exception_handlers import (
     beer_already_exists_handler,
+    beer_presentation_conflict_handler,
     category_name_already_exists_handler,
     insufficient_stock_handler,
     invalid_stock_movement_handler,
@@ -14,6 +15,9 @@ from app.api.exception_handlers import (
     related_resource_not_found_handler,
     supplier_already_exists_handler,
     unit_already_exists_handler,
+)
+from app.api.v1.endpoints.beer_presentations import (
+    router as beer_presentation_router,
 )
 from app.api.v1.endpoints.beers import router as beer_router
 from app.api.v1.endpoints.categories import router as category_router
@@ -31,9 +35,13 @@ from app.common.exceptions import (
     BeerCodeAlreadyExistsError,
     BeerNameAlreadyExistsError,
     BeerNotFoundError,
+    BeerPresentationAlreadyExistsError,
+    BeerPresentationCodeAlreadyExistsError,
+    BeerPresentationNameAlreadyExistsError,
     CategoryNameAlreadyExistsError,
     CategoryNotFoundError,
     InactiveBeerError,
+    InactivePackagingFormatError,
     InactiveRawMaterialError,
     InactiveRecipeError,
     InsufficientStockError,
@@ -41,6 +49,7 @@ from app.common.exceptions import (
     InvalidStockMovementError,
     PackagingFormatCodeAlreadyExistsError,
     PackagingFormatNameAlreadyExistsError,
+    PackagingFormatNotFoundError,
     ProductionBatchCodeAlreadyExistsError,
     ProductionBatchNotFoundError,
     RawMaterialCodeAlreadyExistsError,
@@ -154,7 +163,32 @@ app.add_exception_handler(
 
 app.add_exception_handler(
     PackagingFormatCodeAlreadyExistsError,
-    packaging_format_already_exists_handler
+    packaging_format_already_exists_handler,
+)
+
+app.add_exception_handler(
+    PackagingFormatNotFoundError,
+    related_resource_not_found_handler,
+)
+
+app.add_exception_handler(
+    InactivePackagingFormatError,
+    beer_presentation_conflict_handler,
+)
+
+app.add_exception_handler(
+    BeerPresentationCodeAlreadyExistsError,
+    beer_presentation_conflict_handler,
+)
+
+app.add_exception_handler(
+    BeerPresentationNameAlreadyExistsError,
+    beer_presentation_conflict_handler,
+)
+
+app.add_exception_handler(
+    BeerPresentationAlreadyExistsError,
+    beer_presentation_conflict_handler,
 )
 
 @app.get("/")
@@ -181,3 +215,5 @@ app.include_router(recipe_ingredients_router)
 app.include_router(production_batch_router)
 
 app.include_router(packaging_format_router)
+
+app.include_router(beer_presentation_router)

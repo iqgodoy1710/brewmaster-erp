@@ -101,3 +101,23 @@ class PackagingFormatCodeAlreadyExistsError(Exception):
 
 class PackagingFormatNameAlreadyExistsError(Exception):
     pass
+
+# Exceptions related to BEER PRESENTATIONS
+class PackagingFormatNotFoundError(Exception):
+    pass
+
+
+class InactivePackagingFormatError(Exception):
+    pass
+
+
+class BeerPresentationCodeAlreadyExistsError(Exception):
+    pass
+
+
+class BeerPresentationNameAlreadyExistsError(Exception):
+    pass
+
+
+class BeerPresentationAlreadyExistsError(Exception):
+    pass

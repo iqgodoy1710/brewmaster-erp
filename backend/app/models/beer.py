@@ -16,3 +16,8 @@ class Beer(BaseModel):
         "Recipe",
         back_populates="beer",
     )
+
+    presentations = relationship(
+        "BeerPresentation",
+        back_populates="beer",
+    )
