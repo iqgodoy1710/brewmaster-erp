@@ -27,7 +27,7 @@ def clean_database():
                 "TRUNCATE TABLE "
                 "raw_materials, raw_material_categories, units, suppliers, "
                 "raw_material_stock_movements, beers, recipes, recipe_ingredients, "
-                "production_batches "
+                "production_batches, packaging_formats "
                 "RESTART IDENTITY CASCADE"
             )
         )
@@ -40,7 +40,7 @@ def clean_database():
                 "TRUNCATE TABLE "
                 "raw_materials, raw_material_categories, units, suppliers, "
                 "raw_material_stock_movements, beers, recipes, recipe_ingredients, "
-                "production_batches "
+                "production_batches, packaging_formats "
                 "RESTART IDENTITY CASCADE"
             )
         )

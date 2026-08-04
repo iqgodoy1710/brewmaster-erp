@@ -8,8 +8,12 @@ from app.common.exceptions import (
     InactiveRawMaterialError,
     InactiveRecipeError,
     InsufficientStockError,
+    InvalidProductionBatchStatusError,
     InvalidStockMovementError,
+    PackagingFormatCodeAlreadyExistsError,
+    PackagingFormatNameAlreadyExistsError,
     ProductionBatchCodeAlreadyExistsError,
+    ProductionBatchNotFoundError,
     RawMaterialCodeAlreadyExistsError,
     RawMaterialNotFoundError,
     RecipeHasNoIngredientsError,
@@ -22,8 +26,6 @@ from app.common.exceptions import (
     UnitNameAlreadyExistsError,
     UnitNotFoundError,
     UnitSymbolAlreadyExistsError,
-    InvalidProductionBatchStatusError,
-    ProductionBatchNotFoundError,
 )
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -149,6 +151,18 @@ async def production_batch_creation_conflict_handler(
 async def production_batch_completion_conflict_handler(
     request: Request,
     error: InvalidProductionBatchStatusError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=409,
+        content={"detail": str(error)},
+    )
+
+async def packaging_format_already_exists_handler(
+    request: Request,
+    error: (
+        PackagingFormatCodeAlreadyExistsError
+        | PackagingFormatNameAlreadyExistsError
+    ),
 ) -> JSONResponse:
     return JSONResponse(
         status_code=409,

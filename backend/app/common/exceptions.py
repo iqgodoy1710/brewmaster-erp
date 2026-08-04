@@ -93,3 +93,11 @@ class ProductionBatchNotFoundError(Exception):
 
 class InvalidProductionBatchStatusError(Exception):
     pass
+
+# Exceptions related to PACKAGING FORMATS
+class PackagingFormatCodeAlreadyExistsError(Exception):
+    pass
+
+
+class PackagingFormatNameAlreadyExistsError(Exception):
+    pass
