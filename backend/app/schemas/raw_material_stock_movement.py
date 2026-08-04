@@ -31,6 +31,7 @@ class RawMaterialStockMovementResponse(
     RawMaterialStockMovementCreate
 ):
     id: int
+    production_batch_id: int | None
     active: bool
     created_at: datetime
     updated_at: datetime

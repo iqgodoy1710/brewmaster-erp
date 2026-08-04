@@ -293,3 +293,248 @@ def test_raw_material_planning_projection_detects_shortage(client):
     assert Decimal(projection["planned_consumption"]) == Decimal("100.000")
     assert Decimal(projection["projected_available_stock"]) == Decimal("-50.000")
     assert projection["has_shortage"] is True
+
+def test_complete_production_batch_consumes_stock_and_produces_bulk_beer(
+    client,
+):
+    recipe = create_test_recipe_with_ingredient(client)
+
+    raw_material_response = client.get("/raw-materials/MALT-PALE")
+    assert raw_material_response.status_code == 200
+
+    raw_material = raw_material_response.json()
+
+    initial_balance_response = client.post(
+        "/raw-material-stock-movements/",
+        json={
+            "raw_material_id": raw_material["id"],
+            "movement_type": "initial_balance",
+            "quantity": "150.000",
+        },
+    )
+    assert initial_balance_response.status_code == 201
+
+    production_batch_response = client.post(
+        "/production-batches/",
+        json={
+            "code": "PB-IPA-001",
+            "recipe_id": recipe["id"],
+            "planned_volume_liters": "500.000",
+        },
+    )
+    assert production_batch_response.status_code == 201
+
+    production_batch = production_batch_response.json()
+
+    completion_response = client.post(
+        "/production-batches/PB-IPA-001/complete",
+        json={
+            "produced_volume_liters": "470.000",
+        },
+    )
+
+    assert completion_response.status_code == 200
+
+    completed_batch = completion_response.json()
+    assert completed_batch["status"] == "completed"
+    assert Decimal(
+        completed_batch["produced_volume_liters"]
+    ) == Decimal("470.000")
+    assert Decimal(
+        completed_batch["available_bulk_volume_liters"]
+    ) == Decimal("470.000")
+    assert completed_batch["completed_at"] is not None
+
+    updated_raw_material_response = client.get(
+        "/raw-materials/MALT-PALE"
+    )
+    assert updated_raw_material_response.status_code == 200
+    assert Decimal(
+        updated_raw_material_response.json()["current_stock"]
+    ) == Decimal("50.000")
+
+    movements_response = client.get(
+        f"/raw-material-stock-movements/{raw_material['id']}"
+    )
+    assert movements_response.status_code == 200
+
+    production_consumptions = [
+        movement
+        for movement in movements_response.json()
+        if movement["movement_type"] == "production_consumption"
+    ]
+
+    assert len(production_consumptions) == 1
+
+    movement = production_consumptions[0]
+    assert Decimal(movement["quantity"]) == Decimal("100.000")
+    assert movement["production_batch_id"] == production_batch["id"]
+    assert movement["reference"] == "PB-IPA-001"
+
+    projection_response = client.get(
+        "/production-batches/planning/raw-material-requirements"
+    )
+    assert projection_response.status_code == 200
+    assert projection_response.json() == []
+
+
+def test_complete_production_batch_with_insufficient_stock_is_atomic(
+    client,
+):
+    recipe = create_test_recipe_with_ingredient(client)
+
+    raw_material_response = client.get("/raw-materials/MALT-PALE")
+    assert raw_material_response.status_code == 200
+
+    raw_material = raw_material_response.json()
+
+    initial_balance_response = client.post(
+        "/raw-material-stock-movements/",
+        json={
+            "raw_material_id": raw_material["id"],
+            "movement_type": "initial_balance",
+            "quantity": "50.000",
+        },
+    )
+    assert initial_balance_response.status_code == 201
+
+    production_batch_response = client.post(
+        "/production-batches/",
+        json={
+            "code": "PB-IPA-001",
+            "recipe_id": recipe["id"],
+            "planned_volume_liters": "500.000",
+        },
+    )
+    assert production_batch_response.status_code == 201
+
+    completion_response = client.post(
+        "/production-batches/PB-IPA-001/complete",
+        json={
+            "produced_volume_liters": "470.000",
+        },
+    )
+
+    assert completion_response.status_code == 409
+    assert completion_response.json() == {
+        "detail": "Insufficient stock for raw material: Pale Malt."
+    }
+
+    updated_raw_material_response = client.get(
+        "/raw-materials/MALT-PALE"
+    )
+    assert updated_raw_material_response.status_code == 200
+    assert Decimal(
+        updated_raw_material_response.json()["current_stock"]
+    ) == Decimal("50.000")
+
+    movements_response = client.get(
+        f"/raw-material-stock-movements/{raw_material['id']}"
+    )
+    assert movements_response.status_code == 200
+
+    assert all(
+        movement["movement_type"] != "production_consumption"
+        for movement in movements_response.json()
+    )
+
+    production_batches_response = client.get("/production-batches/")
+    assert production_batches_response.status_code == 200
+
+    batch = production_batches_response.json()[0]
+    assert batch["status"] == "planned"
+    assert batch["produced_volume_liters"] is None
+    assert Decimal(
+        batch["available_bulk_volume_liters"]
+    ) == Decimal("0.000")
+
+
+def test_completed_production_batch_cannot_be_completed_again(client):
+    recipe = create_test_recipe_with_ingredient(client)
+
+    raw_material_response = client.get("/raw-materials/MALT-PALE")
+    assert raw_material_response.status_code == 200
+
+    raw_material = raw_material_response.json()
+
+    initial_balance_response = client.post(
+        "/raw-material-stock-movements/",
+        json={
+            "raw_material_id": raw_material["id"],
+            "movement_type": "initial_balance",
+            "quantity": "150.000",
+        },
+    )
+    assert initial_balance_response.status_code == 201
+
+    production_batch_response = client.post(
+        "/production-batches/",
+        json={
+            "code": "PB-IPA-001",
+            "recipe_id": recipe["id"],
+            "planned_volume_liters": "500.000",
+        },
+    )
+    assert production_batch_response.status_code == 201
+
+    first_completion_response = client.post(
+        "/production-batches/PB-IPA-001/complete",
+        json={
+            "produced_volume_liters": "470.000",
+        },
+    )
+    response = client.post(
+        "/production-batches/PB-IPA-001/complete",
+        json={
+            "produced_volume_liters": "470.000",
+        },
+    )
+
+    assert first_completion_response.status_code == 200
+    assert response.status_code == 409
+    assert response.json() == {
+        "detail": "Only planned production batches can be completed."
+    }
+
+def test_manual_production_consumption_is_rejected(client):
+    category = client.post(
+        "/categories/",
+        json={"name": "Malts"},
+    ).json()
+
+    unit = client.post(
+        "/units/",
+        json={
+            "name": "Kilogram",
+            "symbol": "kg",
+        },
+    ).json()
+
+    raw_material = client.post(
+        "/raw-materials/",
+        json={
+            "code": "MALT-001",
+            "name": "Pale Ale Malt",
+            "category_id": category["id"],
+            "unit_id": unit["id"],
+            "minimum_stock": 0,
+            "current_cost": 0,
+        },
+    ).json()
+
+    response = client.post(
+        "/raw-material-stock-movements/",
+        json={
+            "raw_material_id": raw_material["id"],
+            "movement_type": "production_consumption",
+            "quantity": 1,
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "detail": (
+            "Production consumption must be registered by completing "
+            "a production batch."
+        )
+    }

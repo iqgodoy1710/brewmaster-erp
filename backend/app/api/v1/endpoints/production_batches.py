@@ -2,6 +2,7 @@ from app.db.dependencies import get_db
 from app.schemas.production_batch import (
     ProductionBatchCreate,
     ProductionBatchResponse,
+    ProductionBatchComplete,
 )
 from app.schemas.production_planning import (
     RawMaterialPlanningProjectionResponse,
@@ -43,3 +44,18 @@ def create_production_batch(
     db: Session = Depends(get_db),
 ):
     return ProductionBatchService.create(db, production_batch)
+
+@router.post(
+    "/{code}/complete",
+    response_model=ProductionBatchResponse,
+)
+def complete_production_batch(
+    code: str,
+    completion: ProductionBatchComplete,
+    db: Session = Depends(get_db),
+):
+    return ProductionBatchService.complete(
+        db,
+        code,
+        completion,
+    )

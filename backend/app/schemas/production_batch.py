@@ -27,7 +27,20 @@ class ProductionBatchResponse(ProductionBatchBase):
     active: bool
     status: ProductionBatchStatus
     available_bulk_volume_liters: Decimal
+    produced_volume_liters: Decimal | None
+    completed_at: datetime | None
     created_at: datetime
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ProductionBatchComplete(BaseModel):
+    produced_volume_liters: Decimal = Field(
+        ...,
+        gt=0,
+        max_digits=10,
+        decimal_places=3,
+    )
+
+    model_config = ConfigDict(extra="forbid")

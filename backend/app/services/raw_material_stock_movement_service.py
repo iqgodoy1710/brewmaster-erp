@@ -11,7 +11,8 @@ from app.crud.raw_material import (
     update_raw_material_stock,
 )
 from app.crud.raw_material_stock_movement import (
-    create_raw_material_stock_movement, get_raw_material_stock_movements
+    create_raw_material_stock_movement,
+    get_raw_material_stock_movements,
 )
 from app.crud.supplier import get_supplier_by_id
 from app.models.enums import RawMaterialMovementType
@@ -32,33 +33,31 @@ class RawMaterialStockMovementService:
             movement_data.raw_material_id,
         )
         if not raw_material:
-            raise RawMaterialNotFoundError(
-                "The raw material does not exist."
-            )
+            raise RawMaterialNotFoundError("The raw material does not exist.")
 
         if not raw_material.active:
             raise InvalidStockMovementError(
                 "Cannot register a movement for an inactive raw material."
             )
 
+        RawMaterialStockMovementService._validate_manual_movement_type(
+            movement_data.movement_type,
+        )
+
         RawMaterialStockMovementService._validate_supplier(
             db,
             movement_data,
         )
 
-        stock_change = (
-            RawMaterialStockMovementService._get_stock_change(
-                movement_data.movement_type,
-                movement_data.quantity,
-            )
+        stock_change = RawMaterialStockMovementService._get_stock_change(
+            movement_data.movement_type,
+            movement_data.quantity,
         )
 
         new_stock = raw_material.current_stock + stock_change
 
         if new_stock < 0:
-            raise InsufficientStockError(
-                "There is not enough stock for this movement."
-            )
+            raise InsufficientStockError("There is not enough stock for this movement.")
 
         try:
             movement = create_raw_material_stock_movement(
@@ -85,15 +84,12 @@ class RawMaterialStockMovementService:
         movement_data: RawMaterialStockMovementCreate,
     ) -> None:
         is_purchase_receipt = (
-            movement_data.movement_type
-            == RawMaterialMovementType.PURCHASE_RECEIPT
+            movement_data.movement_type == RawMaterialMovementType.PURCHASE_RECEIPT
         )
 
         if is_purchase_receipt:
             if movement_data.supplier_id is None:
-                raise InvalidStockMovementError(
-                    "Purchase receipts require a supplier."
-                )
+                raise InvalidStockMovementError("Purchase receipts require a supplier.")
 
             if movement_data.unit_cost is None:
                 raise InvalidStockMovementError(
@@ -105,9 +101,7 @@ class RawMaterialStockMovementService:
                 movement_data.supplier_id,
             )
             if not supplier:
-                raise SupplierNotFoundError(
-                    "The supplier does not exist."
-                )
+                raise SupplierNotFoundError("The supplier does not exist.")
 
         elif movement_data.supplier_id is not None:
             raise InvalidStockMovementError(
@@ -138,9 +132,7 @@ class RawMaterialStockMovementService:
         if movement_type in outbound_movement_types:
             return -quantity
 
-        raise InvalidStockMovementError(
-            "The movement type is not valid."
-        )
+        raise InvalidStockMovementError("The movement type is not valid.")
 
     @staticmethod
     def get_all_by_raw_material(
@@ -152,11 +144,18 @@ class RawMaterialStockMovementService:
             raw_material_id,
         )
         if not raw_material:
-            raise RawMaterialNotFoundError(
-                "The raw material does not exist."
-            )
+            raise RawMaterialNotFoundError("The raw material does not exist.")
 
         return get_raw_material_stock_movements(
             db,
             raw_material_id,
         )
+
+    @staticmethod
+    def _validate_manual_movement_type(
+        movement_type: RawMaterialMovementType,
+    ) -> None:
+        if movement_type == RawMaterialMovementType.PRODUCTION_CONSUMPTION:
+            raise InvalidStockMovementError(
+                "Production consumption must be registered by completing a production batch."
+            )

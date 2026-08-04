@@ -86,3 +86,10 @@ class ProductionBatchCodeAlreadyExistsError(Exception):
 
 class RecipeHasNoIngredientsError(Exception):
     pass
+
+class ProductionBatchNotFoundError(Exception):
+    pass
+
+
+class InvalidProductionBatchStatusError(Exception):
+    pass

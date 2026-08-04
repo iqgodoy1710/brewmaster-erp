@@ -31,6 +31,11 @@ class RawMaterialStockMovement(BaseModel):
         ForeignKey("raw_materials.id"),
         nullable=False,
     )
+    production_batch_id = Column(
+        Integer,
+        ForeignKey("production_batches.id"),
+        nullable=True,
+    )
     supplier_id = Column(
         Integer,
         ForeignKey("suppliers.id"),
@@ -67,4 +72,8 @@ class RawMaterialStockMovement(BaseModel):
     supplier = relationship(
         "Supplier",
         back_populates="stock_movements",
+    )
+    production_batch = relationship(
+        "ProductionBatch",
+        back_populates="raw_material_stock_movements",
     )

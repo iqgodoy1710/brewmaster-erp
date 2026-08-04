@@ -5,6 +5,7 @@ from app.api.exception_handlers import (
     category_name_already_exists_handler,
     insufficient_stock_handler,
     invalid_stock_movement_handler,
+    production_batch_completion_conflict_handler,
     production_batch_creation_conflict_handler,
     raw_material_code_already_exists_handler,
     recipe_creation_conflict_handler,
@@ -34,8 +35,10 @@ from app.common.exceptions import (
     InactiveRawMaterialError,
     InactiveRecipeError,
     InsufficientStockError,
+    InvalidProductionBatchStatusError,
     InvalidStockMovementError,
     ProductionBatchCodeAlreadyExistsError,
+    ProductionBatchNotFoundError,
     RawMaterialCodeAlreadyExistsError,
     RawMaterialNotFoundError,
     RecipeHasNoIngredientsError,
@@ -128,6 +131,16 @@ app.add_exception_handler(
 app.add_exception_handler(
     RecipeHasNoIngredientsError,
     production_batch_creation_conflict_handler,
+)
+
+app.add_exception_handler(
+    ProductionBatchNotFoundError,
+    related_resource_not_found_handler,
+)
+
+app.add_exception_handler(
+    InvalidProductionBatchStatusError,
+    production_batch_completion_conflict_handler,
 )
 
 @app.get("/")

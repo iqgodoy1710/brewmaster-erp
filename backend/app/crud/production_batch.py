@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from app.models.enums import ProductionBatchStatus
 from app.models.production_batch import ProductionBatch
 from app.models.raw_material import RawMaterial
@@ -6,6 +8,7 @@ from app.models.recipe_ingredient import RecipeIngredient
 from app.models.unit import Unit
 from app.schemas.production_batch import ProductionBatchCreate
 from sqlalchemy.orm import Session
+from sqlalchemy.sql import func
 
 
 def get_production_batches(
@@ -76,3 +79,17 @@ def get_planned_production_batch_requirements(
         )
         .all()
     )
+
+def complete_production_batch(
+    db: Session,
+    production_batch: ProductionBatch,
+    produced_volume_liters: Decimal,
+) -> ProductionBatch:
+    production_batch.produced_volume_liters = produced_volume_liters
+    production_batch.available_bulk_volume_liters = produced_volume_liters
+    production_batch.status = ProductionBatchStatus.COMPLETED
+    production_batch.completed_at = func.now()
+
+    db.flush()
+
+    return production_batch

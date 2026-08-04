@@ -22,6 +22,8 @@ from app.common.exceptions import (
     UnitNameAlreadyExistsError,
     UnitNotFoundError,
     UnitSymbolAlreadyExistsError,
+    InvalidProductionBatchStatusError,
+    ProductionBatchNotFoundError,
 )
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -44,7 +46,8 @@ async def related_resource_not_found_handler(
     | RawMaterialNotFoundError
     | SupplierNotFoundError
     | BeerNotFoundError
-    | RecipeNotFoundError,
+    | RecipeNotFoundError
+    | ProductionBatchNotFoundError,
 ) -> JSONResponse:
     return JSONResponse(
         status_code=404,
@@ -137,6 +140,15 @@ async def production_batch_creation_conflict_handler(
         ProductionBatchCodeAlreadyExistsError
         | RecipeHasNoIngredientsError
     ),
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=409,
+        content={"detail": str(error)},
+    )
+
+async def production_batch_completion_conflict_handler(
+    request: Request,
+    error: InvalidProductionBatchStatusError,
 ) -> JSONResponse:
     return JSONResponse(
         status_code=409,
