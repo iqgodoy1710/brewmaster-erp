@@ -121,3 +121,15 @@ class BeerPresentationNameAlreadyExistsError(Exception):
 
 class BeerPresentationAlreadyExistsError(Exception):
     pass
+
+# Exceptions related to BEER PRESENTATION PACKAGING MATERIALS
+class BeerPresentationNotFoundError(Exception):
+    pass
+
+
+class InactiveBeerPresentationError(Exception):
+    pass
+
+
+class BeerPresentationPackagingMaterialAlreadyExistsError(Exception):
+    pass

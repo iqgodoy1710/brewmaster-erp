@@ -5,9 +5,12 @@ from app.common.exceptions import (
     BeerPresentationAlreadyExistsError,
     BeerPresentationCodeAlreadyExistsError,
     BeerPresentationNameAlreadyExistsError,
+    BeerPresentationNotFoundError,
+    BeerPresentationPackagingMaterialAlreadyExistsError,
     CategoryNameAlreadyExistsError,
     CategoryNotFoundError,
     InactiveBeerError,
+    InactiveBeerPresentationError,
     InactivePackagingFormatError,
     InactiveRawMaterialError,
     InactiveRecipeError,
@@ -55,7 +58,8 @@ async def related_resource_not_found_handler(
     | BeerNotFoundError
     | RecipeNotFoundError
     | ProductionBatchNotFoundError
-    | PackagingFormatNotFoundError,
+    | PackagingFormatNotFoundError
+    | BeerPresentationNotFoundError,
 ) -> JSONResponse:
     return JSONResponse(
         status_code=404,
@@ -183,6 +187,19 @@ async def beer_presentation_conflict_handler(
         | BeerPresentationAlreadyExistsError
         | BeerPresentationCodeAlreadyExistsError
         | BeerPresentationNameAlreadyExistsError
+    ),
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=409,
+        content={"detail": str(error)},
+    )
+
+
+async def beer_presentation_packaging_material_conflict_handler(
+    request: Request,
+    error: (
+        InactiveBeerPresentationError
+        | BeerPresentationPackagingMaterialAlreadyExistsError
     ),
 ) -> JSONResponse:
     return JSONResponse(

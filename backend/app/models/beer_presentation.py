@@ -44,3 +44,8 @@ class BeerPresentation(BaseModel):
         "PackagingFormat",
         back_populates="beer_presentations",
     )
+
+    packaging_materials = relationship(
+        "BeerPresentationPackagingMaterial",
+        back_populates="beer_presentation",
+    )

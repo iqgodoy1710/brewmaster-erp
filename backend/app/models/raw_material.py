@@ -1,4 +1,3 @@
-
 from sqlalchemy import (
     Column,
     ForeignKey,
@@ -41,5 +40,10 @@ class RawMaterial(BaseModel):
 
     recipe_ingredients = relationship(
         "RecipeIngredient",
+        back_populates="raw_material",
+    )
+
+    beer_presentation_packaging_materials = relationship(
+        "BeerPresentationPackagingMaterial",
         back_populates="raw_material",
     )

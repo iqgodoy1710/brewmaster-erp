@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from app.api.exception_handlers import (
     beer_already_exists_handler,
     beer_presentation_conflict_handler,
+    beer_presentation_packaging_material_conflict_handler,
     category_name_already_exists_handler,
     insufficient_stock_handler,
     invalid_stock_movement_handler,
@@ -15,6 +16,9 @@ from app.api.exception_handlers import (
     related_resource_not_found_handler,
     supplier_already_exists_handler,
     unit_already_exists_handler,
+)
+from app.api.v1.endpoints.beer_presentation_packaging_materials import (
+    router as beer_presentation_packaging_material_router,
 )
 from app.api.v1.endpoints.beer_presentations import (
     router as beer_presentation_router,
@@ -38,9 +42,12 @@ from app.common.exceptions import (
     BeerPresentationAlreadyExistsError,
     BeerPresentationCodeAlreadyExistsError,
     BeerPresentationNameAlreadyExistsError,
+    BeerPresentationNotFoundError,
+    BeerPresentationPackagingMaterialAlreadyExistsError,
     CategoryNameAlreadyExistsError,
     CategoryNotFoundError,
     InactiveBeerError,
+    InactiveBeerPresentationError,
     InactivePackagingFormatError,
     InactiveRawMaterialError,
     InactiveRecipeError,
@@ -191,6 +198,22 @@ app.add_exception_handler(
     beer_presentation_conflict_handler,
 )
 
+app.add_exception_handler(
+    BeerPresentationNotFoundError,
+    related_resource_not_found_handler,
+)
+
+app.add_exception_handler(
+    InactiveBeerPresentationError,
+    beer_presentation_packaging_material_conflict_handler,
+)
+
+app.add_exception_handler(
+    BeerPresentationPackagingMaterialAlreadyExistsError,
+    beer_presentation_packaging_material_conflict_handler,
+)
+
+
 @app.get("/")
 def home():
     return {"message": "Bienvenido a BrewMaster ERP"}
@@ -217,3 +240,5 @@ app.include_router(production_batch_router)
 app.include_router(packaging_format_router)
 
 app.include_router(beer_presentation_router)
+
+app.include_router(beer_presentation_packaging_material_router)
