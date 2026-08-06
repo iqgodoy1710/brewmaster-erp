@@ -28,7 +28,7 @@ def create_test_raw_material(client):
             "current_cost": "1.25",
         },
     )
-    assert raw_material_response.status_code == 200
+    assert raw_material_response.status_code == 201
 
     return raw_material_response.json()
 

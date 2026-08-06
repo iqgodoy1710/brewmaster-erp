@@ -8,6 +8,7 @@ from app.api.exception_handlers import (
     insufficient_stock_handler,
     invalid_stock_movement_handler,
     packaging_format_already_exists_handler,
+    packaging_run_conflict_handler,
     production_batch_completion_conflict_handler,
     production_batch_creation_conflict_handler,
     raw_material_code_already_exists_handler,
@@ -26,6 +27,9 @@ from app.api.v1.endpoints.beer_presentations import (
 from app.api.v1.endpoints.beers import router as beer_router
 from app.api.v1.endpoints.categories import router as category_router
 from app.api.v1.endpoints.packaging_formats import router as packaging_format_router
+from app.api.v1.endpoints.packaging_runs import (
+    router as packaging_run_router,
+)
 from app.api.v1.endpoints.production_batches import router as production_batch_router
 from app.api.v1.endpoints.raw_material_stock_movements import (
     router as raw_material_stock_movements_router,
@@ -41,6 +45,7 @@ from app.common.exceptions import (
     BeerNotFoundError,
     BeerPresentationAlreadyExistsError,
     BeerPresentationCodeAlreadyExistsError,
+    BeerPresentationHasNoPackagingMaterialsError,
     BeerPresentationNameAlreadyExistsError,
     BeerPresentationNotFoundError,
     BeerPresentationPackagingMaterialAlreadyExistsError,
@@ -51,12 +56,15 @@ from app.common.exceptions import (
     InactivePackagingFormatError,
     InactiveRawMaterialError,
     InactiveRecipeError,
+    InsufficientBulkBeerError,
     InsufficientStockError,
+    InvalidPackagingRunError,
     InvalidProductionBatchStatusError,
     InvalidStockMovementError,
     PackagingFormatCodeAlreadyExistsError,
     PackagingFormatNameAlreadyExistsError,
     PackagingFormatNotFoundError,
+    PackagingRunCodeAlreadyExistsError,
     ProductionBatchCodeAlreadyExistsError,
     ProductionBatchNotFoundError,
     RawMaterialCodeAlreadyExistsError,
@@ -213,6 +221,26 @@ app.add_exception_handler(
     beer_presentation_packaging_material_conflict_handler,
 )
 
+app.add_exception_handler(
+    PackagingRunCodeAlreadyExistsError,
+    packaging_run_conflict_handler,
+)
+
+app.add_exception_handler(
+    BeerPresentationHasNoPackagingMaterialsError,
+    packaging_run_conflict_handler,
+)
+
+app.add_exception_handler(
+    InvalidPackagingRunError,
+    packaging_run_conflict_handler,
+)
+
+app.add_exception_handler(
+    InsufficientBulkBeerError,
+    packaging_run_conflict_handler,
+)
+
 
 @app.get("/")
 def home():
@@ -242,3 +270,5 @@ app.include_router(packaging_format_router)
 app.include_router(beer_presentation_router)
 
 app.include_router(beer_presentation_packaging_material_router)
+
+app.include_router(packaging_run_router)

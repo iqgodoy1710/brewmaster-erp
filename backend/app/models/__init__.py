@@ -5,6 +5,7 @@ from app.models.beer_presentation_packaging_material import (
 )
 from app.models.category import Category
 from app.models.packaging_format import PackagingFormat
+from app.models.packaging_run import PackagingRun
 from app.models.production_batch import ProductionBatch
 from app.models.raw_material import RawMaterial
 from app.models.raw_material_stock_movement import RawMaterialStockMovement

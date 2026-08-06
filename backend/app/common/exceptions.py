@@ -133,3 +133,19 @@ class InactiveBeerPresentationError(Exception):
 
 class BeerPresentationPackagingMaterialAlreadyExistsError(Exception):
     pass
+
+# Exceptions related to PACKAGING RUNS
+class PackagingRunCodeAlreadyExistsError(Exception):
+    pass
+
+
+class BeerPresentationHasNoPackagingMaterialsError(Exception):
+    pass
+
+
+class InvalidPackagingRunError(Exception):
+    pass
+
+
+class InsufficientBulkBeerError(Exception):
+    pass

@@ -61,3 +61,25 @@ def create_production_consumption_movement(
     db.flush()
 
     return movement
+
+def create_packaging_material_consumption_movement(
+    db: Session,
+    raw_material_id: int,
+    packaging_run_id: int,
+    quantity: Decimal,
+    reference: str,
+    notes: str | None = None,
+) -> RawMaterialStockMovement:
+    movement = RawMaterialStockMovement(
+        raw_material_id=raw_material_id,
+        packaging_run_id=packaging_run_id,
+        movement_type=RawMaterialMovementType.PRODUCTION_CONSUMPTION,
+        quantity=quantity,
+        reference=reference,
+        notes=notes,
+    )
+
+    db.add(movement)
+    db.flush()
+
+    return movement

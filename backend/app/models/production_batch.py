@@ -75,3 +75,8 @@ class ProductionBatch(BaseModel):
         "RawMaterialStockMovement",
         back_populates="production_batch",
     )
+
+    packaging_runs = relationship(
+        "PackagingRun",
+        back_populates="production_batch",
+    )

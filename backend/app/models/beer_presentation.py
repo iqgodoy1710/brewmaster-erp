@@ -36,6 +36,12 @@ class BeerPresentation(BaseModel):
     )
     description = Column(Text)
 
+    current_stock = Column(
+        Integer,
+        nullable=False,
+        server_default="0",
+    )
+
     beer = relationship(
         "Beer",
         back_populates="presentations",
@@ -49,3 +55,8 @@ class BeerPresentation(BaseModel):
         "BeerPresentationPackagingMaterial",
         back_populates="beer_presentation",
     )
+
+    packaging_runs = relationship(
+    "PackagingRun",
+    back_populates="beer_presentation",
+)

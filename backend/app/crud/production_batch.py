@@ -93,3 +93,27 @@ def complete_production_batch(
     db.flush()
 
     return production_batch
+
+def get_production_batch_by_id(
+    db: Session,
+    production_batch_id: int,
+) -> ProductionBatch | None:
+    return (
+        db.query(ProductionBatch)
+        .filter(ProductionBatch.id == production_batch_id)
+        .first()
+    )
+
+
+def update_available_bulk_volume(
+    db: Session,
+    production_batch: ProductionBatch,
+    available_bulk_volume_liters: Decimal,
+) -> ProductionBatch:
+    production_batch.available_bulk_volume_liters = (
+        available_bulk_volume_liters
+    )
+
+    db.flush()
+
+    return production_batch

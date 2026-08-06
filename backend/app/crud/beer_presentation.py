@@ -60,3 +60,14 @@ def get_beer_presentation_by_id(
         .filter(BeerPresentation.id == beer_presentation_id)
         .first()
     )
+
+def update_beer_presentation_stock(
+    db: Session,
+    beer_presentation: BeerPresentation,
+    current_stock: int,
+) -> BeerPresentation:
+    beer_presentation.current_stock = current_stock
+
+    db.flush()
+
+    return beer_presentation
