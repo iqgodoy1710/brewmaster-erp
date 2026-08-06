@@ -3,6 +3,9 @@ from app.models.beer_presentation import BeerPresentation
 from app.models.beer_presentation_packaging_material import (
     BeerPresentationPackagingMaterial,
 )
+from app.models.beer_presentation_stock_movement import (
+    BeerPresentationStockMovement,
+)
 from app.models.category import Category
 from app.models.packaging_format import PackagingFormat
 from app.models.packaging_run import PackagingRun

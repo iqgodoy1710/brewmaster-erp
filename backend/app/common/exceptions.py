@@ -149,3 +149,11 @@ class InvalidPackagingRunError(Exception):
 
 class InsufficientBulkBeerError(Exception):
     pass
+
+# Exceptions related to BEER PRESENTATION STOCK MOVEMENTS
+class InsufficientBeerPresentationStockError(Exception):
+    pass
+
+
+class InvalidBeerPresentationStockMovementError(Exception):
+    pass

@@ -21,6 +21,9 @@ from app.api.exception_handlers import (
 from app.api.v1.endpoints.beer_presentation_packaging_materials import (
     router as beer_presentation_packaging_material_router,
 )
+from app.api.v1.endpoints.beer_presentation_stock_movements import (
+    router as beer_presentation_stock_movement_router,
+)
 from app.api.v1.endpoints.beer_presentations import (
     router as beer_presentation_router,
 )
@@ -56,8 +59,10 @@ from app.common.exceptions import (
     InactivePackagingFormatError,
     InactiveRawMaterialError,
     InactiveRecipeError,
+    InsufficientBeerPresentationStockError,
     InsufficientBulkBeerError,
     InsufficientStockError,
+    InvalidBeerPresentationStockMovementError,
     InvalidPackagingRunError,
     InvalidProductionBatchStatusError,
     InvalidStockMovementError,
@@ -241,6 +246,16 @@ app.add_exception_handler(
     packaging_run_conflict_handler,
 )
 
+app.add_exception_handler(
+    InsufficientBeerPresentationStockError,
+    insufficient_stock_handler,
+)
+
+app.add_exception_handler(
+    InvalidBeerPresentationStockMovementError,
+    invalid_stock_movement_handler,
+)
+
 
 @app.get("/")
 def home():
@@ -272,3 +287,5 @@ app.include_router(beer_presentation_router)
 app.include_router(beer_presentation_packaging_material_router)
 
 app.include_router(packaging_run_router)
+
+app.include_router(beer_presentation_stock_movement_router)

@@ -15,3 +15,12 @@ class ProductionBatchStatus(StrEnum):
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
+
+class BeerPresentationStockMovementType(StrEnum):
+    PACKAGING_RECEIPT = "packaging_receipt"
+    SALE = "sale"
+    INITIAL_BALANCE = "initial_balance"
+    WASTE = "waste"
+    EXPIRATION = "expiration"
+    INVENTORY_ADJUSTMENT_IN = "inventory_adjustment_in"
+    INVENTORY_ADJUSTMENT_OUT = "inventory_adjustment_out"

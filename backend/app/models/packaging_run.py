@@ -63,3 +63,8 @@ class PackagingRun(BaseModel):
         "RawMaterialStockMovement",
         back_populates="packaging_run",
     )
+
+    beer_presentation_stock_movements = relationship(
+        "BeerPresentationStockMovement",
+        back_populates="packaging_run",
+    )

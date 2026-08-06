@@ -5,6 +5,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    CheckConstraint,
 )
 from sqlalchemy.orm import relationship
 
@@ -19,6 +20,10 @@ class BeerPresentation(BaseModel):
             "beer_id",
             "packaging_format_id",
             name="uq_beer_presentations_beer_id_packaging_format_id",
+        ),
+        CheckConstraint(
+            "current_stock >= 0",
+            name="ck_beer_presentations_current_stock_non_negative",
         ),
     )
 
@@ -57,6 +62,11 @@ class BeerPresentation(BaseModel):
     )
 
     packaging_runs = relationship(
-    "PackagingRun",
-    back_populates="beer_presentation",
-)
+        "PackagingRun",
+        back_populates="beer_presentation",
+    )
+
+    stock_movements = relationship(
+        "BeerPresentationStockMovement",
+        back_populates="beer_presentation",
+    )

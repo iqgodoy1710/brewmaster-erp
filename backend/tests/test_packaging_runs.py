@@ -226,6 +226,16 @@ def test_create_packaging_run_consumes_bulk_beer_and_materials(client):
         assert movements[0]["packaging_run_id"] == packaging_run["id"]
         assert movements[0]["reference"] == packaging_run["code"]
 
+        finished_product_movements = client.get(
+            f"/beer-presentations/{data['beer_presentation']['id']}/stock-movements"
+        ).json()
+
+    assert len(finished_product_movements) == 1
+    assert finished_product_movements[0]["movement_type"] == "packaging_receipt"
+    assert finished_product_movements[0]["packaging_run_id"] == packaging_run["id"]
+    assert finished_product_movements[0]["quantity"] == 10
+    assert finished_product_movements[0]["reference"] == packaging_run["code"]
+
 
 def test_cannot_create_packaging_run_with_duplicate_code(client):
     data = create_completed_batch_with_presentation(client)
@@ -269,10 +279,7 @@ def test_cannot_package_more_bulk_beer_than_available(client):
 
     assert response.status_code == 409
     assert response.json() == {
-        "detail": (
-            "There is not enough bulk beer available "
-            "for this packaging run."
-        )
+        "detail": ("There is not enough bulk beer available for this packaging run.")
     }
 
     production_batches = client.get("/production-batches/").json()
@@ -281,9 +288,9 @@ def test_cannot_package_more_bulk_beer_than_available(client):
         for batch in production_batches
         if batch["id"] == data["production_batch"]["id"]
     )
-    assert Decimal(
-        production_batch["available_bulk_volume_liters"]
-    ) == Decimal("100.000")
+    assert Decimal(production_batch["available_bulk_volume_liters"]) == Decimal(
+        "100.000"
+    )
 
     beer_presentations = client.get("/beer-presentations/").json()
     beer_presentation = next(
@@ -300,9 +307,7 @@ def test_cannot_package_more_bulk_beer_than_available(client):
     }
 
     for packaging_material in data["packaging_materials"]:
-        assert stock_by_id[packaging_material["id"]] == Decimal(
-            "100.000"
-        )
+        assert stock_by_id[packaging_material["id"]] == Decimal("100.000")
 
     assert client.get("/packaging-runs/").json() == []
 
@@ -331,9 +336,9 @@ def test_cannot_package_when_packaging_material_stock_is_insufficient(client):
         for batch in production_batches
         if batch["id"] == data["production_batch"]["id"]
     )
-    assert Decimal(
-        production_batch["available_bulk_volume_liters"]
-    ) == Decimal("100.000")
+    assert Decimal(production_batch["available_bulk_volume_liters"]) == Decimal(
+        "100.000"
+    )
 
     beer_presentations = client.get("/beer-presentations/").json()
     beer_presentation = next(
@@ -350,9 +355,7 @@ def test_cannot_package_when_packaging_material_stock_is_insufficient(client):
     }
 
     for packaging_material in data["packaging_materials"]:
-        assert stock_by_id[packaging_material["id"]] == Decimal(
-            "100.000"
-        )
+        assert stock_by_id[packaging_material["id"]] == Decimal("100.000")
 
     assert client.get("/packaging-runs/").json() == []
 
@@ -441,10 +444,7 @@ def test_cannot_package_with_presentation_from_another_beer(client):
 
     assert response.status_code == 409
     assert response.json() == {
-        "detail": (
-            "The beer presentation does not match "
-            "the production batch beer."
-        )
+        "detail": ("The beer presentation does not match the production batch beer.")
     }
 
     assert client.get("/packaging-runs/").json() == []

@@ -15,8 +15,10 @@ from app.common.exceptions import (
     InactivePackagingFormatError,
     InactiveRawMaterialError,
     InactiveRecipeError,
+    InsufficientBeerPresentationStockError,
     InsufficientBulkBeerError,
     InsufficientStockError,
+    InvalidBeerPresentationStockMovementError,
     InvalidPackagingRunError,
     InvalidProductionBatchStatusError,
     InvalidStockMovementError,
@@ -100,7 +102,10 @@ async def supplier_already_exists_handler(
 
 async def insufficient_stock_handler(
     request: Request,
-    error: InsufficientStockError,
+    error: (
+    InsufficientStockError
+    | InsufficientBeerPresentationStockError
+),
 ) -> JSONResponse:
     return JSONResponse(
         status_code=409,
@@ -110,7 +115,10 @@ async def insufficient_stock_handler(
 
 async def invalid_stock_movement_handler(
     request: Request,
-    error: InvalidStockMovementError,
+    error: (
+    InvalidStockMovementError
+    | InvalidBeerPresentationStockMovementError
+),
 ) -> JSONResponse:
     return JSONResponse(
         status_code=400,

@@ -1,6 +1,4 @@
-from decimal import Decimal, ROUND_HALF_UP
-
-from sqlalchemy.orm import Session
+from decimal import ROUND_HALF_UP, Decimal
 
 from app.common.exceptions import (
     BeerPresentationHasNoPackagingMaterialsError,
@@ -22,6 +20,9 @@ from app.crud.beer_presentation import (
 from app.crud.beer_presentation_packaging_material import (
     get_beer_presentation_packaging_materials,
 )
+from app.crud.beer_presentation_stock_movement import (
+    create_packaging_receipt_movement,
+)
 from app.crud.packaging_run import (
     create_packaging_run,
     get_packaging_run_by_code,
@@ -40,6 +41,7 @@ from app.crud.raw_material_stock_movement import (
 )
 from app.models.enums import ProductionBatchStatus
 from app.schemas.packaging_run import PackagingRunCreate
+from sqlalchemy.orm import Session
 
 
 class PackagingRunService:
@@ -151,6 +153,16 @@ class PackagingRunService:
                 db,
                 packaging_run_data,
                 packaged_volume_liters,
+            )
+            create_packaging_receipt_movement(
+                db,
+                beer_presentation_id=beer_presentation.id,
+                packaging_run_id=packaging_run.id,
+                quantity=packaging_run_data.packaged_quantity,
+                reference=packaging_run.code,
+                notes=(
+                    f"Finished product receipt for packaging run {packaging_run.code}."
+                ),
             )
 
             update_available_bulk_volume(
