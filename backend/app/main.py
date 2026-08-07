@@ -5,6 +5,7 @@ from app.api.exception_handlers import (
     beer_presentation_conflict_handler,
     beer_presentation_packaging_material_conflict_handler,
     category_name_already_exists_handler,
+    customer_already_exists_handler,
     insufficient_stock_handler,
     invalid_stock_movement_handler,
     packaging_format_already_exists_handler,
@@ -29,6 +30,7 @@ from app.api.v1.endpoints.beer_presentations import (
 )
 from app.api.v1.endpoints.beers import router as beer_router
 from app.api.v1.endpoints.categories import router as category_router
+from app.api.v1.endpoints.customers import router as customer_router
 from app.api.v1.endpoints.packaging_formats import router as packaging_format_router
 from app.api.v1.endpoints.packaging_runs import (
     router as packaging_run_router,
@@ -54,6 +56,8 @@ from app.common.exceptions import (
     BeerPresentationPackagingMaterialAlreadyExistsError,
     CategoryNameAlreadyExistsError,
     CategoryNotFoundError,
+    CustomerCodeAlreadyExistsError,
+    CustomerTaxIdAlreadyExistsError,
     InactiveBeerError,
     InactiveBeerPresentationError,
     InactivePackagingFormatError,
@@ -256,6 +260,16 @@ app.add_exception_handler(
     invalid_stock_movement_handler,
 )
 
+app.add_exception_handler(
+    CustomerCodeAlreadyExistsError,
+    customer_already_exists_handler,
+)
+
+app.add_exception_handler(
+    CustomerTaxIdAlreadyExistsError,
+    customer_already_exists_handler,
+)
+
 
 @app.get("/")
 def home():
@@ -289,3 +303,5 @@ app.include_router(beer_presentation_packaging_material_router)
 app.include_router(packaging_run_router)
 
 app.include_router(beer_presentation_stock_movement_router)
+
+app.include_router(customer_router)

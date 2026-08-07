@@ -157,3 +157,11 @@ class InsufficientBeerPresentationStockError(Exception):
 
 class InvalidBeerPresentationStockMovementError(Exception):
     pass
+
+# Exceptions related to CUSTOMERS
+class CustomerCodeAlreadyExistsError(Exception):
+    pass
+
+
+class CustomerTaxIdAlreadyExistsError(Exception):
+    pass

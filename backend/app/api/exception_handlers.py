@@ -10,6 +10,8 @@ from app.common.exceptions import (
     BeerPresentationPackagingMaterialAlreadyExistsError,
     CategoryNameAlreadyExistsError,
     CategoryNotFoundError,
+    CustomerCodeAlreadyExistsError,
+    CustomerTaxIdAlreadyExistsError,
     InactiveBeerError,
     InactiveBeerPresentationError,
     InactivePackagingFormatError,
@@ -102,10 +104,7 @@ async def supplier_already_exists_handler(
 
 async def insufficient_stock_handler(
     request: Request,
-    error: (
-    InsufficientStockError
-    | InsufficientBeerPresentationStockError
-),
+    error: (InsufficientStockError | InsufficientBeerPresentationStockError),
 ) -> JSONResponse:
     return JSONResponse(
         status_code=409,
@@ -115,10 +114,7 @@ async def insufficient_stock_handler(
 
 async def invalid_stock_movement_handler(
     request: Request,
-    error: (
-    InvalidStockMovementError
-    | InvalidBeerPresentationStockMovementError
-),
+    error: (InvalidStockMovementError | InvalidBeerPresentationStockMovementError),
 ) -> JSONResponse:
     return JSONResponse(
         status_code=400,
@@ -219,6 +215,7 @@ async def beer_presentation_packaging_material_conflict_handler(
         content={"detail": str(error)},
     )
 
+
 async def packaging_run_conflict_handler(
     request: Request,
     error: (
@@ -227,6 +224,16 @@ async def packaging_run_conflict_handler(
         | InvalidPackagingRunError
         | InsufficientBulkBeerError
     ),
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=409,
+        content={"detail": str(error)},
+    )
+
+
+async def customer_already_exists_handler(
+    request: Request,
+    error: (CustomerCodeAlreadyExistsError | CustomerTaxIdAlreadyExistsError),
 ) -> JSONResponse:
     return JSONResponse(
         status_code=409,

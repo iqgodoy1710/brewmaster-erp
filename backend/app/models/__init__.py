@@ -7,6 +7,7 @@ from app.models.beer_presentation_stock_movement import (
     BeerPresentationStockMovement,
 )
 from app.models.category import Category
+from app.models.customer import Customer
 from app.models.packaging_format import PackagingFormat
 from app.models.packaging_run import PackagingRun
 from app.models.production_batch import ProductionBatch
