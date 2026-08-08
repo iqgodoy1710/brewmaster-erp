@@ -1,11 +1,11 @@
 from sqlalchemy import (
+    TIMESTAMP,
     Column,
     Enum,
     ForeignKey,
     Integer,
     String,
     Text,
-    TIMESTAMP,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -27,14 +27,17 @@ class Sale(BaseModel):
         Enum(
             SaleStatus,
             name="sale_status",
-            values_callable=lambda enum_class: [
-                member.value for member in enum_class
-            ],
+            values_callable=lambda enum_class: [member.value for member in enum_class],
         ),
         nullable=False,
         default=SaleStatus.DRAFT,
     )
     completed_at = Column(TIMESTAMP, nullable=True)
+    cancelled_at = Column(
+        TIMESTAMP,
+        nullable=True,
+    )
+    cancellation_reason = Column(Text)
     notes = Column(Text)
 
     customer = relationship(

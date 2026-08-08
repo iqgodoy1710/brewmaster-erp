@@ -58,3 +58,16 @@ def complete_sale(
     db.flush()
 
     return sale
+
+def cancel_sale(
+    db: Session,
+    sale: Sale,
+    cancellation_reason: str | None,
+) -> Sale:
+    sale.status = SaleStatus.CANCELLED
+    sale.cancelled_at = func.now()
+    sale.cancellation_reason = cancellation_reason
+
+    db.flush()
+
+    return sale

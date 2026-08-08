@@ -1,8 +1,7 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
-
 from app.models.enums import SaleStatus
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class SaleBase(BaseModel):
@@ -22,5 +21,13 @@ class SaleResponse(SaleBase):
     completed_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    cancelled_at: datetime | None
+    cancellation_reason: str | None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SaleCancel(BaseModel):
+    cancellation_reason: str | None = None
+
+    model_config = ConfigDict(extra="forbid")

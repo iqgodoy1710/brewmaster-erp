@@ -83,3 +83,27 @@ def create_sale_movement(
     db.flush()
 
     return movement
+
+def create_sale_cancellation_movement(
+    db: Session,
+    beer_presentation_id: int,
+    sale_id: int,
+    quantity: int,
+    reference: str,
+    notes: str | None = None,
+) -> BeerPresentationStockMovement:
+    movement = BeerPresentationStockMovement(
+        beer_presentation_id=beer_presentation_id,
+        sale_id=sale_id,
+        movement_type=(
+            BeerPresentationStockMovementType.INVENTORY_ADJUSTMENT_IN
+        ),
+        quantity=quantity,
+        reference=reference,
+        notes=notes,
+    )
+
+    db.add(movement)
+    db.flush()
+
+    return movement

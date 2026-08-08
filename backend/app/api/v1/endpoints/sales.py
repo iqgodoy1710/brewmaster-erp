@@ -1,10 +1,8 @@
+from app.db.dependencies import get_db
+from app.schemas.sale import SaleCancel, SaleCreate, SaleResponse
+from app.services.sale_service import SaleService
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
-
-from app.db.dependencies import get_db
-from app.schemas.sale import SaleCreate, SaleResponse
-from app.services.sale_service import SaleService
-
 
 router = APIRouter(
     prefix="/sales",
@@ -40,3 +38,19 @@ def complete_sale(
     db: Session = Depends(get_db),
 ):
     return SaleService.complete(db, code)
+
+
+@router.post(
+    "/{code}/cancel",
+    response_model=SaleResponse,
+)
+def cancel_sale(
+    code: str,
+    cancellation: SaleCancel,
+    db: Session = Depends(get_db),
+):
+    return SaleService.cancel(
+        db,
+        code,
+        cancellation,
+    )

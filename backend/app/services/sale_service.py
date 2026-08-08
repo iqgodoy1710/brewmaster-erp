@@ -14,10 +14,12 @@ from app.crud.beer_presentation import (
     update_beer_presentation_stock,
 )
 from app.crud.beer_presentation_stock_movement import (
+    create_sale_cancellation_movement,
     create_sale_movement,
 )
 from app.crud.customer import get_customer_by_id
 from app.crud.sale import (
+    cancel_sale,
     complete_sale,
     create_sale,
     get_sale_by_code,
@@ -25,7 +27,7 @@ from app.crud.sale import (
 )
 from app.crud.sale_item import get_sale_items
 from app.models.enums import SaleStatus
-from app.schemas.sale import SaleCreate
+from app.schemas.sale import SaleCancel, SaleCreate
 from sqlalchemy.orm import Session
 
 
@@ -127,6 +129,98 @@ class SaleService:
                 )
 
             complete_sale(db, sale)
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+
+        db.refresh(sale)
+
+        return sale
+
+    @staticmethod
+    def cancel(
+        db: Session,
+        code: str,
+        cancellation_data: SaleCancel,
+    ):
+        sale = get_sale_by_code(db, code)
+        if not sale:
+            raise SaleNotFoundError("The sale does not exist.")
+
+        if (
+            not sale.active
+            or sale.status not in {
+                SaleStatus.DRAFT,
+                SaleStatus.COMPLETED,
+            }
+        ):
+            raise InvalidSaleStatusError(
+                "Only draft or completed sales can be cancelled."
+            )
+
+        if sale.status == SaleStatus.DRAFT:
+            try:
+                cancel_sale(
+                    db,
+                    sale,
+                    cancellation_data.cancellation_reason,
+                )
+                db.commit()
+            except Exception:
+                db.rollback()
+                raise
+
+            db.refresh(sale)
+
+            return sale
+
+        sale_items = get_sale_items(db, sale.id)
+        if not sale_items:
+            raise SaleHasNoItemsError(
+                "Cannot cancel a completed sale without items."
+            )
+
+        presentation_returns = []
+
+        for sale_item in sale_items:
+            beer_presentation = get_beer_presentation_by_id(
+                db,
+                sale_item.beer_presentation_id,
+            )
+            if not beer_presentation:
+                raise BeerPresentationNotFoundError(
+                    "A beer presentation does not exist."
+                )
+
+            presentation_returns.append(
+                (beer_presentation, sale_item.quantity)
+            )
+
+        try:
+            for beer_presentation, quantity in presentation_returns:
+                create_sale_cancellation_movement(
+                    db,
+                    beer_presentation_id=beer_presentation.id,
+                    sale_id=sale.id,
+                    quantity=quantity,
+                    reference=sale.code,
+                    notes=(
+                        "Stock return for cancelled sale "
+                        f"{sale.code}."
+                    ),
+                )
+                update_beer_presentation_stock(
+                    db,
+                    beer_presentation,
+                    beer_presentation.current_stock + quantity,
+                )
+
+            cancel_sale(
+                db,
+                sale,
+                cancellation_data.cancellation_reason,
+            )
             db.commit()
         except Exception:
             db.rollback()

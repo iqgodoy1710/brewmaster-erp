@@ -311,3 +311,139 @@ def test_completed_sale_cannot_be_completed_again(client):
         if presentation["id"] == beer_presentation["id"]
     )
     assert updated_presentation["current_stock"] == 5
+
+def test_cancel_completed_sale_returns_finished_product_stock(client):
+    customer = create_test_customer(client)
+    beer_presentation = create_test_beer_presentation(client)
+
+    initial_stock_response = client.post(
+        "/beer-presentation-stock-movements/",
+        json={
+            "beer_presentation_id": beer_presentation["id"],
+            "movement_type": "initial_balance",
+            "quantity": 10,
+            "reference": "INITIAL-CANCEL-SALE-TEST",
+        },
+    )
+    assert initial_stock_response.status_code == 201
+
+    sale = client.post(
+        "/sales/",
+        json={
+            "code": "SALE-TEST-CANCEL",
+            "customer_id": customer["id"],
+        },
+    ).json()
+
+    sale_item_response = client.post(
+        "/sale-items/",
+        json={
+            "sale_id": sale["id"],
+            "beer_presentation_id": beer_presentation["id"],
+            "quantity": 5,
+            "unit_price": "4.50",
+        },
+    )
+    assert sale_item_response.status_code == 201
+
+    completion_response = client.post(
+        f"/sales/{sale['code']}/complete"
+    )
+    assert completion_response.status_code == 200
+
+    cancellation_response = client.post(
+        f"/sales/{sale['code']}/cancel",
+        json={
+            "cancellation_reason": "Customer cancelled the order.",
+        },
+    )
+
+    assert cancellation_response.status_code == 200
+
+    cancelled_sale = cancellation_response.json()
+
+    assert cancelled_sale["status"] == "cancelled"
+    assert cancelled_sale["completed_at"] is not None
+    assert cancelled_sale["cancelled_at"] is not None
+    assert (
+        cancelled_sale["cancellation_reason"]
+        == "Customer cancelled the order."
+    )
+
+    beer_presentations = client.get("/beer-presentations/").json()
+    updated_presentation = next(
+        presentation
+        for presentation in beer_presentations
+        if presentation["id"] == beer_presentation["id"]
+    )
+    assert updated_presentation["current_stock"] == 10
+
+    movements = client.get(
+        f"/beer-presentations/{beer_presentation['id']}/stock-movements"
+    ).json()
+
+    assert movements[0]["movement_type"] == "inventory_adjustment_in"
+    assert movements[0]["sale_id"] == sale["id"]
+    assert movements[0]["quantity"] == 5
+    assert movements[0]["reference"] == sale["code"]
+
+def test_cancel_draft_sale_does_not_change_stock(client):
+    customer = create_test_customer(client)
+
+    sale = client.post(
+        "/sales/",
+        json={
+            "code": "SALE-TEST-CANCEL-DRAFT",
+            "customer_id": customer["id"],
+        },
+    ).json()
+
+    cancellation_response = client.post(
+        f"/sales/{sale['code']}/cancel",
+        json={
+            "cancellation_reason": "Draft no longer needed.",
+        },
+    )
+
+    assert cancellation_response.status_code == 200
+
+    cancelled_sale = cancellation_response.json()
+
+    assert cancelled_sale["status"] == "cancelled"
+    assert cancelled_sale["completed_at"] is None
+    assert cancelled_sale["cancelled_at"] is not None
+    assert (
+        cancelled_sale["cancellation_reason"]
+        == "Draft no longer needed."
+    )
+
+def test_cancelled_sale_cannot_be_cancelled_again(client):
+    customer = create_test_customer(client)
+
+    sale = client.post(
+        "/sales/",
+        json={
+            "code": "SALE-TEST-DOUBLE-CANCEL",
+            "customer_id": customer["id"],
+        },
+    ).json()
+
+    first_cancellation_response = client.post(
+        f"/sales/{sale['code']}/cancel",
+        json={
+            "cancellation_reason": "First cancellation.",
+        },
+    )
+    assert first_cancellation_response.status_code == 200
+
+    second_cancellation_response = client.post(
+        f"/sales/{sale['code']}/cancel",
+        json={
+            "cancellation_reason": "Second cancellation.",
+        },
+    )
+
+    assert second_cancellation_response.status_code == 409
+    assert second_cancellation_response.json() == {
+        "detail": "Only draft or completed sales can be cancelled."
+    }
