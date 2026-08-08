@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from app.common.exceptions import (
     BeerPresentationNotFoundError,
     CustomerNotFoundError,
@@ -23,11 +25,16 @@ from app.crud.sale import (
     complete_sale,
     create_sale,
     get_sale_by_code,
+    get_sale_detail_by_code,
     get_sales,
 )
 from app.crud.sale_item import get_sale_items
 from app.models.enums import SaleStatus
 from app.schemas.sale import SaleCancel, SaleCreate
+from app.schemas.sale_detail import (
+    SaleDetailItemResponse,
+    SaleDetailResponse,
+)
 from sqlalchemy.orm import Session
 
 
@@ -46,9 +53,7 @@ class SaleService:
             sale_data.customer_id,
         )
         if not customer:
-            raise CustomerNotFoundError(
-                "The customer does not exist."
-            )
+            raise CustomerNotFoundError("The customer does not exist.")
 
         if not customer.active:
             raise InactiveCustomerError(
@@ -60,9 +65,7 @@ class SaleService:
             sale_data.code,
         )
         if existing_sale:
-            raise SaleCodeAlreadyExistsError(
-                "A sale with this code already exists."
-            )
+            raise SaleCodeAlreadyExistsError("A sale with this code already exists.")
 
         return create_sale(db, sale_data)
 
@@ -76,15 +79,11 @@ class SaleService:
             raise SaleNotFoundError("The sale does not exist.")
 
         if not sale.active or sale.status != SaleStatus.DRAFT:
-            raise InvalidSaleStatusError(
-                "Only draft sales can be completed."
-            )
+            raise InvalidSaleStatusError("Only draft sales can be completed.")
 
         sale_items = get_sale_items(db, sale.id)
         if not sale_items:
-            raise SaleHasNoItemsError(
-                "Cannot complete a sale without items."
-            )
+            raise SaleHasNoItemsError("Cannot complete a sale without items.")
 
         presentation_sales = []
 
@@ -108,9 +107,7 @@ class SaleService:
                     "There is not enough stock for a beer presentation."
                 )
 
-            presentation_sales.append(
-                (beer_presentation, sale_item.quantity)
-            )
+            presentation_sales.append((beer_presentation, sale_item.quantity))
 
         try:
             for beer_presentation, quantity in presentation_sales:
@@ -148,13 +145,10 @@ class SaleService:
         if not sale:
             raise SaleNotFoundError("The sale does not exist.")
 
-        if (
-            not sale.active
-            or sale.status not in {
-                SaleStatus.DRAFT,
-                SaleStatus.COMPLETED,
-            }
-        ):
+        if not sale.active or sale.status not in {
+            SaleStatus.DRAFT,
+            SaleStatus.COMPLETED,
+        }:
             raise InvalidSaleStatusError(
                 "Only draft or completed sales can be cancelled."
             )
@@ -177,9 +171,7 @@ class SaleService:
 
         sale_items = get_sale_items(db, sale.id)
         if not sale_items:
-            raise SaleHasNoItemsError(
-                "Cannot cancel a completed sale without items."
-            )
+            raise SaleHasNoItemsError("Cannot cancel a completed sale without items.")
 
         presentation_returns = []
 
@@ -193,9 +185,7 @@ class SaleService:
                     "A beer presentation does not exist."
                 )
 
-            presentation_returns.append(
-                (beer_presentation, sale_item.quantity)
-            )
+            presentation_returns.append((beer_presentation, sale_item.quantity))
 
         try:
             for beer_presentation, quantity in presentation_returns:
@@ -205,10 +195,7 @@ class SaleService:
                     sale_id=sale.id,
                     quantity=quantity,
                     reference=sale.code,
-                    notes=(
-                        "Stock return for cancelled sale "
-                        f"{sale.code}."
-                    ),
+                    notes=(f"Stock return for cancelled sale {sale.code}."),
                 )
                 update_beer_presentation_stock(
                     db,
@@ -229,3 +216,47 @@ class SaleService:
         db.refresh(sale)
 
         return sale
+
+    @staticmethod
+    def get_detail(
+        db: Session,
+        code: str,
+    ) -> SaleDetailResponse:
+        sale = get_sale_detail_by_code(db, code)
+
+        if not sale:
+            raise SaleNotFoundError("The sale does not exist.")
+
+        items = [
+            SaleDetailItemResponse(
+                beer_presentation_id=item.beer_presentation.id,
+                beer_presentation_code=item.beer_presentation.code,
+                beer_presentation_name=item.beer_presentation.name,
+                quantity=item.quantity,
+                unit_price=item.unit_price,
+                line_total=item.quantity * item.unit_price,
+            )
+            for item in sale.items
+            if item.active
+        ]
+
+        total_amount = sum(
+            (item.line_total for item in items),
+            Decimal("0.00"),
+        )
+
+        return SaleDetailResponse(
+            id=sale.id,
+            code=sale.code,
+            customer_id=sale.customer.id,
+            customer_name=sale.customer.name,
+            status=sale.status,
+            notes=sale.notes,
+            completed_at=sale.completed_at,
+            cancelled_at=sale.cancelled_at,
+            cancellation_reason=sale.cancellation_reason,
+            created_at=sale.created_at,
+            updated_at=sale.updated_at,
+            items=items,
+            total_amount=total_amount,
+        )

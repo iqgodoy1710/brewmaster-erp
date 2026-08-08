@@ -447,3 +447,62 @@ def test_cancelled_sale_cannot_be_cancelled_again(client):
     assert second_cancellation_response.json() == {
         "detail": "Only draft or completed sales can be cancelled."
     }
+
+def test_get_sale_detail_includes_customer_items_and_total(client):
+    beer_presentation = create_test_beer_presentation(client)
+
+    customer_response = client.post(
+        "/customers/",
+        json={
+            "code": "CUSTOMER-DETAIL",
+            "name": "Detail Customer",
+        },
+    )
+    assert customer_response.status_code == 201
+
+    customer = customer_response.json()
+
+    sale_response = client.post(
+        "/sales/",
+        json={
+            "code": "SALE-DETAIL-001",
+            "customer_id": customer["id"],
+            "notes": "Sale detail report test.",
+        },
+    )
+    assert sale_response.status_code == 201
+
+    sale = sale_response.json()
+
+    item_response = client.post(
+        "/sale-items/",
+        json={
+            "sale_id": sale["id"],
+            "beer_presentation_id": beer_presentation["id"],
+            "quantity": 3,
+            "unit_price": "4.50",
+        },
+    )
+    assert item_response.status_code == 201
+
+    response = client.get("/sales/SALE-DETAIL-001/detail")
+
+    assert response.status_code == 200
+
+    detail = response.json()
+
+    assert detail["code"] == "SALE-DETAIL-001"
+    assert detail["customer_id"] == customer["id"]
+    assert detail["customer_name"] == "Detail Customer"
+    assert detail["status"] == "draft"
+    assert detail["total_amount"] == "13.50"
+    assert detail["items"] == [
+        {
+            "beer_presentation_id": beer_presentation["id"],
+            "beer_presentation_code": beer_presentation["code"],
+            "beer_presentation_name": beer_presentation["name"],
+            "quantity": 3,
+            "unit_price": "4.50",
+            "line_total": "13.50",
+        }
+    ]

@@ -1,5 +1,6 @@
 from app.db.dependencies import get_db
 from app.schemas.sale import SaleCancel, SaleCreate, SaleResponse
+from app.schemas.sale_detail import SaleDetailResponse
 from app.services.sale_service import SaleService
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
@@ -27,6 +28,17 @@ def create_sale(
     db: Session = Depends(get_db),
 ):
     return SaleService.create(db, sale)
+
+
+@router.get(
+    "/{code}/detail",
+    response_model=SaleDetailResponse,
+)
+def read_sale_detail(
+    code: str,
+    db: Session = Depends(get_db),
+):
+    return SaleService.get_detail(db, code)
 
 
 @router.post(

@@ -1,7 +1,8 @@
 from app.models.enums import SaleStatus
 from app.models.sale import Sale
+from app.models.sale_item import SaleItem
 from app.schemas.sale import SaleCreate
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.sql import func
 
 
@@ -71,3 +72,19 @@ def cancel_sale(
     db.flush()
 
     return sale
+
+def get_sale_detail_by_code(
+    db: Session,
+    code: str,
+) -> Sale | None:
+    return (
+        db.query(Sale)
+        .options(
+            joinedload(Sale.customer),
+            joinedload(Sale.items).joinedload(
+                SaleItem.beer_presentation
+            ),
+        )
+        .filter(Sale.code == code)
+        .first()
+    )
