@@ -106,6 +106,11 @@ class BeerPresentationStockMovementService:
                 "Packaging receipts must be registered by a packaging run."
             )
 
+        if movement_type == BeerPresentationStockMovementType.SALE:
+            raise InvalidBeerPresentationStockMovementError(
+                "Sale movements must be registered by completing a sale."
+            )
+
     @staticmethod
     def _get_stock_change(
         movement_type: BeerPresentationStockMovementType,

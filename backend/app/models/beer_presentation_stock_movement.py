@@ -35,13 +35,16 @@ class BeerPresentationStockMovement(BaseModel):
         ForeignKey("packaging_runs.id"),
         nullable=True,
     )
+    sale_id = Column(
+        Integer,
+        ForeignKey("sales.id"),
+        nullable=True,
+    )
     movement_type = Column(
         Enum(
             BeerPresentationStockMovementType,
             name="beer_presentation_stock_movement_type",
-            values_callable=lambda enum_class: [
-                member.value for member in enum_class
-            ],
+            values_callable=lambda enum_class: [member.value for member in enum_class],
         ),
         nullable=False,
     )
@@ -60,5 +63,9 @@ class BeerPresentationStockMovement(BaseModel):
     )
     packaging_run = relationship(
         "PackagingRun",
+        back_populates="beer_presentation_stock_movements",
+    )
+    sale = relationship(
+        "Sale",
         back_populates="beer_presentation_stock_movements",
     )

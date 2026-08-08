@@ -15,5 +15,7 @@ from app.models.raw_material import RawMaterial
 from app.models.raw_material_stock_movement import RawMaterialStockMovement
 from app.models.recipe import Recipe
 from app.models.recipe_ingredient import RecipeIngredient
+from app.models.sale import Sale
+from app.models.sale_item import SaleItem
 from app.models.supplier import Supplier
 from app.models.unit import Unit

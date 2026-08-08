@@ -165,3 +165,31 @@ class CustomerCodeAlreadyExistsError(Exception):
 
 class CustomerTaxIdAlreadyExistsError(Exception):
     pass
+
+# Exceptions related to SALES
+class CustomerNotFoundError(Exception):
+    pass
+
+
+class InactiveCustomerError(Exception):
+    pass
+
+
+class SaleCodeAlreadyExistsError(Exception):
+    pass
+
+
+class SaleNotFoundError(Exception):
+    pass
+
+
+class InvalidSaleStatusError(Exception):
+    pass
+
+
+class SaleHasNoItemsError(Exception):
+    pass
+
+
+class SaleItemAlreadyExistsError(Exception):
+    pass

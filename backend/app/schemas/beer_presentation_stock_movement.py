@@ -21,6 +21,7 @@ class BeerPresentationStockMovementResponse(
 ):
     id: int
     packaging_run_id: int | None
+    sale_id: int | None
     active: bool
     created_at: datetime
     updated_at: datetime

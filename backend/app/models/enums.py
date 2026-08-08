@@ -24,3 +24,8 @@ class BeerPresentationStockMovementType(StrEnum):
     EXPIRATION = "expiration"
     INVENTORY_ADJUSTMENT_IN = "inventory_adjustment_in"
     INVENTORY_ADJUSTMENT_OUT = "inventory_adjustment_out"
+
+class SaleStatus(StrEnum):
+    DRAFT = "draft"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"

@@ -70,3 +70,8 @@ class BeerPresentation(BaseModel):
         "BeerPresentationStockMovement",
         back_populates="beer_presentation",
     )
+
+    sale_items = relationship(
+        "SaleItem",
+        back_populates="beer_presentation",
+    )

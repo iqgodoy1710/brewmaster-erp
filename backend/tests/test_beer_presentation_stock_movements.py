@@ -54,9 +54,9 @@ def test_stock_movements_update_beer_presentation_stock(client):
         "/beer-presentation-stock-movements/",
         json={
             "beer_presentation_id": beer_presentation["id"],
-            "movement_type": "sale",
+            "movement_type": "inventory_adjustment_out",
             "quantity": 5,
-            "reference": "SALE-STOCK-TEST",
+            "reference": "ADJUSTMENT-OUT-STOCK-TEST",
         },
     )
     assert sale_response.status_code == 201
@@ -74,7 +74,7 @@ def test_stock_movements_update_beer_presentation_stock(client):
     ).json()
 
     assert len(movements) == 2
-    assert movements[0]["movement_type"] == "sale"
+    assert movements[0]["movement_type"] == "inventory_adjustment_out"
     assert movements[1]["movement_type"] == "initial_balance"
 
 def test_cannot_create_outbound_movement_with_insufficient_stock(client):
@@ -84,9 +84,9 @@ def test_cannot_create_outbound_movement_with_insufficient_stock(client):
         "/beer-presentation-stock-movements/",
         json={
             "beer_presentation_id": beer_presentation["id"],
-            "movement_type": "sale",
+            "movement_type": "inventory_adjustment_out",
             "quantity": 1,
-            "reference": "SALE-NO-STOCK-TEST",
+            "reference": "ADJUSTMENT-OUT-NO-STOCK-TEST",
         },
     )
 
@@ -135,3 +135,23 @@ def test_cannot_create_packaging_receipt_manually(client):
         if presentation["id"] == beer_presentation["id"]
     )
     assert updated_presentation["current_stock"] == 0
+
+def test_cannot_create_sale_movement_manually(client):
+    beer_presentation = create_test_beer_presentation(client)
+
+    response = client.post(
+        "/beer-presentation-stock-movements/",
+        json={
+            "beer_presentation_id": beer_presentation["id"],
+            "movement_type": "sale",
+            "quantity": 1,
+            "reference": "MANUAL-SALE-TEST",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "detail": (
+            "Sale movements must be registered by completing a sale."
+        )
+    }

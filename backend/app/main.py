@@ -16,6 +16,7 @@ from app.api.exception_handlers import (
     recipe_creation_conflict_handler,
     recipe_ingredient_conflict_handler,
     related_resource_not_found_handler,
+    sale_conflict_handler,
     supplier_already_exists_handler,
     unit_already_exists_handler,
 )
@@ -42,6 +43,8 @@ from app.api.v1.endpoints.raw_material_stock_movements import (
 from app.api.v1.endpoints.raw_materials import router as raw_materials_router
 from app.api.v1.endpoints.recipe_ingredients import router as recipe_ingredients_router
 from app.api.v1.endpoints.recipes import router as recipe_router
+from app.api.v1.endpoints.sale_items import router as sale_item_router
+from app.api.v1.endpoints.sales import router as sale_router
 from app.api.v1.endpoints.suppliers import router as supplier_router
 from app.api.v1.endpoints.units import router as unit_router
 from app.common.exceptions import (
@@ -57,9 +60,11 @@ from app.common.exceptions import (
     CategoryNameAlreadyExistsError,
     CategoryNotFoundError,
     CustomerCodeAlreadyExistsError,
+    CustomerNotFoundError,
     CustomerTaxIdAlreadyExistsError,
     InactiveBeerError,
     InactiveBeerPresentationError,
+    InactiveCustomerError,
     InactivePackagingFormatError,
     InactiveRawMaterialError,
     InactiveRecipeError,
@@ -69,6 +74,7 @@ from app.common.exceptions import (
     InvalidBeerPresentationStockMovementError,
     InvalidPackagingRunError,
     InvalidProductionBatchStatusError,
+    InvalidSaleStatusError,
     InvalidStockMovementError,
     PackagingFormatCodeAlreadyExistsError,
     PackagingFormatNameAlreadyExistsError,
@@ -82,6 +88,10 @@ from app.common.exceptions import (
     RecipeIngredientAlreadyExistsError,
     RecipeNotFoundError,
     RecipeVersionAlreadyExistsError,
+    SaleCodeAlreadyExistsError,
+    SaleHasNoItemsError,
+    SaleItemAlreadyExistsError,
+    SaleNotFoundError,
     SupplierNameAlreadyExistsError,
     SupplierNotFoundError,
     SupplierTaxIdAlreadyExistsError,
@@ -269,7 +279,40 @@ app.add_exception_handler(
     CustomerTaxIdAlreadyExistsError,
     customer_already_exists_handler,
 )
+app.add_exception_handler(
+    CustomerNotFoundError,
+    related_resource_not_found_handler,
+)
 
+app.add_exception_handler(
+    SaleNotFoundError,
+    related_resource_not_found_handler,
+)
+
+app.add_exception_handler(
+    InactiveCustomerError,
+    sale_conflict_handler,
+)
+
+app.add_exception_handler(
+    SaleCodeAlreadyExistsError,
+    sale_conflict_handler,
+)
+
+app.add_exception_handler(
+    InvalidSaleStatusError,
+    sale_conflict_handler,
+)
+
+app.add_exception_handler(
+    SaleHasNoItemsError,
+    sale_conflict_handler,
+)
+
+app.add_exception_handler(
+    SaleItemAlreadyExistsError,
+    sale_conflict_handler,
+)
 
 @app.get("/")
 def home():
@@ -305,3 +348,7 @@ app.include_router(packaging_run_router)
 app.include_router(beer_presentation_stock_movement_router)
 
 app.include_router(customer_router)
+
+app.include_router(sale_router)
+
+app.include_router(sale_item_router)

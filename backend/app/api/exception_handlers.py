@@ -11,9 +11,11 @@ from app.common.exceptions import (
     CategoryNameAlreadyExistsError,
     CategoryNotFoundError,
     CustomerCodeAlreadyExistsError,
+    CustomerNotFoundError,
     CustomerTaxIdAlreadyExistsError,
     InactiveBeerError,
     InactiveBeerPresentationError,
+    InactiveCustomerError,
     InactivePackagingFormatError,
     InactiveRawMaterialError,
     InactiveRecipeError,
@@ -23,6 +25,7 @@ from app.common.exceptions import (
     InvalidBeerPresentationStockMovementError,
     InvalidPackagingRunError,
     InvalidProductionBatchStatusError,
+    InvalidSaleStatusError,
     InvalidStockMovementError,
     PackagingFormatCodeAlreadyExistsError,
     PackagingFormatNameAlreadyExistsError,
@@ -36,6 +39,10 @@ from app.common.exceptions import (
     RecipeIngredientAlreadyExistsError,
     RecipeNotFoundError,
     RecipeVersionAlreadyExistsError,
+    SaleCodeAlreadyExistsError,
+    SaleHasNoItemsError,
+    SaleItemAlreadyExistsError,
+    SaleNotFoundError,
     SupplierNameAlreadyExistsError,
     SupplierNotFoundError,
     SupplierTaxIdAlreadyExistsError,
@@ -67,7 +74,9 @@ async def related_resource_not_found_handler(
     | RecipeNotFoundError
     | ProductionBatchNotFoundError
     | PackagingFormatNotFoundError
-    | BeerPresentationNotFoundError,
+    | BeerPresentationNotFoundError
+    | CustomerNotFoundError
+    | SaleNotFoundError,
 ) -> JSONResponse:
     return JSONResponse(
         status_code=404,
@@ -234,6 +243,21 @@ async def packaging_run_conflict_handler(
 async def customer_already_exists_handler(
     request: Request,
     error: (CustomerCodeAlreadyExistsError | CustomerTaxIdAlreadyExistsError),
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=409,
+        content={"detail": str(error)},
+    )
+
+async def sale_conflict_handler(
+    request: Request,
+    error: (
+        InactiveCustomerError
+        | SaleCodeAlreadyExistsError
+        | InvalidSaleStatusError
+        | SaleHasNoItemsError
+        | SaleItemAlreadyExistsError
+    ),
 ) -> JSONResponse:
     return JSONResponse(
         status_code=409,
