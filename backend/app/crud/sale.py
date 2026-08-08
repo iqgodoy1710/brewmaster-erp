@@ -1,3 +1,4 @@
+from app.models.customer import Customer
 from app.models.enums import SaleStatus
 from app.models.sale import Sale
 from app.models.sale_item import SaleItem
@@ -87,4 +88,46 @@ def get_sale_detail_by_code(
         )
         .filter(Sale.code == code)
         .first()
+    )
+
+def get_completed_sales_report(
+    db: Session,
+):
+    return (
+        db.query(
+            Sale.id.label("sale_id"),
+            Sale.code.label("sale_code"),
+            Customer.id.label("customer_id"),
+            Customer.name.label("customer_name"),
+            Sale.completed_at,
+            func.sum(SaleItem.quantity).label("total_units"),
+            func.sum(
+                SaleItem.quantity * SaleItem.unit_price
+            ).label("total_amount"),
+        )
+        .join(
+            Customer,
+            Sale.customer_id == Customer.id,
+        )
+        .join(
+            SaleItem,
+            SaleItem.sale_id == Sale.id,
+        )
+        .filter(
+            Sale.active.is_(True),
+            Sale.status == SaleStatus.COMPLETED,
+            SaleItem.active.is_(True),
+        )
+        .group_by(
+            Sale.id,
+            Sale.code,
+            Customer.id,
+            Customer.name,
+            Sale.completed_at,
+        )
+        .order_by(
+            Sale.completed_at.desc(),
+            Sale.id.desc(),
+        )
+        .all()
     )

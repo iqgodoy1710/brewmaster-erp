@@ -4,6 +4,8 @@ from app.schemas.sale_detail import SaleDetailResponse
 from app.services.sale_service import SaleService
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
+from app.schemas.sale_report import SaleReportItemResponse
+
 
 router = APIRouter(
     prefix="/sales",
@@ -16,6 +18,16 @@ def read_sales(
     db: Session = Depends(get_db),
 ):
     return SaleService.get_all(db)
+
+
+@router.get(
+    "/report",
+    response_model=list[SaleReportItemResponse],
+)
+def read_completed_sales_report(
+    db: Session = Depends(get_db),
+):
+    return SaleService.get_completed_report(db)
 
 
 @router.post(

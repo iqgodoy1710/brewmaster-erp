@@ -506,3 +506,66 @@ def test_get_sale_detail_includes_customer_items_and_total(client):
             "line_total": "13.50",
         }
     ]
+
+
+def test_completed_sales_report_only_includes_completed_sales(client):
+    customer = create_test_customer(client)
+    beer_presentation = create_test_beer_presentation(client)
+
+    initial_stock_response = client.post(
+        "/beer-presentation-stock-movements/",
+        json={
+            "beer_presentation_id": beer_presentation["id"],
+            "movement_type": "initial_balance",
+            "quantity": 10,
+            "reference": "INITIAL-REPORT-TEST",
+        },
+    )
+    assert initial_stock_response.status_code == 201
+
+    completed_sale = client.post(
+        "/sales/",
+        json={
+            "code": "SALE-REPORT-COMPLETED",
+            "customer_id": customer["id"],
+        },
+    ).json()
+
+    item_response = client.post(
+        "/sale-items/",
+        json={
+            "sale_id": completed_sale["id"],
+            "beer_presentation_id": beer_presentation["id"],
+            "quantity": 3,
+            "unit_price": "4.50",
+        },
+    )
+    assert item_response.status_code == 201
+
+    completion_response = client.post(
+        f"/sales/{completed_sale['code']}/complete"
+    )
+    assert completion_response.status_code == 200
+
+    client.post(
+        "/sales/",
+        json={
+            "code": "SALE-REPORT-DRAFT",
+            "customer_id": customer["id"],
+        },
+    )
+
+    response = client.get("/sales/report")
+
+    assert response.status_code == 200
+
+    report = response.json()
+
+    assert len(report) == 1
+    assert report[0]["sale_id"] == completed_sale["id"]
+    assert report[0]["sale_code"] == "SALE-REPORT-COMPLETED"
+    assert report[0]["customer_id"] == customer["id"]
+    assert report[0]["customer_name"] == customer["name"]
+    assert report[0]["total_units"] == 3
+    assert report[0]["total_amount"] == "13.50"
+    assert report[0]["completed_at"] is not None

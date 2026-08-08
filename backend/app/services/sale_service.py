@@ -24,6 +24,7 @@ from app.crud.sale import (
     cancel_sale,
     complete_sale,
     create_sale,
+    get_completed_sales_report,
     get_sale_by_code,
     get_sale_detail_by_code,
     get_sales,
@@ -35,6 +36,7 @@ from app.schemas.sale_detail import (
     SaleDetailItemResponse,
     SaleDetailResponse,
 )
+from app.schemas.sale_report import SaleReportItemResponse
 from sqlalchemy.orm import Session
 
 
@@ -42,6 +44,25 @@ class SaleService:
     @staticmethod
     def get_all(db: Session):
         return get_sales(db)
+
+    @staticmethod
+    def get_completed_report(
+        db: Session,
+    ) -> list[SaleReportItemResponse]:
+        rows = get_completed_sales_report(db)
+
+        return [
+            SaleReportItemResponse(
+                sale_id=row.sale_id,
+                sale_code=row.sale_code,
+                customer_id=row.customer_id,
+                customer_name=row.customer_name,
+                completed_at=row.completed_at,
+                total_units=row.total_units,
+                total_amount=row.total_amount,
+            )
+            for row in rows
+        ]
 
     @staticmethod
     def create(
