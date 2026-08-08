@@ -1,18 +1,16 @@
-import app.models
 from typing import List
 
-from fastapi import APIRouter, Depends, status
-from sqlalchemy.orm import Session
-
-
+import app.models
 from app.db.dependencies import get_db
+from app.schemas.inventory_alert import RawMaterialLowStockResponse
 from app.schemas.raw_material import (
-    RawMaterialResponse,
     RawMaterialCreate,
+    RawMaterialResponse,
     RawMaterialUpdate,
 )
 from app.services.raw_material_service import RawMaterialService
-
+from fastapi import APIRouter, Depends, status
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/raw-materials", tags=["Raw Materials"])
 
@@ -33,6 +31,15 @@ def create_raw_material(
 ):
     return RawMaterialService.create(db, raw_material)
 
+
+@router.get(
+    "/low-stock",
+    response_model=list[RawMaterialLowStockResponse],
+)
+def read_raw_material_low_stock_alerts(
+    db: Session = Depends(get_db),
+):
+    return RawMaterialService.get_low_stock_alerts(db)
 
 @router.get("/{code}", response_model=RawMaterialResponse)
 def read_raw_material_by_code(

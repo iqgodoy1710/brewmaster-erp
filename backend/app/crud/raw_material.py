@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from app.models.raw_material import RawMaterial
+from app.models.unit import Unit
 from app.schemas.raw_material import RawMaterialCreate, RawMaterialUpdate
 from sqlalchemy.orm import Session
 
@@ -73,3 +74,21 @@ def update_raw_material_stock(
     db.flush()
 
     return raw_material
+
+def get_raw_materials_at_or_below_minimum_stock(
+    db: Session,
+):
+    return (
+        db.query(RawMaterial, Unit)
+        .join(
+            Unit,
+            RawMaterial.unit_id == Unit.id,
+        )
+        .filter(
+            RawMaterial.active.is_(True),
+            RawMaterial.minimum_stock > 0,
+            RawMaterial.current_stock <= RawMaterial.minimum_stock,
+        )
+        .order_by(RawMaterial.name)
+        .all()
+    )
