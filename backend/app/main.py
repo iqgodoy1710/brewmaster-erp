@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.exception_handlers import (
     beer_already_exists_handler,
@@ -101,6 +102,16 @@ from app.common.exceptions import (
 )
 
 app = FastAPI(title="BrewMaster ERP API", version="1.0.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.add_exception_handler(
     RawMaterialCodeAlreadyExistsError,
@@ -313,6 +324,7 @@ app.add_exception_handler(
     SaleItemAlreadyExistsError,
     sale_conflict_handler,
 )
+
 
 @app.get("/")
 def home():
