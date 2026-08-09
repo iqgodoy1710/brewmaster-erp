@@ -467,3 +467,8 @@ th:last-child {
   cursor: wait;
   opacity: 0.65;
 }
+
+.danger-button {
+  color: #fff !important;
+  background: #b42318 !important;
+}

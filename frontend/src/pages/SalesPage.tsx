@@ -32,6 +32,7 @@ const formatDate = (value: string) =>
 
 function SalesPage() {
   const [sales, setSales] = useState<CompletedSaleReportItem[]>([]);
+  const [allSales, setAllSales] = useState<Sale[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [presentations, setPresentations] = useState<BeerPresentation[]>([]);
   const [lines, setLines] = useState<SaleLine[]>([]);
@@ -45,19 +46,24 @@ function SalesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [saleToCancelCode, setSaleToCancelCode] = useState("");
+  const [cancellationReason, setCancellationReason] = useState("");
+  const [isCancelling, setIsCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
-      const [salesData, customersData, presentationsData] =
+      const [salesData, allSalesData, customersData, presentationsData] =
         await Promise.all([
           apiGet<CompletedSaleReportItem[]>("/sales/report"),
+          apiGet<Sale[]>("/sales/"),
           apiGet<Customer[]>("/customers/"),
           apiGet<BeerPresentation[]>("/beer-presentations/"),
         ]);
 
       setSales(salesData);
+      setAllSales(allSalesData);
       setCustomers(customersData);
       setPresentations(presentationsData);
     } catch (caughtError) {
@@ -81,11 +87,7 @@ function SalesPage() {
   );
 
   const totalAmount = useMemo(
-    () =>
-      sales.reduce(
-        (total, sale) => total + Number(sale.total_amount),
-        0,
-      ),
+    () => sales.reduce((total, sale) => total + Number(sale.total_amount), 0),
     [sales],
   );
 
@@ -96,6 +98,14 @@ function SalesPage() {
         0,
       ),
     [lines],
+  );
+
+  const cancellableSales = useMemo(
+    () =>
+      allSales.filter(
+        (sale) => sale.status === "draft" || sale.status === "completed",
+      ),
+    [allSales],
   );
 
   function addLine() {
@@ -129,9 +139,7 @@ function SalesPage() {
     }
 
     if (
-      lines.some(
-        (line) => line.beerPresentationId === selectedPresentation.id,
-      )
+      lines.some((line) => line.beerPresentationId === selectedPresentation.id)
     ) {
       setError("La presentación ya fue agregada a la venta.");
       return;
@@ -161,9 +169,7 @@ function SalesPage() {
     );
   }
 
-  async function createDraft(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
+  async function createDraft(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!saleCode.trim()) {
@@ -202,9 +208,7 @@ function SalesPage() {
       }
 
       setCreatedSale(sale);
-      setSuccess(
-        `El borrador ${sale.code} fue creado. Ya podés completarlo.`,
-      );
+      setSuccess(`El borrador ${sale.code} fue creado. Ya podés completarlo.`);
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -244,6 +248,45 @@ function SalesPage() {
       );
     } finally {
       setIsCompleting(false);
+    }
+  }
+
+  async function cancelSale(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!saleToCancelCode) {
+      setError("Seleccioná una venta para cancelar.");
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setIsCancelling(true);
+
+    try {
+      const cancelledSale = await apiPost<Sale>(
+        `/sales/${encodeURIComponent(saleToCancelCode)}/cancel`,
+        {
+          cancellation_reason: cancellationReason.trim() || null,
+        },
+      );
+
+      setCreatedSale((currentSale) =>
+        currentSale?.id === cancelledSale.id ? cancelledSale : currentSale,
+      );
+      setSaleToCancelCode("");
+      setCancellationReason("");
+      setSuccess(`La venta ${cancelledSale.code} fue cancelada correctamente.`);
+
+      await loadData();
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "No se pudo cancelar la venta.",
+      );
+    } finally {
+      setIsCancelling(false);
     }
   }
 
@@ -297,9 +340,7 @@ function SalesPage() {
                       onClick={completeSale}
                       type="button"
                     >
-                      {isCompleting
-                        ? "Completando..."
-                        : "Completar venta"}
+                      {isCompleting ? "Completando..." : "Completar venta"}
                     </button>
                   )}
 
@@ -319,9 +360,7 @@ function SalesPage() {
                     Código de venta
                     <input
                       maxLength={30}
-                      onChange={(event) =>
-                        setSaleCode(event.target.value)
-                      }
+                      onChange={(event) => setSaleCode(event.target.value)}
                       placeholder="SALE-001"
                       required
                       value={saleCode}
@@ -331,9 +370,7 @@ function SalesPage() {
                   <label>
                     Cliente
                     <select
-                      onChange={(event) =>
-                        setCustomerId(event.target.value)
-                      }
+                      onChange={(event) => setCustomerId(event.target.value)}
                       required
                       value={customerId}
                     >
@@ -369,14 +406,9 @@ function SalesPage() {
                         }
                         value={presentationId}
                       >
-                        <option value="">
-                          Seleccioná una presentación
-                        </option>
+                        <option value="">Seleccioná una presentación</option>
                         {presentations.map((presentation) => (
-                          <option
-                            key={presentation.id}
-                            value={presentation.id}
-                          >
+                          <option key={presentation.id} value={presentation.id}>
                             {presentation.code} · {presentation.name}
                             {" · Stock: "}
                             {presentation.current_stock}
@@ -400,9 +432,7 @@ function SalesPage() {
                       Precio unitario
                       <input
                         min="0"
-                        onChange={(event) =>
-                          setUnitPrice(event.target.value)
-                        }
+                        onChange={(event) => setUnitPrice(event.target.value)}
                         step="0.01"
                         type="number"
                         value={unitPrice}
@@ -432,15 +462,12 @@ function SalesPage() {
                           </span>
 
                           <span>
-                            {line.quantity} ×{" "}
-                            {formatCurrency(line.unitPrice)}
+                            {line.quantity} × {formatCurrency(line.unitPrice)}
                           </span>
 
                           <button
                             className="text-button"
-                            onClick={() =>
-                              removeLine(line.beerPresentationId)
-                            }
+                            onClick={() => removeLine(line.beerPresentationId)}
                             type="button"
                           >
                             Quitar
@@ -451,15 +478,64 @@ function SalesPage() {
 
                     <p className="draft-total">
                       Total estimado:{" "}
-                      <strong>
-                        {formatCurrency(String(draftTotal))}
-                      </strong>
+                      <strong>{formatCurrency(String(draftTotal))}</strong>
                     </p>
                   </div>
                 )}
 
                 <button disabled={isSaving} type="submit">
                   {isSaving ? "Creando borrador..." : "Crear borrador"}
+                </button>
+              </form>
+            )}
+          </section>
+          <section className="panel sales-form-panel">
+            <h2>Cancelar venta</h2>
+
+            {cancellableSales.length === 0 ? (
+              <p className="empty-state">
+                No hay ventas en borrador o completadas para cancelar.
+              </p>
+            ) : (
+              <form className="sale-form" onSubmit={cancelSale}>
+                <div className="form-grid">
+                  <label>
+                    Venta
+                    <select
+                      onChange={(event) =>
+                        setSaleToCancelCode(event.target.value)
+                      }
+                      required
+                      value={saleToCancelCode}
+                    >
+                      <option value="">Seleccioná una venta</option>
+                      {cancellableSales.map((sale) => (
+                        <option key={sale.id} value={sale.code}>
+                          {sale.code} ·{" "}
+                          {sale.status === "draft" ? "Borrador" : "Completada"}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    Motivo de cancelación
+                    <input
+                      onChange={(event) =>
+                        setCancellationReason(event.target.value)
+                      }
+                      placeholder="Motivo opcional."
+                      value={cancellationReason}
+                    />
+                  </label>
+                </div>
+
+                <button
+                  className="danger-button"
+                  disabled={isCancelling}
+                  type="submit"
+                >
+                  {isCancelling ? "Cancelando..." : "Cancelar venta"}
                 </button>
               </form>
             )}
@@ -486,9 +562,7 @@ function SalesPage() {
             <h2>Ventas completadas</h2>
 
             {sales.length === 0 ? (
-              <p className="empty-state">
-                Todavía no hay ventas completadas.
-              </p>
+              <p className="empty-state">Todavía no hay ventas completadas.</p>
             ) : (
               <div className="table-wrapper">
                 <table>
