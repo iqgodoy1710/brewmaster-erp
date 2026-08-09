@@ -17,6 +17,7 @@ import RawMaterialMovementsPage from "./pages/RawMaterialMovementsPage";
 import CustomersPage from "./pages/CustomersPage";
 import BeersPage from "./pages/BeersPage";
 import PackagingFormatsPage from "./pages/PackagingFormatsPage";
+import BeerPresentationsPage from "./pages/BeerPresentationsPage";
 
 function App() {
   return (
@@ -110,6 +111,14 @@ function App() {
             >
               Formatos
             </NavLink>
+            <NavLink
+              className={({ isActive }) =>
+                isActive ? "nav-link active" : "nav-link"
+              }
+              to="/presentaciones"
+            >
+              Presentaciones
+            </NavLink>
           </nav>
         </header>
 
@@ -131,6 +140,7 @@ function App() {
           <Route path="/clientes" element={<CustomersPage />} />
           <Route path="/cervezas" element={<BeersPage />} />
           <Route path="/formatos-envasado" element={<PackagingFormatsPage />} />
+          <Route path="/presentaciones" element={<BeerPresentationsPage />} />
         </Routes>
       </div>
     </BrowserRouter>
