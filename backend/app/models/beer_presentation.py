@@ -1,11 +1,11 @@
 from sqlalchemy import (
+    CheckConstraint,
     Column,
     ForeignKey,
     Integer,
     String,
     Text,
     UniqueConstraint,
-    CheckConstraint,
 )
 from sqlalchemy.orm import relationship
 
@@ -25,6 +25,10 @@ class BeerPresentation(BaseModel):
             "current_stock >= 0",
             name="ck_beer_presentations_current_stock_non_negative",
         ),
+        CheckConstraint(
+            "minimum_stock >= 0",
+            name="ck_beer_presentations_minimum_stock_non_negative",
+        ),
     )
 
     code = Column(String(30), nullable=False, unique=True)
@@ -42,6 +46,12 @@ class BeerPresentation(BaseModel):
     description = Column(Text)
 
     current_stock = Column(
+        Integer,
+        nullable=False,
+        server_default="0",
+    )
+
+    minimum_stock = Column(
         Integer,
         nullable=False,
         server_default="0",

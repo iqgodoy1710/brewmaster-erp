@@ -1,10 +1,9 @@
-from sqlalchemy.orm import Session
-
 from app.common.exceptions import (
     BeerNotFoundError,
     BeerPresentationAlreadyExistsError,
     BeerPresentationCodeAlreadyExistsError,
     BeerPresentationNameAlreadyExistsError,
+    BeerPresentationNotFoundError,
     InactiveBeerError,
     InactivePackagingFormatError,
     PackagingFormatNotFoundError,
@@ -16,15 +15,47 @@ from app.crud.beer_presentation import (
     get_beer_presentation_by_code,
     get_beer_presentation_by_name,
     get_beer_presentations,
+    get_beer_presentations_at_or_below_minimum_stock,
+    update_beer_presentation_minimum_stock,
 )
 from app.crud.packaging_format import get_packaging_format_by_id
-from app.schemas.beer_presentation import BeerPresentationCreate
+from app.schemas.beer_presentation import (
+    BeerPresentationCreate,
+    BeerPresentationMinimumStockUpdate,
+)
+from app.schemas.inventory_alert import (
+    BeerPresentationLowStockResponse,
+)
+from sqlalchemy.orm import Session
 
 
 class BeerPresentationService:
     @staticmethod
     def get_all(db: Session):
         return get_beer_presentations(db)
+
+    @staticmethod
+    def get_low_stock_alerts(
+        db: Session,
+    ) -> list[BeerPresentationLowStockResponse]:
+        beer_presentations = (
+            get_beer_presentations_at_or_below_minimum_stock(db)
+        )
+
+        return [
+            BeerPresentationLowStockResponse(
+                beer_presentation_id=beer_presentation.id,
+                beer_presentation_code=beer_presentation.code,
+                beer_presentation_name=beer_presentation.name,
+                current_stock=beer_presentation.current_stock,
+                minimum_stock=beer_presentation.minimum_stock,
+                shortage_quantity=(
+                    beer_presentation.minimum_stock
+                    - beer_presentation.current_stock
+                ),
+            )
+            for beer_presentation in beer_presentations
+        ]
 
     @staticmethod
     def create(
@@ -45,9 +76,7 @@ class BeerPresentationService:
             presentation_data.packaging_format_id,
         )
         if not packaging_format:
-            raise PackagingFormatNotFoundError(
-                "The packaging format does not exist."
-            )
+            raise PackagingFormatNotFoundError("The packaging format does not exist.")
 
         if not packaging_format.active:
             raise InactivePackagingFormatError(
@@ -85,3 +114,20 @@ class BeerPresentationService:
             )
 
         return create_beer_presentation(db, presentation_data)
+
+    @staticmethod
+    def update_minimum_stock(
+        db: Session,
+        code: str,
+        minimum_stock_data: BeerPresentationMinimumStockUpdate,
+    ):
+        beer_presentation = get_beer_presentation_by_code(db, code)
+
+        if not beer_presentation:
+            raise BeerPresentationNotFoundError("The beer presentation does not exist.")
+
+        return update_beer_presentation_minimum_stock(
+            db,
+            beer_presentation,
+            minimum_stock_data.minimum_stock,
+        )

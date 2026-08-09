@@ -61,6 +61,7 @@ def get_beer_presentation_by_id(
         .first()
     )
 
+
 def update_beer_presentation_stock(
     db: Session,
     beer_presentation: BeerPresentation,
@@ -71,3 +72,31 @@ def update_beer_presentation_stock(
     db.flush()
 
     return beer_presentation
+
+
+def update_beer_presentation_minimum_stock(
+    db: Session,
+    beer_presentation: BeerPresentation,
+    minimum_stock: int,
+) -> BeerPresentation:
+    beer_presentation.minimum_stock = minimum_stock
+
+    db.commit()
+    db.refresh(beer_presentation)
+
+    return beer_presentation
+
+
+def get_beer_presentations_at_or_below_minimum_stock(
+    db: Session,
+) -> list[BeerPresentation]:
+    return (
+        db.query(BeerPresentation)
+        .filter(
+            BeerPresentation.active.is_(True),
+            BeerPresentation.minimum_stock > 0,
+            BeerPresentation.current_stock <= BeerPresentation.minimum_stock,
+        )
+        .order_by(BeerPresentation.name)
+        .all()
+    )
