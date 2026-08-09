@@ -199,3 +199,14 @@ export type Beer = {
   created_at: string;
   updated_at: string;
 };
+
+export type PackagingFormat = {
+  id: number;
+  code: string;
+  name: string;
+  capacity_liters: string;
+  description: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
