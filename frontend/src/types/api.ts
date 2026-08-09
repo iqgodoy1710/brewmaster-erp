@@ -153,3 +153,38 @@ export type PackagingRun = {
   created_at: string;
   updated_at: string;
 };
+
+export type Supplier = {
+  id: number;
+  name: string;
+  tax_id: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RawMaterialMovementType =
+  | "purchase_receipt"
+  | "production_consumption"
+  | "initial_balance"
+  | "waste"
+  | "expiration"
+  | "inventory_adjustment_in"
+  | "inventory_adjustment_out";
+
+export type RawMaterialStockMovement = {
+  id: number;
+  raw_material_id: number;
+  movement_type: RawMaterialMovementType;
+  quantity: string;
+  supplier_id: number | null;
+  unit_cost: string | null;
+  reference: string | null;
+  notes: string | null;
+  occurred_at: string;
+  production_batch_id: number | null;
+  packaging_run_id: number | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
