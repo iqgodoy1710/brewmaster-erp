@@ -139,3 +139,17 @@ export type Recipe = {
   created_at: string;
   updated_at: string;
 };
+
+export type PackagingRun = {
+  id: number;
+  code: string;
+  production_batch_id: number;
+  beer_presentation_id: number;
+  packaged_quantity: number;
+  notes: string | null;
+  packaged_volume_liters: string;
+  occurred_at: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
