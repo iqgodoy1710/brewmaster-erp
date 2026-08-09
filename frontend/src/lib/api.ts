@@ -37,3 +37,13 @@ export function apiPatch<T>(
     body: JSON.stringify(body),
   });
 }
+
+export function apiPost<T>(
+  path: string,
+  body?: unknown,
+): Promise<T> {
+  return apiRequest<T>(path, {
+    method: "POST",
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}

@@ -55,3 +55,44 @@ export type BeerPresentation = {
   updated_at: string;
   current_stock: number;
 };
+
+export type Customer = {
+  id: number;
+  code: string;
+  name: string;
+  tax_id: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  notes: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SaleStatus = "draft" | "completed" | "cancelled";
+
+export type Sale = {
+  id: number;
+  code: string;
+  customer_id: number;
+  notes: string | null;
+  active: boolean;
+  status: SaleStatus;
+  completed_at: string | null;
+  cancelled_at: string | null;
+  cancellation_reason: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SaleItem = {
+  id: number;
+  sale_id: number;
+  beer_presentation_id: number;
+  quantity: number;
+  unit_price: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};

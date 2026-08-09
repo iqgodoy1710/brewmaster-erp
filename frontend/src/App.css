@@ -267,3 +267,163 @@ th:last-child {
   cursor: wait;
   opacity: 0.65;
 }
+
+.success-message {
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid #b8e2c8;
+  border-radius: 10px;
+  color: #166534;
+  background: #effcf3;
+}
+
+.sales-form-panel {
+  margin-bottom: 1rem;
+}
+
+.sale-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.sale-form label {
+  display: grid;
+  gap: 0.4rem;
+  color: #334155;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.sale-form input,
+.sale-form select,
+.sale-form textarea {
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #172033;
+  background: #fff;
+}
+
+.sale-form textarea {
+  resize: vertical;
+}
+
+.sale-line-editor,
+.draft-lines {
+  padding: 1rem;
+  border: 1px solid #dce3ed;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.sale-line-editor h3,
+.draft-lines h3 {
+  margin: 0 0 0.8rem;
+  font-size: 0.95rem;
+}
+
+.line-grid {
+  grid-template-columns: minmax(0, 2fr) 1fr 1fr;
+  margin-bottom: 0.8rem;
+}
+
+.sale-form > button,
+.form-actions button,
+.sale-line-editor > button {
+  width: fit-content;
+  padding: 0.6rem 0.85rem;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  background: #172033;
+}
+
+.sale-form > button:disabled,
+.form-actions button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.secondary-button {
+  color: #172033 !important;
+  border: 1px solid #cbd5e1 !important;
+  background: #fff !important;
+}
+
+.draft-lines ul {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.draft-lines li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 1rem;
+}
+
+.draft-lines li span:first-child {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.draft-lines small {
+  color: #60708a;
+}
+
+.text-button {
+  padding: 0;
+  border: 0;
+  color: #b54708;
+  font-weight: 700;
+  cursor: pointer;
+  background: transparent;
+}
+
+.draft-total {
+  margin: 1rem 0 0;
+  text-align: right;
+}
+
+.sale-result {
+  display: grid;
+  gap: 1rem;
+}
+
+.sale-result p {
+  margin: 0;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+@media (max-width: 720px) {
+  .form-grid,
+  .line-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .draft-lines li {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }
+
+  .draft-total {
+    text-align: left;
+  }
+}
