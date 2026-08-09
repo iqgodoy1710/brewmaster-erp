@@ -188,3 +188,14 @@ export type RawMaterialStockMovement = {
   created_at: string;
   updated_at: string;
 };
+
+export type Beer = {
+  id: number;
+  code: string;
+  name: string;
+  style: string | null;
+  description: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};

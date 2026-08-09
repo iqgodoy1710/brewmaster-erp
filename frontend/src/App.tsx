@@ -15,6 +15,7 @@ import ProductionPage from "./pages/ProductionPage";
 import PackagingPage from "./pages/PackagingPage";
 import RawMaterialMovementsPage from "./pages/RawMaterialMovementsPage";
 import CustomersPage from "./pages/CustomersPage";
+import BeersPage from "./pages/BeersPage";
 
 function App() {
   return (
@@ -92,6 +93,14 @@ function App() {
             >
               Clientes
             </NavLink>
+            <NavLink
+              className={({ isActive }) =>
+                isActive ? "nav-link active" : "nav-link"
+              }
+              to="/cervezas"
+            >
+              Cervezas
+            </NavLink>
           </nav>
         </header>
 
@@ -111,6 +120,7 @@ function App() {
             element={<RawMaterialMovementsPage />}
           />
           <Route path="/clientes" element={<CustomersPage />} />
+          <Route path="/cervezas" element={<BeersPage />} />
         </Routes>
       </div>
     </BrowserRouter>
