@@ -96,3 +96,46 @@ export type SaleItem = {
   created_at: string;
   updated_at: string;
 };
+
+export type ProductionBatchStatus =
+  | "planned"
+  | "in_progress"
+  | "completed"
+  | "cancelled";
+
+export type ProductionBatch = {
+  id: number;
+  code: string;
+  recipe_id: number;
+  planned_volume_liters: string;
+  notes: string | null;
+  active: boolean;
+  status: ProductionBatchStatus;
+  available_bulk_volume_liters: string;
+  produced_volume_liters: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RawMaterialPlanningProjection = {
+  raw_material_id: number;
+  raw_material_code: string;
+  raw_material_name: string;
+  unit_symbol: string;
+  current_stock: string;
+  planned_consumption: string;
+  projected_available_stock: string;
+  has_shortage: boolean;
+};
+
+export type Recipe = {
+  id: number;
+  beer_id: number;
+  version: number;
+  target_volume_liters: string;
+  notes: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
