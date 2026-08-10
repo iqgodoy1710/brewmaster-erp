@@ -220,3 +220,13 @@ export type RecipeIngredient = {
   created_at: string;
   updated_at: string;
 };
+
+export type BeerPresentationPackagingMaterial = {
+  id: number;
+  beer_presentation_id: number;
+  raw_material_id: number;
+  required_quantity: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};

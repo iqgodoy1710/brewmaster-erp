@@ -20,6 +20,7 @@ import PackagingFormatsPage from "./pages/PackagingFormatsPage";
 import BeerPresentationsPage from "./pages/BeerPresentationsPage";
 import RecipesPage from "./pages/RecipesPage";
 import RecipeIngredientsPage from "./pages/RecipeIngredientsPage";
+import BeerPresentationPackagingMaterialsPage from "./pages/BeerPresentationPackagingMaterialsPage";
 
 function App() {
   return (
@@ -137,6 +138,14 @@ function App() {
             >
               Ingredientes
             </NavLink>
+            <NavLink
+              className={({ isActive }) =>
+                isActive ? "nav-link active" : "nav-link"
+              }
+              to="/materiales-envasado"
+            >
+              Materiales
+            </NavLink>
           </nav>
         </header>
 
@@ -163,6 +172,10 @@ function App() {
           <Route
             path="/ingredientes-receta"
             element={<RecipeIngredientsPage />}
+          />
+          <Route
+            path="/materiales-envasado"
+            element={<BeerPresentationPackagingMaterialsPage />}
           />
         </Routes>
       </div>
