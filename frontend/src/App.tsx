@@ -21,6 +21,7 @@ import BeerPresentationsPage from "./pages/BeerPresentationsPage";
 import RecipesPage from "./pages/RecipesPage";
 import RecipeIngredientsPage from "./pages/RecipeIngredientsPage";
 import BeerPresentationPackagingMaterialsPage from "./pages/BeerPresentationPackagingMaterialsPage";
+import SuppliersPage from "./pages/SuppliersPage";
 
 function App() {
   return (
@@ -146,6 +147,14 @@ function App() {
             >
               Materiales
             </NavLink>
+            <NavLink
+              className={({ isActive }) =>
+                isActive ? "nav-link active" : "nav-link"
+              }
+              to="/proveedores"
+            >
+              Proveedores
+            </NavLink>
           </nav>
         </header>
 
@@ -177,6 +186,7 @@ function App() {
             path="/materiales-envasado"
             element={<BeerPresentationPackagingMaterialsPage />}
           />
+          <Route path="/proveedores" element={<SuppliersPage />} />
         </Routes>
       </div>
     </BrowserRouter>
