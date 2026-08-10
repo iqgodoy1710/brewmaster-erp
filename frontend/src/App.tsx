@@ -18,6 +18,8 @@ import CustomersPage from "./pages/CustomersPage";
 import BeersPage from "./pages/BeersPage";
 import PackagingFormatsPage from "./pages/PackagingFormatsPage";
 import BeerPresentationsPage from "./pages/BeerPresentationsPage";
+import RecipesPage from "./pages/RecipesPage";
+import RecipeIngredientsPage from "./pages/RecipeIngredientsPage";
 
 function App() {
   return (
@@ -119,6 +121,22 @@ function App() {
             >
               Presentaciones
             </NavLink>
+            <NavLink
+              className={({ isActive }) =>
+                isActive ? "nav-link active" : "nav-link"
+              }
+              to="/recetas"
+            >
+              Recetas
+            </NavLink>
+            <NavLink
+              className={({ isActive }) =>
+                isActive ? "nav-link active" : "nav-link"
+              }
+              to="/ingredientes-receta"
+            >
+              Ingredientes
+            </NavLink>
           </nav>
         </header>
 
@@ -141,6 +159,11 @@ function App() {
           <Route path="/cervezas" element={<BeersPage />} />
           <Route path="/formatos-envasado" element={<PackagingFormatsPage />} />
           <Route path="/presentaciones" element={<BeerPresentationsPage />} />
+          <Route path="/recetas" element={<RecipesPage />} />
+          <Route
+            path="/ingredientes-receta"
+            element={<RecipeIngredientsPage />}
+          />
         </Routes>
       </div>
     </BrowserRouter>

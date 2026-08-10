@@ -210,3 +210,13 @@ export type PackagingFormat = {
   created_at: string;
   updated_at: string;
 };
+
+export type RecipeIngredient = {
+  id: number;
+  recipe_id: number;
+  raw_material_id: number;
+  required_quantity: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
