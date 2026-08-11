@@ -8,11 +8,32 @@
 
 .topbar {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 1rem;
   padding: 1rem max(1.5rem, calc((100% - 1120px) / 2));
   color: #fff;
   background: #172033;
+}
+
+.topbar-brand {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 1rem;
+}
+
+.menu-button {
+  display: none;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid rgb(255 255 255 / 25%);
+  border-radius: 8px;
+  color: #fff;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: rgb(255 255 255 / 12%);
 }
 
 .brand,
@@ -220,7 +241,11 @@ th:last-child {
 
 .navigation {
   display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 0.25rem;
+  min-width: 0;
 }
 
 .nav-link {
@@ -471,4 +496,39 @@ th:last-child {
 .danger-button {
   color: #fff !important;
   background: #b42318 !important;
+}
+
+@media (max-width: 720px) {
+  .topbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .topbar-brand {
+    justify-content: space-between;
+  }
+
+  .menu-button {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .navigation {
+    display: none;
+    flex: none;
+    flex-direction: column;
+    align-items: stretch;
+    min-width: auto;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgb(255 255 255 / 15%);
+  }
+
+  .navigation.navigation-open {
+    display: flex;
+  }
+
+  .nav-link {
+    width: 100%;
+  }
 }

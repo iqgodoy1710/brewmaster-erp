@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -27,16 +28,34 @@ import UnitsPage from "./pages/UnitsPage";
 import SaleDetailsPage from "./pages/SaleDetailsPage";
 
 function App() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   return (
     <BrowserRouter>
       <div className="app-shell">
         <header className="topbar">
-          <div>
-            <p className="brand">BrewMaster ERP</p>
-            <p className="subtitle">Panel operativo</p>
+          <div className="topbar-brand">
+            <div>
+              <p className="brand">BrewMaster ERP</p>
+              <p className="subtitle">Panel operativo</p>
+            </div>
+
+            <button
+              aria-controls="primary-navigation"
+              aria-expanded={isMenuOpen}
+              className="menu-button"
+              onClick={() => setIsMenuOpen((isOpen) => !isOpen)}
+              type="button"
+            >
+              {isMenuOpen ? "Cerrar menú" : "Menú"}
+            </button>
           </div>
 
-          <nav className="navigation" aria-label="Navegación principal">
+          <nav
+            id="primary-navigation"
+            aria-label="Navegación principal"
+            className={`navigation ${isMenuOpen ? "navigation-open" : ""}`}
+            onClick={() => setIsMenuOpen(false)}
+          >
             <NavLink
               className={({ isActive }) =>
                 isActive ? "nav-link active" : "nav-link"
