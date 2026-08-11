@@ -22,6 +22,8 @@ import RecipesPage from "./pages/RecipesPage";
 import RecipeIngredientsPage from "./pages/RecipeIngredientsPage";
 import BeerPresentationPackagingMaterialsPage from "./pages/BeerPresentationPackagingMaterialsPage";
 import SuppliersPage from "./pages/SuppliersPage";
+import CategoriesPage from "./pages/CategoriesPage";
+import UnitsPage from "./pages/UnitsPage";
 
 function App() {
   return (
@@ -155,6 +157,22 @@ function App() {
             >
               Proveedores
             </NavLink>
+            <NavLink
+              className={({ isActive }) =>
+                isActive ? "nav-link active" : "nav-link"
+              }
+              to="/categorias"
+            >
+              Categorías
+            </NavLink>
+            <NavLink
+              className={({ isActive }) =>
+                isActive ? "nav-link active" : "nav-link"
+              }
+              to="/unidades"
+            >
+              Unidades
+            </NavLink>
           </nav>
         </header>
 
@@ -187,6 +205,8 @@ function App() {
             element={<BeerPresentationPackagingMaterialsPage />}
           />
           <Route path="/proveedores" element={<SuppliersPage />} />
+          <Route path="/categorias" element={<CategoriesPage />} />
+          <Route path="/unidades" element={<UnitsPage />} />
         </Routes>
       </div>
     </BrowserRouter>

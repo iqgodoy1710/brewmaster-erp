@@ -230,3 +230,21 @@ export type BeerPresentationPackagingMaterial = {
   created_at: string;
   updated_at: string;
 };
+
+export type Category = {
+  id: number;
+  name: string;
+  description: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Unit = {
+  id: number;
+  name: string;
+  symbol: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
