@@ -248,3 +248,28 @@ export type Unit = {
   created_at: string;
   updated_at: string;
 };
+
+export type SaleDetailItem = {
+  beer_presentation_id: number;
+  beer_presentation_code: string;
+  beer_presentation_name: string;
+  quantity: number;
+  unit_price: string;
+  line_total: string;
+};
+
+export type SaleDetail = {
+  id: number;
+  code: string;
+  customer_id: number;
+  customer_name: string;
+  status: SaleStatus;
+  notes: string | null;
+  completed_at: string | null;
+  cancelled_at: string | null;
+  cancellation_reason: string | null;
+  created_at: string;
+  updated_at: string;
+  items: SaleDetailItem[];
+  total_amount: string;
+};

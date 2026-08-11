@@ -24,6 +24,7 @@ import BeerPresentationPackagingMaterialsPage from "./pages/BeerPresentationPack
 import SuppliersPage from "./pages/SuppliersPage";
 import CategoriesPage from "./pages/CategoriesPage";
 import UnitsPage from "./pages/UnitsPage";
+import SaleDetailsPage from "./pages/SaleDetailsPage";
 
 function App() {
   return (
@@ -173,6 +174,14 @@ function App() {
             >
               Unidades
             </NavLink>
+            <NavLink
+              className={({ isActive }) =>
+                isActive ? "nav-link active" : "nav-link"
+              }
+              to="/detalle-ventas"
+            >
+              Detalle ventas
+            </NavLink>
           </nav>
         </header>
 
@@ -207,6 +216,7 @@ function App() {
           <Route path="/proveedores" element={<SuppliersPage />} />
           <Route path="/categorias" element={<CategoriesPage />} />
           <Route path="/unidades" element={<UnitsPage />} />
+          <Route path="/detalle-ventas" element={<SaleDetailsPage />} />
         </Routes>
       </div>
     </BrowserRouter>
