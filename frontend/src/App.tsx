@@ -26,6 +26,7 @@ import SuppliersPage from "./pages/SuppliersPage";
 import CategoriesPage from "./pages/CategoriesPage";
 import UnitsPage from "./pages/UnitsPage";
 import SaleDetailsPage from "./pages/SaleDetailsPage";
+import { isDemoMode } from "./lib/api";
 
 function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -203,6 +204,12 @@ function App() {
             </NavLink>
           </nav>
         </header>
+        {isDemoMode && (
+          <p className="demo-banner" role="status">
+            Demo pública: explorá los flujos y datos de ejemplo. Los cambios
+            están deshabilitados.
+          </p>
+        )}
 
         <Routes>
           <Route path="/" element={<DashboardPage />} />
