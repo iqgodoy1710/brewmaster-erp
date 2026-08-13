@@ -3,6 +3,13 @@
 Sistema MVP para gestionar una cervecería: inventario de insumos, recetas,
 producción, envasado, stock de producto terminado, clientes y ventas.
 
+## Demo pública
+
+[Explorar BrewMaster ERP](https://brewmaster-erp-demo.onrender.com)
+
+> Demo pública de solo lectura con datos ficticios. La API puede tardar unos
+> segundos en responder tras un período de inactividad.
+
 ## Funcionalidades
 
 - Catálogos de cervezas, formatos, presentaciones, categorías y unidades.
