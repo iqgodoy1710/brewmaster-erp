@@ -1,5 +1,8 @@
-from fastapi import FastAPI
+import os
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.exception_handlers import (
     beer_already_exists_handler,
@@ -102,6 +105,20 @@ from app.common.exceptions import (
 )
 
 app = FastAPI(title="BrewMaster ERP API", version="1.0.0")
+@app.middleware("http")
+async def block_demo_writes(request: Request, call_next):
+    is_demo_read_only = os.getenv("DEMO_READ_ONLY") == "true"
+
+    if (
+        is_demo_read_only
+        and request.method not in {"GET", "HEAD", "OPTIONS"}
+    ):
+        return JSONResponse(
+            status_code=403,
+            content={"detail": "This public demo is read-only."},
+        )
+
+    return await call_next(request)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
