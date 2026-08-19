@@ -3,10 +3,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import "../App.css";
 import { apiGet, apiPost } from "../lib/api";
 import type {
-  RawMaterial,
+  RawMaterialReference,
   Recipe,
   RecipeIngredient,
 } from "../types/api";
+import { hasRole, useCurrentUser } from "../lib/auth";
 
 const formatNumber = (value: string) =>
   new Intl.NumberFormat("es-ES", {
@@ -15,8 +16,11 @@ const formatNumber = (value: string) =>
   }).format(Number(value));
 
 function RecipeIngredientsPage() {
+  const currentUser = useCurrentUser();
+
+  const canManageCatalog = hasRole(currentUser, "admin");
   const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
+  const [rawMaterials, setRawMaterials] = useState<RawMaterialReference[]>([]);
   const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
   const [recipeId, setRecipeId] = useState("");
   const [rawMaterialId, setRawMaterialId] = useState("");
@@ -31,7 +35,7 @@ function RecipeIngredientsPage() {
     try {
       const [recipesData, rawMaterialsData] = await Promise.all([
         apiGet<Recipe[]>("/recipes/"),
-        apiGet<RawMaterial[]>("/raw-materials/"),
+        apiGet<RawMaterialReference[]>("/raw-materials/references"),
       ]);
 
       setRecipes(recipesData);
@@ -81,9 +85,7 @@ function RecipeIngredientsPage() {
     [recipeId, recipes],
   );
 
-  async function createIngredient(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
+  async function createIngredient(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const quantity = Number(requiredQuantity);
@@ -140,70 +142,95 @@ function RecipeIngredientsPage() {
       </section>
 
       {isLoading && <p>Cargando ingredientes...</p>}
-      {error && <p className="error-message" role="alert">{error}</p>}
+      {error && (
+        <p className="error-message" role="alert">
+          {error}
+        </p>
+      )}
       {success && <p className="success-message">{success}</p>}
 
       {!isLoading && hasLoaded && (
         <>
-          <section className="panel sales-form-panel">
-            <h2>Agregar ingrediente</h2>
+          {canManageCatalog ? (
+            <section className="panel sales-form-panel">
+              <h2>Agregar ingrediente</h2>
 
-            <form className="sale-form" onSubmit={createIngredient}>
-              <div className="form-grid">
-                <label>
-                  Receta
-                  <select
-                    onChange={(event) => setRecipeId(event.target.value)}
-                    required
-                    value={recipeId}
-                  >
-                    <option value="">Seleccioná una receta</option>
-                    {recipes.map((recipe) => (
-                      <option key={recipe.id} value={recipe.id}>
-                        Receta #{recipe.id} · Versión {recipe.version}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+              <form className="sale-form" onSubmit={createIngredient}>
+                <div className="form-grid">
+                  <label>
+                    Receta
+                    <select
+                      onChange={(event) => setRecipeId(event.target.value)}
+                      required
+                      value={recipeId}
+                    >
+                      <option value="">Seleccioná una receta</option>
+                      {recipes.map((recipe) => (
+                        <option key={recipe.id} value={recipe.id}>
+                          Receta #{recipe.id} · Versión {recipe.version}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    Insumo
+                    <select
+                      onChange={(event) => setRawMaterialId(event.target.value)}
+                      required
+                      value={rawMaterialId}
+                    >
+                      <option value="">Seleccioná un insumo</option>
+                      {rawMaterials.map((rawMaterial) => (
+                        <option key={rawMaterial.id} value={rawMaterial.id}>
+                          {rawMaterial.code} · {rawMaterial.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
 
                 <label>
-                  Insumo
-                  <select
+                  Cantidad requerida
+                  <input
+                    min="0.001"
                     onChange={(event) =>
-                      setRawMaterialId(event.target.value)
+                      setRequiredQuantity(event.target.value)
                     }
                     required
-                    value={rawMaterialId}
-                  >
-                    <option value="">Seleccioná un insumo</option>
-                    {rawMaterials.map((rawMaterial) => (
-                      <option key={rawMaterial.id} value={rawMaterial.id}>
-                        {rawMaterial.code} · {rawMaterial.name}
-                      </option>
-                    ))}
-                  </select>
+                    step="0.001"
+                    type="number"
+                    value={requiredQuantity}
+                  />
                 </label>
-              </div>
+
+                <button disabled={isSaving} type="submit">
+                  {isSaving
+                    ? "Agregando ingrediente..."
+                    : "Agregar ingrediente"}
+                </button>
+              </form>
+            </section>
+          ) : (
+            <section className="panel">
+              <h2>Consultar ingredientes</h2>
 
               <label>
-                Cantidad requerida
-                <input
-                  min="0.001"
-                  onChange={(event) =>
-                    setRequiredQuantity(event.target.value)
-                  }
-                  required
-                  step="0.001"
-                  type="number"
-                  value={requiredQuantity}
-                />
+                Receta
+                <select
+                  onChange={(event) => setRecipeId(event.target.value)}
+                  value={recipeId}
+                >
+                  <option value="">Seleccioná una receta</option>
+                  {recipes.map((recipe) => (
+                    <option key={recipe.id} value={recipe.id}>
+                      Receta #{recipe.id} · Versión {recipe.version}
+                    </option>
+                  ))}
+                </select>
               </label>
-
-              <button disabled={isSaving} type="submit">
-                {isSaving ? "Agregando ingrediente..." : "Agregar ingrediente"}
-              </button>
-            </form>
-          </section>
+            </section>
+          )}
 
           <section className="panel">
             <h2>
@@ -232,12 +259,8 @@ function RecipeIngredientsPage() {
                   <tbody>
                     {ingredients.map((ingredient) => (
                       <tr key={ingredient.id}>
-                        <td>
-                          {rawMaterialName(ingredient.raw_material_id)}
-                        </td>
-                        <td>
-                          {formatNumber(ingredient.required_quantity)}
-                        </td>
+                        <td>{rawMaterialName(ingredient.raw_material_id)}</td>
+                        <td>{formatNumber(ingredient.required_quantity)}</td>
                       </tr>
                     ))}
                   </tbody>

@@ -19,3 +19,4 @@ from app.models.sale import Sale
 from app.models.sale_item import SaleItem
 from app.models.supplier import Supplier
 from app.models.unit import Unit
+from app.models.user import User

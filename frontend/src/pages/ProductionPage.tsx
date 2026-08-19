@@ -7,6 +7,7 @@ import type {
   RawMaterialPlanningProjection,
   Recipe,
 } from "../types/api";
+import { hasRole, useCurrentUser } from "../lib/auth";
 
 const formatNumber = (value: string) =>
   new Intl.NumberFormat("es-ES", {
@@ -28,6 +29,10 @@ const statusLabels: Record<ProductionBatch["status"], string> = {
 };
 
 function ProductionPage() {
+  const currentUser = useCurrentUser();
+
+  const canManageOperations = hasRole(currentUser, "admin", "operator");
+
   const [batches, setBatches] = useState<ProductionBatch[]>([]);
   const [projections, setProjections] = useState<
     RawMaterialPlanningProjection[]
@@ -211,69 +216,78 @@ function ProductionPage() {
 
       {!isLoading && hasLoaded && (
         <>
-          <section className="panel sales-form-panel">
-            <h2>Planificar lote</h2>
+          {canManageOperations ? (
+            <section className="panel sales-form-panel">
+              <h2>Planificar lote</h2>
 
-            <form className="sale-form" onSubmit={createProductionBatch}>
-              <div className="form-grid">
-                <label>
-                  Código de lote
-                  <input
-                    maxLength={30}
-                    onChange={(event) => setBatchCode(event.target.value)}
-                    placeholder="PB-IPA-002"
-                    required
-                    value={batchCode}
-                  />
-                </label>
+              <form className="sale-form" onSubmit={createProductionBatch}>
+                <div className="form-grid">
+                  <label>
+                    Código de lote
+                    <input
+                      maxLength={30}
+                      onChange={(event) => setBatchCode(event.target.value)}
+                      placeholder="PB-IPA-002"
+                      required
+                      value={batchCode}
+                    />
+                  </label>
 
-                <label>
-                  Receta
-                  <select
-                    onChange={(event) => setRecipeId(event.target.value)}
-                    required
-                    value={recipeId}
-                  >
-                    <option value="">Seleccioná una receta</option>
-                    {recipes.map((recipe) => (
-                      <option key={recipe.id} value={recipe.id}>
-                        Receta #{recipe.id} · Versión {recipe.version}
-                        {" · "}
-                        {formatNumber(recipe.target_volume_liters)} L
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
+                  <label>
+                    Receta
+                    <select
+                      onChange={(event) => setRecipeId(event.target.value)}
+                      required
+                      value={recipeId}
+                    >
+                      <option value="">Seleccioná una receta</option>
+                      {recipes.map((recipe) => (
+                        <option key={recipe.id} value={recipe.id}>
+                          Receta #{recipe.id} · Versión {recipe.version}
+                          {" · "}
+                          {formatNumber(recipe.target_volume_liters)} L
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
 
-              <div className="form-grid">
-                <label>
-                  Volumen planificado (L)
-                  <input
-                    min="0.001"
-                    onChange={(event) => setPlannedVolume(event.target.value)}
-                    required
-                    step="0.001"
-                    type="number"
-                    value={plannedVolume}
-                  />
-                </label>
+                <div className="form-grid">
+                  <label>
+                    Volumen planificado (L)
+                    <input
+                      min="0.001"
+                      onChange={(event) => setPlannedVolume(event.target.value)}
+                      required
+                      step="0.001"
+                      type="number"
+                      value={plannedVolume}
+                    />
+                  </label>
 
-                <label>
-                  Notas
-                  <input
-                    onChange={(event) => setNotes(event.target.value)}
-                    placeholder="Notas opcionales del lote."
-                    value={notes}
-                  />
-                </label>
-              </div>
+                  <label>
+                    Notas
+                    <input
+                      onChange={(event) => setNotes(event.target.value)}
+                      placeholder="Notas opcionales del lote."
+                      value={notes}
+                    />
+                  </label>
+                </div>
 
-              <button disabled={isSaving} type="submit">
-                {isSaving ? "Creando lote..." : "Crear lote planificado"}
-              </button>
-            </form>
-          </section>
+                <button disabled={isSaving} type="submit">
+                  {isSaving ? "Creando lote..." : "Crear lote planificado"}
+                </button>
+              </form>
+            </section>
+          ) : (
+            <section className="panel">
+              <p className="empty-state">
+                Gerencia tiene acceso de consulta a Producción.
+              </p>
+            </section>
+          )}
+
           <section className="summary-grid">
             <article className="summary-card">
               <p>Lotes planificados</p>
@@ -330,7 +344,7 @@ function ProductionPage() {
                             : "—"}
                         </td>
                         <td>
-                          {batch.status === "planned" ? (
+                          {batch.status === "planned" && canManageOperations ? (
                             <form
                               className="batch-completion-form"
                               onSubmit={(event) =>

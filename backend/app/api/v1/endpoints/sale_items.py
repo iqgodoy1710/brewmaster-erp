@@ -1,13 +1,21 @@
+from app.api.auth_dependencies import require_roles
+from app.db.dependencies import get_db
+from app.models.enums import UserRole
+from app.schemas.sale_item import SaleItemCreate, SaleItemResponse
+from app.services.sale_item_service import SaleItemService
 from fastapi import APIRouter, Depends, Path, status
 from sqlalchemy.orm import Session
 
-from app.db.dependencies import get_db
-from app.schemas.sale_item import SaleItemCreate, SaleItemResponse
-from app.services.sale_item_service import SaleItemService
-
-
 router = APIRouter(
     tags=["Sale Items"],
+    dependencies=[
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+                UserRole.MANAGEMENT,
+            )
+        )
+    ],
 )
 
 

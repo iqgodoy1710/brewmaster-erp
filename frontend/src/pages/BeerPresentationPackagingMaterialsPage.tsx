@@ -5,8 +5,9 @@ import { apiGet, apiPost } from "../lib/api";
 import type {
   BeerPresentation,
   BeerPresentationPackagingMaterial,
-  RawMaterial,
+  RawMaterialReference,
 } from "../types/api";
+import { hasRole, useCurrentUser } from "../lib/auth";
 
 const formatQuantity = (value: string) =>
   new Intl.NumberFormat("es-ES", {
@@ -15,8 +16,11 @@ const formatQuantity = (value: string) =>
   }).format(Number(value));
 
 function BeerPresentationPackagingMaterialsPage() {
+  const currentUser = useCurrentUser();
+
+  const canManageCatalog = hasRole(currentUser, "admin");
   const [presentations, setPresentations] = useState<BeerPresentation[]>([]);
-  const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
+  const [rawMaterials, setRawMaterials] = useState<RawMaterialReference[]>([]);
   const [materials, setMaterials] = useState<
     BeerPresentationPackagingMaterial[]
   >([]);
@@ -31,14 +35,14 @@ function BeerPresentationPackagingMaterialsPage() {
   const selectedPresentation = useMemo(
     () =>
       presentations.find(
-        (presentation) =>
-          presentation.id === Number(beerPresentationId),
+        (presentation) => presentation.id === Number(beerPresentationId),
       ) ?? null,
     [beerPresentationId, presentations],
   );
 
   const rawMaterialById = useMemo(
-    () => new Map(rawMaterials.map((rawMaterial) => [rawMaterial.id, rawMaterial])),
+    () =>
+      new Map(rawMaterials.map((rawMaterial) => [rawMaterial.id, rawMaterial])),
     [rawMaterials],
   );
 
@@ -49,7 +53,7 @@ function BeerPresentationPackagingMaterialsPage() {
 
       const [presentationsData, rawMaterialsData] = await Promise.all([
         apiGet<BeerPresentation[]>("/beer-presentations/"),
-        apiGet<RawMaterial[]>("/raw-materials/"),
+        apiGet<RawMaterialReference[]>("/raw-materials/references"),
       ]);
 
       setPresentations(presentationsData);
@@ -144,9 +148,7 @@ function BeerPresentationPackagingMaterialsPage() {
       <section className="page-heading">
         <p className="eyebrow">Envasado</p>
         <h1>Materiales de envasado</h1>
-        <p>
-          Configurá los insumos necesarios para producir cada presentación.
-        </p>
+        <p>Configurá los insumos necesarios para producir cada presentación.</p>
       </section>
 
       {isLoading && <p>Cargando datos...</p>}
@@ -161,62 +163,85 @@ function BeerPresentationPackagingMaterialsPage() {
 
       {!isLoading && (
         <>
-          <section className="panel">
-            <h2>Asignar material</h2>
+          {canManageCatalog ? (
+            <section className="panel">
+              <h2>Asignar material</h2>
 
-            <form className="sale-form" onSubmit={handleSubmit}>
-              <div className="form-grid">
-                <label>
-                  Presentación
-                  <select
-                    value={beerPresentationId}
-                    onChange={(event) =>
-                      setBeerPresentationId(event.target.value)
-                    }
-                  >
-                    <option value="">Seleccioná una presentación</option>
-                    {presentations.map((presentation) => (
-                      <option key={presentation.id} value={presentation.id}>
-                        {presentation.code} · {presentation.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+              <form className="sale-form" onSubmit={handleSubmit}>
+                <div className="form-grid">
+                  <label>
+                    Presentación
+                    <select
+                      value={beerPresentationId}
+                      onChange={(event) =>
+                        setBeerPresentationId(event.target.value)
+                      }
+                    >
+                      <option value="">Seleccioná una presentación</option>
+                      {presentations.map((presentation) => (
+                        <option key={presentation.id} value={presentation.id}>
+                          {presentation.code} · {presentation.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
-                <label>
-                  Insumo
-                  <select
-                    value={rawMaterialId}
-                    onChange={(event) => setRawMaterialId(event.target.value)}
-                  >
-                    <option value="">Seleccioná un insumo</option>
-                    {rawMaterials.map((rawMaterial) => (
-                      <option key={rawMaterial.id} value={rawMaterial.id}>
-                        {rawMaterial.code} · {rawMaterial.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                  <label>
+                    Insumo
+                    <select
+                      value={rawMaterialId}
+                      onChange={(event) => setRawMaterialId(event.target.value)}
+                    >
+                      <option value="">Seleccioná un insumo</option>
+                      {rawMaterials.map((rawMaterial) => (
+                        <option key={rawMaterial.id} value={rawMaterial.id}>
+                          {rawMaterial.code} · {rawMaterial.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
-                <label>
-                  Cantidad requerida por unidad
-                  <input
-                    min="0.001"
-                    step="0.001"
-                    type="number"
-                    value={requiredQuantity}
-                    onChange={(event) =>
-                      setRequiredQuantity(event.target.value)
-                    }
-                  />
-                </label>
-              </div>
+                  <label>
+                    Cantidad requerida por unidad
+                    <input
+                      min="0.001"
+                      step="0.001"
+                      type="number"
+                      value={requiredQuantity}
+                      onChange={(event) =>
+                        setRequiredQuantity(event.target.value)
+                      }
+                    />
+                  </label>
+                </div>
 
-              <button disabled={isSaving} type="submit">
-                {isSaving ? "Agregando..." : "Agregar material"}
-              </button>
-            </form>
-          </section>
+                <button disabled={isSaving} type="submit">
+                  {isSaving ? "Agregando..." : "Agregar material"}
+                </button>
+              </form>
+            </section>
+          ) : (
+            <section className="panel">
+              <h2>Consultar materiales</h2>
+
+              <label>
+                Presentación
+                <select
+                  value={beerPresentationId}
+                  onChange={(event) =>
+                    setBeerPresentationId(event.target.value)
+                  }
+                >
+                  <option value="">Seleccioná una presentación</option>
+                  {presentations.map((presentation) => (
+                    <option key={presentation.id} value={presentation.id}>
+                      {presentation.code} · {presentation.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </section>
+          )}
 
           <section className="panel">
             <h2>

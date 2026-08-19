@@ -1,4 +1,5 @@
-#Excepciones relacionadas a RAW MATERIALS
+# Excepciones relacionadas a RAW MATERIALS
+
 
 class RawMaterialCodeAlreadyExistsError(Exception):
     pass
@@ -11,29 +12,35 @@ class CategoryNotFoundError(Exception):
 class UnitNotFoundError(Exception):
     pass
 
+
 class RawMaterialNotFoundError(Exception):
     pass
 
-#Excepciones relacionadas a CATEGORIAS
+
+# Excepciones relacionadas a CATEGORIAS
 class CategoryNameAlreadyExistsError(Exception):
     pass
 
 
-#Excepciones relacionadas a UNITS
+# Excepciones relacionadas a UNITS
 class UnitNameAlreadyExistsError(Exception):
     pass
+
 
 class UnitSymbolAlreadyExistsError(Exception):
     pass
 
-#Excepciones relacionadas a SUPPLIERS
+
+# Excepciones relacionadas a SUPPLIERS
 class SupplierNameAlreadyExistsError(Exception):
     pass
+
 
 class SupplierTaxIdAlreadyExistsError(Exception):
     pass
 
-#Excepciones relacionadas a RAW MATERIAL STOCK MOVEMENT
+
+# Excepciones relacionadas a RAW MATERIAL STOCK MOVEMENT
 class SupplierNotFoundError(Exception):
     pass
 
@@ -45,6 +52,7 @@ class InsufficientStockError(Exception):
 class InvalidStockMovementError(Exception):
     pass
 
+
 # Exceptions related to BEERS
 class BeerCodeAlreadyExistsError(Exception):
     pass
@@ -52,6 +60,7 @@ class BeerCodeAlreadyExistsError(Exception):
 
 class BeerNameAlreadyExistsError(Exception):
     pass
+
 
 # Exceptions related to RECIPES
 class BeerNotFoundError(Exception):
@@ -61,8 +70,10 @@ class BeerNotFoundError(Exception):
 class RecipeVersionAlreadyExistsError(Exception):
     pass
 
+
 class InactiveBeerError(Exception):
     pass
+
 
 # Exceptions related to RECIPE INGREDIENTS
 class RecipeNotFoundError(Exception):
@@ -80,12 +91,15 @@ class InactiveRawMaterialError(Exception):
 class RecipeIngredientAlreadyExistsError(Exception):
     pass
 
+
 # Exceptions related to PRODUCTION BATCHES
 class ProductionBatchCodeAlreadyExistsError(Exception):
     pass
 
+
 class RecipeHasNoIngredientsError(Exception):
     pass
+
 
 class ProductionBatchNotFoundError(Exception):
     pass
@@ -94,6 +108,7 @@ class ProductionBatchNotFoundError(Exception):
 class InvalidProductionBatchStatusError(Exception):
     pass
 
+
 # Exceptions related to PACKAGING FORMATS
 class PackagingFormatCodeAlreadyExistsError(Exception):
     pass
@@ -101,6 +116,7 @@ class PackagingFormatCodeAlreadyExistsError(Exception):
 
 class PackagingFormatNameAlreadyExistsError(Exception):
     pass
+
 
 # Exceptions related to BEER PRESENTATIONS
 class PackagingFormatNotFoundError(Exception):
@@ -122,6 +138,7 @@ class BeerPresentationNameAlreadyExistsError(Exception):
 class BeerPresentationAlreadyExistsError(Exception):
     pass
 
+
 # Exceptions related to BEER PRESENTATION PACKAGING MATERIALS
 class BeerPresentationNotFoundError(Exception):
     pass
@@ -133,6 +150,7 @@ class InactiveBeerPresentationError(Exception):
 
 class BeerPresentationPackagingMaterialAlreadyExistsError(Exception):
     pass
+
 
 # Exceptions related to PACKAGING RUNS
 class PackagingRunCodeAlreadyExistsError(Exception):
@@ -150,6 +168,7 @@ class InvalidPackagingRunError(Exception):
 class InsufficientBulkBeerError(Exception):
     pass
 
+
 # Exceptions related to BEER PRESENTATION STOCK MOVEMENTS
 class InsufficientBeerPresentationStockError(Exception):
     pass
@@ -158,6 +177,7 @@ class InsufficientBeerPresentationStockError(Exception):
 class InvalidBeerPresentationStockMovementError(Exception):
     pass
 
+
 # Exceptions related to CUSTOMERS
 class CustomerCodeAlreadyExistsError(Exception):
     pass
@@ -165,6 +185,7 @@ class CustomerCodeAlreadyExistsError(Exception):
 
 class CustomerTaxIdAlreadyExistsError(Exception):
     pass
+
 
 # Exceptions related to SALES
 class CustomerNotFoundError(Exception):
@@ -192,4 +213,25 @@ class SaleHasNoItemsError(Exception):
 
 
 class SaleItemAlreadyExistsError(Exception):
+    pass
+
+
+# Exceptions related to USERS
+class UserEmailAlreadyExistsError(Exception):
+    pass
+
+
+class InvalidCredentialsError(Exception):
+    pass
+
+
+class InsufficientPermissionsError(Exception):
+    pass
+
+
+class UserNotFoundError(Exception):
+    pass
+
+
+class InvalidUserUpdateError(Exception):
     pass

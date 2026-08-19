@@ -3,8 +3,12 @@ import { useCallback, useEffect, useState } from "react";
 import "../App.css";
 import { apiGet, apiPost } from "../lib/api";
 import type { Unit } from "../types/api";
+import { hasRole, useCurrentUser } from "../lib/auth";
 
 function UnitsPage() {
+  const currentUser = useCurrentUser();
+
+  const canManageCatalog = hasRole(currentUser, "admin");
   const [units, setUnits] = useState<Unit[]>([]);
   const [name, setName] = useState("");
   const [symbol, setSymbol] = useState("");
@@ -84,36 +88,43 @@ function UnitsPage() {
       )}
 
       {success && <p className="success-message">{success}</p>}
+      {canManageCatalog ? (
+        <section className="panel">
+          <h2>Nueva unidad</h2>
 
-      <section className="panel">
-        <h2>Nueva unidad</h2>
+          <form className="sale-form" onSubmit={handleSubmit}>
+            <div className="form-grid">
+              <label>
+                Nombre
+                <input
+                  placeholder="Ej.: Kilogramo"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                />
+              </label>
 
-        <form className="sale-form" onSubmit={handleSubmit}>
-          <div className="form-grid">
-            <label>
-              Nombre
-              <input
-                placeholder="Ej.: Kilogramo"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-              />
-            </label>
+              <label>
+                Símbolo
+                <input
+                  placeholder="Ej.: kg"
+                  value={symbol}
+                  onChange={(event) => setSymbol(event.target.value)}
+                />
+              </label>
+            </div>
 
-            <label>
-              Símbolo
-              <input
-                placeholder="Ej.: kg"
-                value={symbol}
-                onChange={(event) => setSymbol(event.target.value)}
-              />
-            </label>
-          </div>
-
-          <button disabled={isSaving} type="submit">
-            {isSaving ? "Creando..." : "Crear unidad"}
-          </button>
-        </form>
-      </section>
+            <button disabled={isSaving} type="submit">
+              {isSaving ? "Creando..." : "Crear unidad"}
+            </button>
+          </form>
+        </section>
+      ) : (
+        <section className="panel">
+          <p className="empty-state">
+            Solo los administradores pueden modificar este catálogo.
+          </p>
+        </section>
+      )}
 
       <section className="panel">
         <h2>Unidades registradas</h2>
@@ -121,9 +132,7 @@ function UnitsPage() {
         {isLoading ? (
           <p>Cargando unidades...</p>
         ) : units.length === 0 ? (
-          <p className="empty-state">
-            Todavía no hay unidades registradas.
-          </p>
+          <p className="empty-state">Todavía no hay unidades registradas.</p>
         ) : (
           <div className="table-wrapper">
             <table>

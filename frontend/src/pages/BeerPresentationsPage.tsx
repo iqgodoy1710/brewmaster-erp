@@ -2,13 +2,13 @@ import { useCallback, useEffect, useState } from "react";
 
 import "../App.css";
 import { apiGet, apiPost } from "../lib/api";
-import type {
-  Beer,
-  BeerPresentation,
-  PackagingFormat,
-} from "../types/api";
+import type { Beer, BeerPresentation, PackagingFormat } from "../types/api";
+import { hasRole, useCurrentUser } from "../lib/auth";
 
 function BeerPresentationsPage() {
+  const currentUser = useCurrentUser();
+
+  const canManageCatalog = hasRole(currentUser, "admin");
   const [presentations, setPresentations] = useState<BeerPresentation[]>([]);
   const [beers, setBeers] = useState<Beer[]>([]);
   const [formats, setFormats] = useState<PackagingFormat[]>([]);
@@ -51,9 +51,7 @@ function BeerPresentationsPage() {
     loadData();
   }, [loadData]);
 
-  async function createPresentation(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
+  async function createPresentation(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const stock = Number(minimumStock);
@@ -122,105 +120,113 @@ function BeerPresentationsPage() {
       </section>
 
       {isLoading && <p>Cargando presentaciones...</p>}
-      {error && <p className="error-message" role="alert">{error}</p>}
+      {error && (
+        <p className="error-message" role="alert">
+          {error}
+        </p>
+      )}
       {success && <p className="success-message">{success}</p>}
 
       {!isLoading && hasLoaded && (
         <>
-          <section className="panel sales-form-panel">
-            <h2>Nueva presentación</h2>
+          {canManageCatalog ? (
+            <section className="panel sales-form-panel">
+              <h2>Nueva presentación</h2>
 
-            <form className="sale-form" onSubmit={createPresentation}>
-              <div className="form-grid">
-                <label>
-                  Código
-                  <input
-                    maxLength={30}
-                    onChange={(event) => setCode(event.target.value)}
-                    placeholder="IPA-BOT-500"
-                    required
-                    value={code}
-                  />
-                </label>
+              <form className="sale-form" onSubmit={createPresentation}>
+                <div className="form-grid">
+                  <label>
+                    Código
+                    <input
+                      maxLength={30}
+                      onChange={(event) => setCode(event.target.value)}
+                      placeholder="IPA-BOT-500"
+                      required
+                      value={code}
+                    />
+                  </label>
 
-                <label>
-                  Nombre
-                  <input
-                    maxLength={150}
-                    onChange={(event) => setName(event.target.value)}
-                    placeholder="IPA botella 500 mL"
-                    required
-                    value={name}
-                  />
-                </label>
-              </div>
+                  <label>
+                    Nombre
+                    <input
+                      maxLength={150}
+                      onChange={(event) => setName(event.target.value)}
+                      placeholder="IPA botella 500 mL"
+                      required
+                      value={name}
+                    />
+                  </label>
+                </div>
 
-              <div className="form-grid">
-                <label>
-                  Cerveza
-                  <select
-                    onChange={(event) => setBeerId(event.target.value)}
-                    required
-                    value={beerId}
-                  >
-                    <option value="">Seleccioná una cerveza</option>
-                    {beers.map((beer) => (
-                      <option key={beer.id} value={beer.id}>
-                        {beer.code} · {beer.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <div className="form-grid">
+                  <label>
+                    Cerveza
+                    <select
+                      onChange={(event) => setBeerId(event.target.value)}
+                      required
+                      value={beerId}
+                    >
+                      <option value="">Seleccioná una cerveza</option>
+                      {beers.map((beer) => (
+                        <option key={beer.id} value={beer.id}>
+                          {beer.code} · {beer.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
-                <label>
-                  Formato
-                  <select
-                    onChange={(event) => setFormatId(event.target.value)}
-                    required
-                    value={formatId}
-                  >
-                    <option value="">Seleccioná un formato</option>
-                    {formats.map((format) => (
-                      <option key={format.id} value={format.id}>
-                        {format.code} · {format.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
+                  <label>
+                    Formato
+                    <select
+                      onChange={(event) => setFormatId(event.target.value)}
+                      required
+                      value={formatId}
+                    >
+                      <option value="">Seleccioná un formato</option>
+                      {formats.map((format) => (
+                        <option key={format.id} value={format.id}>
+                          {format.code} · {format.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
 
-              <div className="form-grid">
-                <label>
-                  Stock mínimo
-                  <input
-                    min="0"
-                    onChange={(event) =>
-                      setMinimumStock(event.target.value)
-                    }
-                    required
-                    step="1"
-                    type="number"
-                    value={minimumStock}
-                  />
-                </label>
+                <div className="form-grid">
+                  <label>
+                    Stock mínimo
+                    <input
+                      min="0"
+                      onChange={(event) => setMinimumStock(event.target.value)}
+                      required
+                      step="1"
+                      type="number"
+                      value={minimumStock}
+                    />
+                  </label>
 
-                <label>
-                  Descripción
-                  <input
-                    onChange={(event) =>
-                      setDescription(event.target.value)
-                    }
-                    placeholder="Descripción opcional."
-                    value={description}
-                  />
-                </label>
-              </div>
+                  <label>
+                    Descripción
+                    <input
+                      onChange={(event) => setDescription(event.target.value)}
+                      placeholder="Descripción opcional."
+                      value={description}
+                    />
+                  </label>
+                </div>
 
-              <button disabled={isSaving} type="submit">
-                {isSaving ? "Creando presentación..." : "Crear presentación"}
-              </button>
-            </form>
-          </section>
+                <button disabled={isSaving} type="submit">
+                  {isSaving ? "Creando presentación..." : "Crear presentación"}
+                </button>
+              </form>
+            </section>
+          ) : (
+            <section className="panel">
+              <p className="empty-state">
+                Solo los administradores pueden crear presentaciones.
+              </p>
+            </section>
+          )}
 
           <section className="panel">
             <h2>Presentaciones registradas</h2>

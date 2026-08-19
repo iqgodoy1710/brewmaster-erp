@@ -10,8 +10,11 @@ from app.api.exception_handlers import (
     beer_presentation_packaging_material_conflict_handler,
     category_name_already_exists_handler,
     customer_already_exists_handler,
+    insufficient_permissions_handler,
     insufficient_stock_handler,
+    invalid_credentials_handler,
     invalid_stock_movement_handler,
+    invalid_user_update_handler,
     packaging_format_already_exists_handler,
     packaging_run_conflict_handler,
     production_batch_completion_conflict_handler,
@@ -23,7 +26,9 @@ from app.api.exception_handlers import (
     sale_conflict_handler,
     supplier_already_exists_handler,
     unit_already_exists_handler,
+    user_already_exists_handler,
 )
+from app.api.v1.endpoints.auth import router as auth_router
 from app.api.v1.endpoints.beer_presentation_packaging_materials import (
     router as beer_presentation_packaging_material_router,
 )
@@ -51,6 +56,7 @@ from app.api.v1.endpoints.sale_items import router as sale_item_router
 from app.api.v1.endpoints.sales import router as sale_router
 from app.api.v1.endpoints.suppliers import router as supplier_router
 from app.api.v1.endpoints.units import router as unit_router
+from app.api.v1.endpoints.users import router as user_router
 from app.common.exceptions import (
     BeerCodeAlreadyExistsError,
     BeerNameAlreadyExistsError,
@@ -74,12 +80,15 @@ from app.common.exceptions import (
     InactiveRecipeError,
     InsufficientBeerPresentationStockError,
     InsufficientBulkBeerError,
+    InsufficientPermissionsError,
     InsufficientStockError,
     InvalidBeerPresentationStockMovementError,
+    InvalidCredentialsError,
     InvalidPackagingRunError,
     InvalidProductionBatchStatusError,
     InvalidSaleStatusError,
     InvalidStockMovementError,
+    InvalidUserUpdateError,
     PackagingFormatCodeAlreadyExistsError,
     PackagingFormatNameAlreadyExistsError,
     PackagingFormatNotFoundError,
@@ -102,23 +111,26 @@ from app.common.exceptions import (
     UnitNameAlreadyExistsError,
     UnitNotFoundError,
     UnitSymbolAlreadyExistsError,
+    UserEmailAlreadyExistsError,
+    UserNotFoundError,
 )
 
 app = FastAPI(title="BrewMaster ERP API", version="1.0.0")
+
+
 @app.middleware("http")
 async def block_demo_writes(request: Request, call_next):
     is_demo_read_only = os.getenv("DEMO_READ_ONLY") == "true"
 
-    if (
-        is_demo_read_only
-        and request.method not in {"GET", "HEAD", "OPTIONS"}
-    ):
+    if is_demo_read_only and request.method not in {"GET", "HEAD", "OPTIONS"}:
         return JSONResponse(
             status_code=403,
             content={"detail": "This public demo is read-only."},
         )
 
     return await call_next(request)
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -343,6 +355,31 @@ app.add_exception_handler(
     sale_conflict_handler,
 )
 
+app.add_exception_handler(
+    InvalidCredentialsError,
+    invalid_credentials_handler,
+)
+
+app.add_exception_handler(
+    InsufficientPermissionsError,
+    insufficient_permissions_handler,
+)
+
+app.add_exception_handler(
+    UserEmailAlreadyExistsError,
+    user_already_exists_handler,
+)
+
+app.add_exception_handler(
+    UserNotFoundError,
+    related_resource_not_found_handler,
+)
+
+app.add_exception_handler(
+    InvalidUserUpdateError,
+    invalid_user_update_handler,
+)
+
 
 @app.get("/")
 def home():
@@ -382,3 +419,7 @@ app.include_router(customer_router)
 app.include_router(sale_router)
 
 app.include_router(sale_item_router)
+
+app.include_router(auth_router)
+
+app.include_router(user_router)

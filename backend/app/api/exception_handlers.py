@@ -21,12 +21,15 @@ from app.common.exceptions import (
     InactiveRecipeError,
     InsufficientBeerPresentationStockError,
     InsufficientBulkBeerError,
+    InsufficientPermissionsError,
     InsufficientStockError,
     InvalidBeerPresentationStockMovementError,
+    InvalidCredentialsError,
     InvalidPackagingRunError,
     InvalidProductionBatchStatusError,
     InvalidSaleStatusError,
     InvalidStockMovementError,
+    InvalidUserUpdateError,
     PackagingFormatCodeAlreadyExistsError,
     PackagingFormatNameAlreadyExistsError,
     PackagingFormatNotFoundError,
@@ -49,6 +52,8 @@ from app.common.exceptions import (
     UnitNameAlreadyExistsError,
     UnitNotFoundError,
     UnitSymbolAlreadyExistsError,
+    UserEmailAlreadyExistsError,
+    UserNotFoundError,
 )
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -76,7 +81,8 @@ async def related_resource_not_found_handler(
     | PackagingFormatNotFoundError
     | BeerPresentationNotFoundError
     | CustomerNotFoundError
-    | SaleNotFoundError,
+    | SaleNotFoundError
+    | UserNotFoundError,
 ) -> JSONResponse:
     return JSONResponse(
         status_code=404,
@@ -249,6 +255,7 @@ async def customer_already_exists_handler(
         content={"detail": str(error)},
     )
 
+
 async def sale_conflict_handler(
     request: Request,
     error: (
@@ -258,6 +265,47 @@ async def sale_conflict_handler(
         | SaleHasNoItemsError
         | SaleItemAlreadyExistsError
     ),
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=409,
+        content={"detail": str(error)},
+    )
+
+
+async def invalid_credentials_handler(
+    request: Request,
+    error: InvalidCredentialsError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=401,
+        content={"detail": str(error)},
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+async def insufficient_permissions_handler(
+    request: Request,
+    error: InsufficientPermissionsError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=403,
+        content={"detail": str(error)},
+    )
+
+
+async def user_already_exists_handler(
+    request: Request,
+    error: UserEmailAlreadyExistsError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=409,
+        content={"detail": str(error)},
+    )
+
+
+async def invalid_user_update_handler(
+    request: Request,
+    error: InvalidUserUpdateError,
 ) -> JSONResponse:
     return JSONResponse(
         status_code=409,

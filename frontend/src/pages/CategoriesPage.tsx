@@ -3,8 +3,12 @@ import { useCallback, useEffect, useState } from "react";
 import "../App.css";
 import { apiGet, apiPost } from "../lib/api";
 import type { Category } from "../types/api";
+import { hasRole, useCurrentUser } from "../lib/auth";
 
 function CategoriesPage() {
+  const currentUser = useCurrentUser();
+
+  const canManageCatalog = hasRole(currentUser, "admin");
   const [categories, setCategories] = useState<Category[]>([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -84,36 +88,43 @@ function CategoriesPage() {
       )}
 
       {success && <p className="success-message">{success}</p>}
+      {canManageCatalog ? (
+        <section className="panel">
+          <h2>Nueva categoría</h2>
 
-      <section className="panel">
-        <h2>Nueva categoría</h2>
+          <form className="sale-form" onSubmit={handleSubmit}>
+            <div className="form-grid">
+              <label>
+                Nombre
+                <input
+                  placeholder="Ej.: Lúpulos"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                />
+              </label>
 
-        <form className="sale-form" onSubmit={handleSubmit}>
-          <div className="form-grid">
-            <label>
-              Nombre
-              <input
-                placeholder="Ej.: Lúpulos"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-              />
-            </label>
+              <label>
+                Descripción
+                <input
+                  placeholder="Descripción opcional"
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                />
+              </label>
+            </div>
 
-            <label>
-              Descripción
-              <input
-                placeholder="Descripción opcional"
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-              />
-            </label>
-          </div>
-
-          <button disabled={isSaving} type="submit">
-            {isSaving ? "Creando..." : "Crear categoría"}
-          </button>
-        </form>
-      </section>
+            <button disabled={isSaving} type="submit">
+              {isSaving ? "Creando..." : "Crear categoría"}
+            </button>
+          </form>
+        </section>
+      ) : (
+        <section className="panel">
+          <p className="empty-state">
+            Solo los administradores pueden modificar este catálogo.
+          </p>
+        </section>
+      )}
 
       <section className="panel">
         <h2>Categorías registradas</h2>
@@ -121,9 +132,7 @@ function CategoriesPage() {
         {isLoading ? (
           <p>Cargando categorías...</p>
         ) : categories.length === 0 ? (
-          <p className="empty-state">
-            Todavía no hay categorías registradas.
-          </p>
+          <p className="empty-state">Todavía no hay categorías registradas.</p>
         ) : (
           <div className="table-wrapper">
             <table>

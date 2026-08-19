@@ -7,6 +7,7 @@ import type {
   CompletedSaleReportItem,
   RawMaterialLowStock,
 } from "../types/api";
+import { hasRole, useCurrentUser } from "../lib/auth";
 
 const formatCurrency = (amount: string) =>
   new Intl.NumberFormat("es-ES", {
@@ -21,6 +22,9 @@ const formatDate = (value: string) =>
   }).format(new Date(value));
 
 function DashboardPage() {
+  const currentUser = useCurrentUser();
+
+  const canViewSales = hasRole(currentUser, "admin", "management");
   const [rawMaterialAlerts, setRawMaterialAlerts] = useState<
     RawMaterialLowStock[]
   >([]);
@@ -36,12 +40,14 @@ function DashboardPage() {
   useEffect(() => {
     async function loadDashboard() {
       try {
-        const [rawMaterialData, beerPresentationData, completedSalesData] =
-          await Promise.all([
-            apiGet<RawMaterialLowStock[]>("/raw-materials/low-stock"),
-            apiGet<BeerPresentationLowStock[]>("/beer-presentations/low-stock"),
-            apiGet<CompletedSaleReportItem[]>("/sales/report"),
-          ]);
+        const [rawMaterialData, beerPresentationData] = await Promise.all([
+          apiGet<RawMaterialLowStock[]>("/raw-materials/low-stock"),
+          apiGet<BeerPresentationLowStock[]>("/beer-presentations/low-stock"),
+        ]);
+
+        const completedSalesData = canViewSales
+          ? await apiGet<CompletedSaleReportItem[]>("/sales/report")
+          : [];
 
         setRawMaterialAlerts(rawMaterialData);
         setBeerPresentationAlerts(beerPresentationData);
@@ -58,7 +64,7 @@ function DashboardPage() {
     }
 
     loadDashboard();
-  }, []);
+  }, [canViewSales]);
 
   return (
     <main className="dashboard">
@@ -89,10 +95,12 @@ function DashboardPage() {
               <strong>{beerPresentationAlerts.length}</strong>
             </article>
 
-            <article className="summary-card">
-              <p>Ventas completadas</p>
-              <strong>{completedSales.length}</strong>
-            </article>
+            {canViewSales && (
+              <article className="summary-card">
+                <p>Ventas completadas</p>
+                <strong>{completedSales.length}</strong>
+              </article>
+            )}
           </section>
 
           <section className="dashboard-grid">
@@ -146,39 +154,42 @@ function DashboardPage() {
               )}
             </article>
           </section>
+          {canViewSales && (
+            <section className="panel sales-panel">
+              <h2>Ventas completadas</h2>
 
-          <section className="panel sales-panel">
-            <h2>Ventas completadas</h2>
-
-            {completedSales.length === 0 ? (
-              <p className="empty-state">Todavía no hay ventas completadas.</p>
-            ) : (
-              <div className="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Venta</th>
-                      <th>Cliente</th>
-                      <th>Fecha</th>
-                      <th>Unidades</th>
-                      <th>Importe</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {completedSales.map((sale) => (
-                      <tr key={sale.sale_id}>
-                        <td>{sale.sale_code}</td>
-                        <td>{sale.customer_name}</td>
-                        <td>{formatDate(sale.completed_at)}</td>
-                        <td>{sale.total_units}</td>
-                        <td>{formatCurrency(sale.total_amount)}</td>
+              {completedSales.length === 0 ? (
+                <p className="empty-state">
+                  Todavía no hay ventas completadas.
+                </p>
+              ) : (
+                <div className="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Venta</th>
+                        <th>Cliente</th>
+                        <th>Fecha</th>
+                        <th>Unidades</th>
+                        <th>Importe</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
+                    </thead>
+                    <tbody>
+                      {completedSales.map((sale) => (
+                        <tr key={sale.sale_id}>
+                          <td>{sale.sale_code}</td>
+                          <td>{sale.customer_name}</td>
+                          <td>{formatDate(sale.completed_at)}</td>
+                          <td>{sale.total_units}</td>
+                          <td>{formatCurrency(sale.total_amount)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          )}
         </>
       )}
     </main>

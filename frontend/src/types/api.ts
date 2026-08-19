@@ -273,3 +273,26 @@ export type SaleDetail = {
   items: SaleDetailItem[];
   total_amount: string;
 };
+
+export type UserRole = "admin" | "operator" | "management";
+
+export type AuthenticatedUser = {
+  id: number;
+  email: string;
+  full_name: string;
+  role: UserRole;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TokenResponse = {
+  access_token: string;
+  token_type: string;
+};
+
+export type RawMaterialReference = {
+  id: number;
+  code: string;
+  name: string;
+};

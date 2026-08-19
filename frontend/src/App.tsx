@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -26,12 +26,91 @@ import SuppliersPage from "./pages/SuppliersPage";
 import CategoriesPage from "./pages/CategoriesPage";
 import UnitsPage from "./pages/UnitsPage";
 import SaleDetailsPage from "./pages/SaleDetailsPage";
-import { isDemoMode } from "./lib/api";
+import LoginPage from "./pages/LoginPage";
+import {
+  apiGet,
+  apiPost,
+  clearAccessToken,
+  getAccessToken,
+  isAuthRequired,
+  isDemoMode,
+  setAccessToken,
+} from "./lib/api";
+import type { AuthenticatedUser, TokenResponse } from "./types/api";
+import { AuthProvider } from "./lib/auth";
+import UsersPage from "./pages/UsersPage";
 
-function App() {
+function AppContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [user, setUser] = useState<AuthenticatedUser | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(isAuthRequired);
+
+  useEffect(() => {
+    async function loadSession() {
+      if (!isAuthRequired || !getAccessToken()) {
+        setIsAuthLoading(false);
+        return;
+      }
+
+      try {
+        const currentUser = await apiGet<AuthenticatedUser>("/auth/me");
+        setUser(currentUser);
+      } catch {
+        clearAccessToken();
+        setUser(null);
+      } finally {
+        setIsAuthLoading(false);
+      }
+    }
+
+    void loadSession();
+  }, []);
+
+  async function handleLogin(email: string, password: string): Promise<void> {
+    const tokenResponse = await apiPost<TokenResponse>("/auth/login", {
+      email,
+      password,
+    });
+
+    setAccessToken(tokenResponse.access_token);
+
+    try {
+      const currentUser = await apiGet<AuthenticatedUser>("/auth/me");
+      setUser(currentUser);
+    } catch (error) {
+      clearAccessToken();
+      throw error;
+    }
+  }
+
+  function handleLogout() {
+    clearAccessToken();
+    setUser(null);
+    setIsMenuOpen(false);
+  }
+
+  if (isAuthRequired && isAuthLoading) {
+    return (
+      <main className="login-page">
+        <p>Verificando sesión...</p>
+      </main>
+    );
+  }
+
+  if (isAuthRequired && !user) {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
+
+  const hasFinancialAccess = !isAuthRequired || user?.role !== "operator";
+  const isAdministrator = user?.role === "admin";
+
   return (
-    <BrowserRouter>
+    <AuthProvider user={user}>
       <div className="app-shell">
         <header className="topbar">
           <div className="topbar-brand">
@@ -39,6 +118,19 @@ function App() {
               <p className="brand">BrewMaster ERP</p>
               <p className="subtitle">Panel operativo</p>
             </div>
+
+            {isAuthRequired && user && (
+              <div className="session-controls">
+                <span>{user.full_name}</span>
+                <button
+                  className="logout-button"
+                  onClick={handleLogout}
+                  type="button"
+                >
+                  Salir
+                </button>
+              </div>
+            )}
 
             <button
               aria-controls="primary-navigation"
@@ -66,14 +158,18 @@ function App() {
             >
               Dashboard
             </NavLink>
-            <NavLink
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-              to="/insumos"
-            >
-              Insumos
-            </NavLink>
+
+            {hasFinancialAccess && (
+              <NavLink
+                className={({ isActive }) =>
+                  isActive ? "nav-link active" : "nav-link"
+                }
+                to="/insumos"
+              >
+                Insumos
+              </NavLink>
+            )}
+
             <NavLink
               className={({ isActive }) =>
                 isActive ? "nav-link active" : "nav-link"
@@ -82,14 +178,18 @@ function App() {
             >
               Producto terminado
             </NavLink>
-            <NavLink
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-              to="/ventas"
-            >
-              Ventas
-            </NavLink>
+
+            {hasFinancialAccess && (
+              <NavLink
+                className={({ isActive }) =>
+                  isActive ? "nav-link active" : "nav-link"
+                }
+                to="/ventas"
+              >
+                Ventas
+              </NavLink>
+            )}
+
             <NavLink
               className={({ isActive }) =>
                 isActive ? "nav-link active" : "nav-link"
@@ -98,6 +198,7 @@ function App() {
             >
               Producción
             </NavLink>
+
             <NavLink
               className={({ isActive }) =>
                 isActive ? "nav-link active" : "nav-link"
@@ -106,22 +207,29 @@ function App() {
             >
               Envasado
             </NavLink>
-            <NavLink
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-              to="/movimientos-insumos"
-            >
-              Mov. insumos
-            </NavLink>
-            <NavLink
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-              to="/clientes"
-            >
-              Clientes
-            </NavLink>
+
+            {hasFinancialAccess && (
+              <NavLink
+                className={({ isActive }) =>
+                  isActive ? "nav-link active" : "nav-link"
+                }
+                to="/movimientos-insumos"
+              >
+                Mov. insumos
+              </NavLink>
+            )}
+
+            {hasFinancialAccess && (
+              <NavLink
+                className={({ isActive }) =>
+                  isActive ? "nav-link active" : "nav-link"
+                }
+                to="/clientes"
+              >
+                Clientes
+              </NavLink>
+            )}
+
             <NavLink
               className={({ isActive }) =>
                 isActive ? "nav-link active" : "nav-link"
@@ -130,6 +238,7 @@ function App() {
             >
               Cervezas
             </NavLink>
+
             <NavLink
               className={({ isActive }) =>
                 isActive ? "nav-link active" : "nav-link"
@@ -138,6 +247,7 @@ function App() {
             >
               Formatos
             </NavLink>
+
             <NavLink
               className={({ isActive }) =>
                 isActive ? "nav-link active" : "nav-link"
@@ -146,6 +256,7 @@ function App() {
             >
               Presentaciones
             </NavLink>
+
             <NavLink
               className={({ isActive }) =>
                 isActive ? "nav-link active" : "nav-link"
@@ -154,6 +265,7 @@ function App() {
             >
               Recetas
             </NavLink>
+
             <NavLink
               className={({ isActive }) =>
                 isActive ? "nav-link active" : "nav-link"
@@ -162,6 +274,7 @@ function App() {
             >
               Ingredientes
             </NavLink>
+
             <NavLink
               className={({ isActive }) =>
                 isActive ? "nav-link active" : "nav-link"
@@ -170,14 +283,18 @@ function App() {
             >
               Materiales
             </NavLink>
-            <NavLink
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-              to="/proveedores"
-            >
-              Proveedores
-            </NavLink>
+
+            {hasFinancialAccess && (
+              <NavLink
+                className={({ isActive }) =>
+                  isActive ? "nav-link active" : "nav-link"
+                }
+                to="/proveedores"
+              >
+                Proveedores
+              </NavLink>
+            )}
+
             <NavLink
               className={({ isActive }) =>
                 isActive ? "nav-link active" : "nav-link"
@@ -186,6 +303,7 @@ function App() {
             >
               Categorías
             </NavLink>
+
             <NavLink
               className={({ isActive }) =>
                 isActive ? "nav-link active" : "nav-link"
@@ -194,16 +312,31 @@ function App() {
             >
               Unidades
             </NavLink>
-            <NavLink
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-              to="/detalle-ventas"
-            >
-              Detalle ventas
-            </NavLink>
+
+            {isAdministrator && (
+              <NavLink
+                className={({ isActive }) =>
+                  isActive ? "nav-link active" : "nav-link"
+                }
+                to="/usuarios"
+              >
+                Usuarios
+              </NavLink>
+            )}
+
+            {hasFinancialAccess && (
+              <NavLink
+                className={({ isActive }) =>
+                  isActive ? "nav-link active" : "nav-link"
+                }
+                to="/detalle-ventas"
+              >
+                Detalle ventas
+              </NavLink>
+            )}
           </nav>
         </header>
+
         {isDemoMode && (
           <p className="demo-banner" role="status">
             Demo pública: explorá los flujos y datos de ejemplo. Los cambios
@@ -214,7 +347,6 @@ function App() {
         <Routes>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/insumos" element={<RawMaterialsPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
           <Route
             path="/producto-terminado"
             element={<FinishedProductsPage />}
@@ -243,8 +375,24 @@ function App() {
           <Route path="/categorias" element={<CategoriesPage />} />
           <Route path="/unidades" element={<UnitsPage />} />
           <Route path="/detalle-ventas" element={<SaleDetailsPage />} />
+          <Route path="/login" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route
+            path="/usuarios"
+            element={
+              isAdministrator ? <UsersPage /> : <Navigate to="/" replace />
+            }
+          />
         </Routes>
       </div>
+    </AuthProvider>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
     </BrowserRouter>
   );
 }

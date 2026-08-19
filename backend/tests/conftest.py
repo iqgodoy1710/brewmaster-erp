@@ -29,7 +29,7 @@ def clean_database():
                 "raw_material_stock_movements, beers, recipes, recipe_ingredients, "
                 "production_batches, packaging_formats, beer_presentations, "
                 "beer_presentation_packaging_materials, packaging_runs, "
-                "beer_presentation_stock_movements, customers, sales, sale_items "
+                "beer_presentation_stock_movements, customers, sales, sale_items, users "
                 "RESTART IDENTITY CASCADE"
             )
         )
@@ -44,7 +44,7 @@ def clean_database():
                 "raw_material_stock_movements, beers, recipes, recipe_ingredients, "
                 "production_batches, packaging_formats, beer_presentations, "
                 "beer_presentation_packaging_materials, packaging_runs, "
-                "beer_presentation_stock_movements, customers, sales, sale_items "
+                "beer_presentation_stock_movements, customers, sales, sale_items, users "
                 "RESTART IDENTITY CASCADE"
             )
         )
@@ -66,3 +66,12 @@ def client():
         yield test_client
 
     app.dependency_overrides.clear()
+
+@pytest.fixture
+def db():
+    db = TestingSessionLocal()
+
+    try:
+        yield db
+    finally:
+        db.close()

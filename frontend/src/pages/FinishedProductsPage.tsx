@@ -3,8 +3,12 @@ import { useEffect, useState } from "react";
 import "../App.css";
 import { apiGet, apiPatch } from "../lib/api";
 import type { BeerPresentation } from "../types/api";
+import { hasRole, useCurrentUser } from "../lib/auth";
 
 function FinishedProductsPage() {
+  const currentUser = useCurrentUser();
+
+  const canManageMinimumStock = hasRole(currentUser, "admin", "management");
   const [presentations, setPresentations] = useState<BeerPresentation[]>([]);
   const [minimumStockInputs, setMinimumStockInputs] = useState<
     Record<string, string>
@@ -134,37 +138,41 @@ function FinishedProductsPage() {
                       <td>{presentation.name}</td>
                       <td>{presentation.current_stock}</td>
                       <td>
-                        <form
-                          className="minimum-stock-form"
-                          onSubmit={(event) =>
-                            updateMinimumStock(event, presentation)
-                          }
-                        >
-                          <input
-                            aria-label={`Stock mínimo de ${presentation.name}`}
-                            min="0"
-                            step="1"
-                            type="number"
-                            value={
-                              minimumStockInputs[presentation.code] ??
-                              String(presentation.minimum_stock)
+                        {canManageMinimumStock ? (
+                          <form
+                            className="minimum-stock-form"
+                            onSubmit={(event) =>
+                              updateMinimumStock(event, presentation)
                             }
-                            onChange={(event) =>
-                              setMinimumStockInputs((currentInputs) => ({
-                                ...currentInputs,
-                                [presentation.code]: event.target.value,
-                              }))
-                            }
-                          />
-                          <button
-                            disabled={savingCode === presentation.code}
-                            type="submit"
                           >
-                            {savingCode === presentation.code
-                              ? "Guardando..."
-                              : "Guardar"}
-                          </button>
-                        </form>
+                            <input
+                              aria-label={`Stock mínimo de ${presentation.name}`}
+                              min="0"
+                              step="1"
+                              type="number"
+                              value={
+                                minimumStockInputs[presentation.code] ??
+                                String(presentation.minimum_stock)
+                              }
+                              onChange={(event) =>
+                                setMinimumStockInputs((currentInputs) => ({
+                                  ...currentInputs,
+                                  [presentation.code]: event.target.value,
+                                }))
+                              }
+                            />
+                            <button
+                              disabled={savingCode === presentation.code}
+                              type="submit"
+                            >
+                              {savingCode === presentation.code
+                                ? "Guardando..."
+                                : "Guardar"}
+                            </button>
+                          </form>
+                        ) : (
+                          presentation.minimum_stock
+                        )}
                       </td>
                     </tr>
                   ))}

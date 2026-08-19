@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import "../App.css";
 import { apiGet, apiPost } from "../lib/api";
 import type { Beer, Recipe } from "../types/api";
+import { hasRole, useCurrentUser } from "../lib/auth";
 
 const formatNumber = (value: string) =>
   new Intl.NumberFormat("es-ES", {
@@ -11,6 +12,9 @@ const formatNumber = (value: string) =>
   }).format(Number(value));
 
 function RecipesPage() {
+  const currentUser = useCurrentUser();
+
+  const canManageCatalog = hasRole(currentUser, "admin");
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [beers, setBeers] = useState<Beer[]>([]);
   const [beerId, setBeerId] = useState("");
@@ -48,9 +52,7 @@ function RecipesPage() {
     loadData();
   }, [loadData]);
 
-  async function createRecipe(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
+  async function createRecipe(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const parsedVersion = Number(version);
@@ -66,10 +68,7 @@ function RecipesPage() {
       return;
     }
 
-    if (
-      !Number.isFinite(parsedTargetVolume) ||
-      parsedTargetVolume <= 0
-    ) {
+    if (!Number.isFinite(parsedTargetVolume) || parsedTargetVolume <= 0) {
       setError("El volumen objetivo debe ser mayor a cero.");
       return;
     }
@@ -116,75 +115,85 @@ function RecipesPage() {
       </section>
 
       {isLoading && <p>Cargando recetas...</p>}
-      {error && <p className="error-message" role="alert">{error}</p>}
+      {error && (
+        <p className="error-message" role="alert">
+          {error}
+        </p>
+      )}
       {success && <p className="success-message">{success}</p>}
 
       {!isLoading && hasLoaded && (
         <>
-          <section className="panel sales-form-panel">
-            <h2>Nueva receta</h2>
+          {canManageCatalog ? (
+            <section className="panel sales-form-panel">
+              <h2>Nueva receta</h2>
 
-            <form className="sale-form" onSubmit={createRecipe}>
-              <div className="form-grid">
-                <label>
-                  Cerveza
-                  <select
-                    onChange={(event) => setBeerId(event.target.value)}
-                    required
-                    value={beerId}
-                  >
-                    <option value="">Seleccioná una cerveza</option>
-                    {beers.map((beer) => (
-                      <option key={beer.id} value={beer.id}>
-                        {beer.code} · {beer.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+              <form className="sale-form" onSubmit={createRecipe}>
+                <div className="form-grid">
+                  <label>
+                    Cerveza
+                    <select
+                      onChange={(event) => setBeerId(event.target.value)}
+                      required
+                      value={beerId}
+                    >
+                      <option value="">Seleccioná una cerveza</option>
+                      {beers.map((beer) => (
+                        <option key={beer.id} value={beer.id}>
+                          {beer.code} · {beer.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
-                <label>
-                  Versión
-                  <input
-                    min="1"
-                    onChange={(event) => setVersion(event.target.value)}
-                    required
-                    step="1"
-                    type="number"
-                    value={version}
-                  />
-                </label>
-              </div>
+                  <label>
+                    Versión
+                    <input
+                      min="1"
+                      onChange={(event) => setVersion(event.target.value)}
+                      required
+                      step="1"
+                      type="number"
+                      value={version}
+                    />
+                  </label>
+                </div>
 
-              <div className="form-grid">
-                <label>
-                  Volumen objetivo (L)
-                  <input
-                    min="0.001"
-                    onChange={(event) =>
-                      setTargetVolume(event.target.value)
-                    }
-                    required
-                    step="0.001"
-                    type="number"
-                    value={targetVolume}
-                  />
-                </label>
+                <div className="form-grid">
+                  <label>
+                    Volumen objetivo (L)
+                    <input
+                      min="0.001"
+                      onChange={(event) => setTargetVolume(event.target.value)}
+                      required
+                      step="0.001"
+                      type="number"
+                      value={targetVolume}
+                    />
+                  </label>
 
-                <label>
-                  Notas
-                  <input
-                    onChange={(event) => setNotes(event.target.value)}
-                    placeholder="Notas opcionales."
-                    value={notes}
-                  />
-                </label>
-              </div>
+                  <label>
+                    Notas
+                    <input
+                      onChange={(event) => setNotes(event.target.value)}
+                      placeholder="Notas opcionales."
+                      value={notes}
+                    />
+                  </label>
+                </div>
 
-              <button disabled={isSaving} type="submit">
-                {isSaving ? "Creando receta..." : "Crear receta"}
-              </button>
-            </form>
-          </section>
+                <button disabled={isSaving} type="submit">
+                  {isSaving ? "Creando receta..." : "Crear receta"}
+                </button>
+              </form>
+            </section>
+          ) : (
+            <section className="panel">
+              <p className="empty-state">
+                Solo los administradores pueden crear recetas.
+              </p>
+            </section>
+          )}
 
           <section className="panel">
             <h2>Recetas registradas</h2>
@@ -206,9 +215,7 @@ function RecipesPage() {
                       <td>{recipe.id}</td>
                       <td>{beerName(recipe.beer_id)}</td>
                       <td>{recipe.version}</td>
-                      <td>
-                        {formatNumber(recipe.target_volume_liters)} L
-                      </td>
+                      <td>{formatNumber(recipe.target_volume_liters)} L</td>
                       <td>{recipe.notes ?? "—"}</td>
                     </tr>
                   ))}

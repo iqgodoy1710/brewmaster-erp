@@ -544,3 +544,29 @@ th:last-child {
   font-size: 0.9rem;
   font-weight: 650;
 }
+
+.login-page {
+  display: grid;
+  min-height: calc(100vh - 4rem);
+  padding: 2rem;
+  place-items: center;
+}
+
+.login-panel {
+  display: grid;
+  gap: 1rem;
+  max-width: 28rem;
+  width: 100%;
+}
+
+.login-form {
+  display: grid;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.login-form label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 700;
+}

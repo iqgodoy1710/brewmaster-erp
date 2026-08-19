@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import "../App.css";
 import { apiGet, apiPost } from "../lib/api";
 import type { PackagingFormat } from "../types/api";
+import { hasRole, useCurrentUser } from "../lib/auth";
 
 const formatNumber = (value: string) =>
   new Intl.NumberFormat("es-ES", {
@@ -11,6 +12,9 @@ const formatNumber = (value: string) =>
   }).format(Number(value));
 
 function PackagingFormatsPage() {
+  const currentUser = useCurrentUser();
+
+  const canManageCatalog = hasRole(currentUser, "admin");
   const [formats, setFormats] = useState<PackagingFormat[]>([]);
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
@@ -24,9 +28,7 @@ function PackagingFormatsPage() {
 
   const loadFormats = useCallback(async () => {
     try {
-      const data = await apiGet<PackagingFormat[]>(
-        "/packaging-formats/",
-      );
+      const data = await apiGet<PackagingFormat[]>("/packaging-formats/");
       setFormats(data);
       setHasLoaded(true);
     } catch (caughtError) {
@@ -44,9 +46,7 @@ function PackagingFormatsPage() {
     loadFormats();
   }, [loadFormats]);
 
-  async function createFormat(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
+  async function createFormat(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const capacity = Number(capacityLiters);
@@ -66,15 +66,12 @@ function PackagingFormatsPage() {
     setIsSaving(true);
 
     try {
-      const format = await apiPost<PackagingFormat>(
-        "/packaging-formats/",
-        {
-          code: code.trim(),
-          name: name.trim(),
-          capacity_liters: capacityLiters,
-          description: description.trim() || null,
-        },
-      );
+      const format = await apiPost<PackagingFormat>("/packaging-formats/", {
+        code: code.trim(),
+        name: name.trim(),
+        capacity_liters: capacityLiters,
+        description: description.trim() || null,
+      });
 
       setCode("");
       setName("");
@@ -103,72 +100,81 @@ function PackagingFormatsPage() {
       </section>
 
       {isLoading && <p>Cargando formatos de envasado...</p>}
-      {error && <p className="error-message" role="alert">{error}</p>}
+      {error && (
+        <p className="error-message" role="alert">
+          {error}
+        </p>
+      )}
       {success && <p className="success-message">{success}</p>}
 
       {!isLoading && hasLoaded && (
         <>
-          <section className="panel sales-form-panel">
-            <h2>Nuevo formato</h2>
+          {canManageCatalog ? (
+            <section className="panel sales-form-panel">
+              <h2>Nuevo formato</h2>
 
-            <form className="sale-form" onSubmit={createFormat}>
-              <div className="form-grid">
-                <label>
-                  Código
-                  <input
-                    maxLength={20}
-                    onChange={(event) => setCode(event.target.value)}
-                    placeholder="CAN-473"
-                    required
-                    value={code}
-                  />
-                </label>
+              <form className="sale-form" onSubmit={createFormat}>
+                <div className="form-grid">
+                  <label>
+                    Código
+                    <input
+                      maxLength={20}
+                      onChange={(event) => setCode(event.target.value)}
+                      placeholder="CAN-473"
+                      required
+                      value={code}
+                    />
+                  </label>
 
-                <label>
-                  Nombre
-                  <input
-                    maxLength={100}
-                    onChange={(event) => setName(event.target.value)}
-                    placeholder="Lata 473 mL"
-                    required
-                    value={name}
-                  />
-                </label>
-              </div>
+                  <label>
+                    Nombre
+                    <input
+                      maxLength={100}
+                      onChange={(event) => setName(event.target.value)}
+                      placeholder="Lata 473 mL"
+                      required
+                      value={name}
+                    />
+                  </label>
+                </div>
 
-              <div className="form-grid">
-                <label>
-                  Capacidad (L)
-                  <input
-                    min="0.001"
-                    onChange={(event) =>
-                      setCapacityLiters(event.target.value)
-                    }
-                    required
-                    step="0.001"
-                    type="number"
-                    value={capacityLiters}
-                  />
-                </label>
+                <div className="form-grid">
+                  <label>
+                    Capacidad (L)
+                    <input
+                      min="0.001"
+                      onChange={(event) =>
+                        setCapacityLiters(event.target.value)
+                      }
+                      required
+                      step="0.001"
+                      type="number"
+                      value={capacityLiters}
+                    />
+                  </label>
 
-                <label>
-                  Descripción
-                  <input
-                    onChange={(event) =>
-                      setDescription(event.target.value)
-                    }
-                    placeholder="Descripción opcional."
-                    value={description}
-                  />
-                </label>
-              </div>
+                  <label>
+                    Descripción
+                    <input
+                      onChange={(event) => setDescription(event.target.value)}
+                      placeholder="Descripción opcional."
+                      value={description}
+                    />
+                  </label>
+                </div>
 
-              <button disabled={isSaving} type="submit">
-                {isSaving ? "Creando formato..." : "Crear formato"}
-              </button>
-            </form>
-          </section>
-
+                <button disabled={isSaving} type="submit">
+                  {isSaving ? "Creando formato..." : "Crear formato"}
+                </button>
+              </form>
+            </section>
+          ) : (
+            <section className="panel">
+              <p className="empty-state">
+                Solo los administradores pueden modificar este catálogo.
+              </p>
+            </section>
+          )}
           <section className="panel">
             <h2>Formatos registrados</h2>
 
@@ -192,9 +198,7 @@ function PackagingFormatsPage() {
                       <tr key={format.id}>
                         <td>{format.code}</td>
                         <td>{format.name}</td>
-                        <td>
-                          {formatNumber(format.capacity_liters)} L
-                        </td>
+                        <td>{formatNumber(format.capacity_liters)} L</td>
                         <td>{format.description ?? "—"}</td>
                       </tr>
                     ))}

@@ -1,4 +1,6 @@
+from app.api.auth_dependencies import require_roles
 from app.db.dependencies import get_db
+from app.models.enums import UserRole
 from app.schemas.beer_presentation_packaging_material import (
     BeerPresentationPackagingMaterialCreate,
     BeerPresentationPackagingMaterialResponse,
@@ -11,6 +13,15 @@ from sqlalchemy.orm import Session
 
 router = APIRouter(
     tags=["Beer Presentation Packaging Materials"],
+    dependencies=[
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+                UserRole.OPERATOR,
+                UserRole.MANAGEMENT,
+            )
+        )
+    ],
 )
 
 
@@ -32,6 +43,13 @@ def read_beer_presentation_packaging_materials(
     "/beer-presentation-packaging-materials/",
     response_model=BeerPresentationPackagingMaterialResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+            )
+        )
+    ],
 )
 def create_beer_presentation_packaging_material(
     packaging_material: BeerPresentationPackagingMaterialCreate,

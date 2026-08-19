@@ -3,8 +3,12 @@ import { useCallback, useEffect, useState } from "react";
 import "../App.css";
 import { apiGet, apiPost } from "../lib/api";
 import type { Beer } from "../types/api";
+import { hasRole, useCurrentUser } from "../lib/auth";
 
 function BeersPage() {
+  const currentUser = useCurrentUser();
+
+  const canManageCatalog = hasRole(currentUser, "admin");
   const [beers, setBeers] = useState<Beer[]>([]);
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
@@ -36,9 +40,7 @@ function BeersPage() {
     loadBeers();
   }, [loadBeers]);
 
-  async function createBeer(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
+  async function createBeer(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!code.trim()) {
@@ -101,63 +103,68 @@ function BeersPage() {
 
       {!isLoading && hasLoaded && (
         <>
-          <section className="panel sales-form-panel">
-            <h2>Nueva cerveza</h2>
+          {canManageCatalog ? (
+            <section className="panel sales-form-panel">
+              <h2>Nueva cerveza</h2>
 
-            <form className="sale-form" onSubmit={createBeer}>
-              <div className="form-grid">
-                <label>
-                  Código
-                  <input
-                    maxLength={20}
-                    onChange={(event) => setCode(event.target.value)}
-                    placeholder="IPA-001"
-                    required
-                    value={code}
-                  />
-                </label>
+              <form className="sale-form" onSubmit={createBeer}>
+                <div className="form-grid">
+                  <label>
+                    Código
+                    <input
+                      maxLength={20}
+                      onChange={(event) => setCode(event.target.value)}
+                      placeholder="IPA-001"
+                      required
+                      value={code}
+                    />
+                  </label>
 
-                <label>
-                  Nombre
-                  <input
-                    maxLength={100}
-                    onChange={(event) => setName(event.target.value)}
-                    placeholder="IPA clásica"
-                    required
-                    value={name}
-                  />
-                </label>
-              </div>
+                  <label>
+                    Nombre
+                    <input
+                      maxLength={100}
+                      onChange={(event) => setName(event.target.value)}
+                      placeholder="IPA clásica"
+                      required
+                      value={name}
+                    />
+                  </label>
+                </div>
 
-              <div className="form-grid">
-                <label>
-                  Estilo
-                  <input
-                    maxLength={50}
-                    onChange={(event) => setStyle(event.target.value)}
-                    placeholder="India Pale Ale"
-                    value={style}
-                  />
-                </label>
+                <div className="form-grid">
+                  <label>
+                    Estilo
+                    <input
+                      maxLength={50}
+                      onChange={(event) => setStyle(event.target.value)}
+                      placeholder="India Pale Ale"
+                      value={style}
+                    />
+                  </label>
 
-                <label>
-                  Descripción
-                  <input
-                    onChange={(event) =>
-                      setDescription(event.target.value)
-                    }
-                    placeholder="Descripción opcional."
-                    value={description}
-                  />
-                </label>
-              </div>
+                  <label>
+                    Descripción
+                    <input
+                      onChange={(event) => setDescription(event.target.value)}
+                      placeholder="Descripción opcional."
+                      value={description}
+                    />
+                  </label>
+                </div>
 
-              <button disabled={isSaving} type="submit">
-                {isSaving ? "Creando cerveza..." : "Crear cerveza"}
-              </button>
-            </form>
-          </section>
-
+                <button disabled={isSaving} type="submit">
+                  {isSaving ? "Creando cerveza..." : "Crear cerveza"}
+                </button>
+              </form>
+            </section>
+          ) : (
+            <section className="panel">
+              <p className="empty-state">
+                Solo los administradores pueden modificar este catálogo.
+              </p>
+            </section>
+          )}
           <section className="panel">
             <h2>Cervezas registradas</h2>
 

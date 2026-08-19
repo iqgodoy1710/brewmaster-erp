@@ -8,6 +8,7 @@ import type {
   ProductionBatch,
   Recipe,
 } from "../types/api";
+import { hasRole, useCurrentUser } from "../lib/auth";
 
 const formatNumber = (value: string) =>
   new Intl.NumberFormat("es-ES", {
@@ -22,6 +23,9 @@ const formatDate = (value: string) =>
   }).format(new Date(value));
 
 function PackagingPage() {
+  const currentUser = useCurrentUser();
+
+  const canManageOperations = hasRole(currentUser, "admin", "operator");
   const [runs, setRuns] = useState<PackagingRun[]>([]);
   const [batches, setBatches] = useState<ProductionBatch[]>([]);
   const [presentations, setPresentations] = useState<BeerPresentation[]>([]);
@@ -109,9 +113,7 @@ function PackagingPage() {
     [runs],
   );
 
-  async function createPackagingRun(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
+  async function createPackagingRun(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const quantity = Number(packagedQuantity);
@@ -154,9 +156,7 @@ function PackagingPage() {
       setPresentationId("");
       setPackagedQuantity("");
       setNotes("");
-      setSuccess(
-        `La corrida ${run.code} fue registrada correctamente.`,
-      );
+      setSuccess(`La corrida ${run.code} fue registrada correctamente.`);
 
       await loadPackagingData();
     } catch (caughtError) {
@@ -175,9 +175,7 @@ function PackagingPage() {
       <section className="page-heading">
         <p className="eyebrow">Operación</p>
         <h1>Envasado</h1>
-        <p>
-          Convertí cerveza a granel en producto terminado por presentación.
-        </p>
+        <p>Convertí cerveza a granel en producto terminado por presentación.</p>
       </section>
 
       {isLoading && <p>Cargando datos de envasado...</p>}
@@ -192,104 +190,104 @@ function PackagingPage() {
 
       {!isLoading && hasLoaded && (
         <>
-          <section className="panel sales-form-panel">
-            <h2>Nueva corrida de envasado</h2>
+          {canManageOperations ? (
+            <section className="panel sales-form-panel">
+              <h2>Nueva corrida de envasado</h2>
 
-            <form className="sale-form" onSubmit={createPackagingRun}>
-              <div className="form-grid">
+              <form className="sale-form" onSubmit={createPackagingRun}>
+                <div className="form-grid">
+                  <label>
+                    Código de corrida
+                    <input
+                      maxLength={30}
+                      onChange={(event) => setRunCode(event.target.value)}
+                      placeholder="PACK-IPA-B500-003"
+                      required
+                      value={runCode}
+                    />
+                  </label>
+
+                  <label>
+                    Lote completado
+                    <select
+                      onChange={(event) => {
+                        setBatchId(event.target.value);
+                        setPresentationId("");
+                      }}
+                      required
+                      value={batchId}
+                    >
+                      <option value="">Seleccioná un lote</option>
+                      {eligibleBatches.map((batch) => (
+                        <option key={batch.id} value={batch.id}>
+                          {batch.code} · Granel:{" "}
+                          {formatNumber(batch.available_bulk_volume_liters)} L
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                <div className="form-grid">
+                  <label>
+                    Presentación de la misma cerveza
+                    <select
+                      disabled={!selectedBatch}
+                      onChange={(event) =>
+                        setPresentationId(event.target.value)
+                      }
+                      required
+                      value={presentationId}
+                    >
+                      <option value="">
+                        {selectedBatch
+                          ? "Seleccioná una presentación"
+                          : "Seleccioná primero un lote"}
+                      </option>
+                      {compatiblePresentations.map((presentation) => (
+                        <option key={presentation.id} value={presentation.id}>
+                          {presentation.code} · {presentation.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    Cantidad envasada
+                    <input
+                      min="1"
+                      onChange={(event) =>
+                        setPackagedQuantity(event.target.value)
+                      }
+                      required
+                      step="1"
+                      type="number"
+                      value={packagedQuantity}
+                    />
+                  </label>
+                </div>
+
                 <label>
-                  Código de corrida
+                  Notas
                   <input
-                    maxLength={30}
-                    onChange={(event) => setRunCode(event.target.value)}
-                    placeholder="PACK-IPA-B500-003"
-                    required
-                    value={runCode}
+                    onChange={(event) => setNotes(event.target.value)}
+                    placeholder="Notas opcionales de la corrida."
+                    value={notes}
                   />
                 </label>
 
-                <label>
-                  Lote completado
-                  <select
-                    onChange={(event) => {
-                      setBatchId(event.target.value);
-                      setPresentationId("");
-                    }}
-                    required
-                    value={batchId}
-                  >
-                    <option value="">Seleccioná un lote</option>
-                    {eligibleBatches.map((batch) => (
-                      <option key={batch.id} value={batch.id}>
-                        {batch.code} · Granel:{" "}
-                        {formatNumber(
-                          batch.available_bulk_volume_liters,
-                        )}{" "}
-                        L
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <div className="form-grid">
-                <label>
-                  Presentación de la misma cerveza
-                  <select
-                    disabled={!selectedBatch}
-                    onChange={(event) =>
-                      setPresentationId(event.target.value)
-                    }
-                    required
-                    value={presentationId}
-                  >
-                    <option value="">
-                      {selectedBatch
-                        ? "Seleccioná una presentación"
-                        : "Seleccioná primero un lote"}
-                    </option>
-                    {compatiblePresentations.map((presentation) => (
-                      <option
-                        key={presentation.id}
-                        value={presentation.id}
-                      >
-                        {presentation.code} · {presentation.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label>
-                  Cantidad envasada
-                  <input
-                    min="1"
-                    onChange={(event) =>
-                      setPackagedQuantity(event.target.value)
-                    }
-                    required
-                    step="1"
-                    type="number"
-                    value={packagedQuantity}
-                  />
-                </label>
-              </div>
-
-              <label>
-                Notas
-                <input
-                  onChange={(event) => setNotes(event.target.value)}
-                  placeholder="Notas opcionales de la corrida."
-                  value={notes}
-                />
-              </label>
-
-              <button disabled={isSaving} type="submit">
-                {isSaving
-                  ? "Registrando corrida..."
-                  : "Registrar envasado"}
-              </button>
-            </form>
-          </section>
+                <button disabled={isSaving} type="submit">
+                  {isSaving ? "Registrando corrida..." : "Registrar envasado"}
+                </button>
+              </form>
+            </section>
+          ) : (
+            <section className="panel">
+              <p className="empty-state">
+                Gerencia tiene acceso de consulta a Envasado.
+              </p>
+            </section>
+          )}
 
           <section className="summary-grid">
             <article className="summary-card">
@@ -336,8 +334,7 @@ function PackagingPage() {
                       );
                       const presentation = presentations.find(
                         (currentPresentation) =>
-                          currentPresentation.id ===
-                          run.beer_presentation_id,
+                          currentPresentation.id === run.beer_presentation_id,
                       );
 
                       return (
@@ -346,9 +343,7 @@ function PackagingPage() {
                           <td>{batch?.code ?? "—"}</td>
                           <td>{presentation?.name ?? "—"}</td>
                           <td>{run.packaged_quantity}</td>
-                          <td>
-                            {formatNumber(run.packaged_volume_liters)} L
-                          </td>
+                          <td>{formatNumber(run.packaged_volume_liters)} L</td>
                           <td>{formatDate(run.occurred_at)}</td>
                         </tr>
                       );
