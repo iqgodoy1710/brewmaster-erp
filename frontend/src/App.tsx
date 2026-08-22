@@ -14,7 +14,6 @@ import {
   apiPost,
   clearAccessToken,
   getAccessToken,
-  
   isDemoMode,
   isAuthRequired,
   setAccessToken,
@@ -49,8 +48,7 @@ import KegsPage from "./pages/KegsPage";
 function AppContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
-  const [isSessionLoading, setIsSessionLoading] =
-    useState(isAuthRequired);
+  const [isSessionLoading, setIsSessionLoading] = useState(isAuthRequired);
 
   useEffect(() => {
     async function loadSession() {
@@ -116,27 +114,24 @@ function AppContent() {
     );
   }
 
-  const isAdministrator =
-    !isAuthRequired || user?.role === "admin";
+  const isAdministrator = !isAuthRequired || user?.role === "admin";
 
   const isOperator = user?.role === "operator";
 
   const isManagement = user?.role === "management";
 
-  const hasFinancialAccess =
-    !isAuthRequired || isAdministrator || isManagement;
+  const hasFinancialAccess = !isAuthRequired || isAdministrator || isManagement;
 
-  const canOperate =
-    !isAuthRequired || isAdministrator || isOperator;
+  const canOperate = !isAuthRequired || isAdministrator || isOperator;
 
-  const canManageCatalogs =
-    !isAuthRequired || isAdministrator || isOperator;
+  const canManageCatalogs = !isAuthRequired || isAdministrator || isOperator;
 
   const canViewFinishedProducts =
-    !isAuthRequired ||
-    isAdministrator ||
-    isOperator ||
-    isManagement;
+    !isAuthRequired || isAdministrator || isOperator || isManagement;
+
+  function closeMenu() {
+    setIsMenuOpen(false);
+  }
 
   return (
     <AuthProvider user={user}>
@@ -180,6 +175,10 @@ function AppContent() {
             onClick={(event) => {
               if ((event.target as HTMLElement).closest("a")) {
                 setIsMenuOpen(false);
+
+                event.currentTarget
+                  .querySelectorAll("details[open]")
+                  .forEach((group) => group.removeAttribute("open"));
               }
             }}
           >
@@ -189,13 +188,12 @@ function AppContent() {
               }
               end
               to="/"
+              onClick={closeMenu}
             >
               Dashboard
             </NavLink>
 
-            {(canOperate ||
-              canViewFinishedProducts ||
-              hasFinancialAccess) && (
+            {(canOperate || canViewFinishedProducts || hasFinancialAccess) && (
               <details className="nav-group">
                 <summary>Operación</summary>
 
@@ -206,6 +204,7 @@ function AppContent() {
                         isActive ? "nav-link active" : "nav-link"
                       }
                       to="/insumos"
+                      onClick={closeMenu}
                     >
                       Insumos
                     </NavLink>
@@ -217,6 +216,7 @@ function AppContent() {
                         isActive ? "nav-link active" : "nav-link"
                       }
                       to="/producto-terminado"
+                      onClick={closeMenu}
                     >
                       Producto terminado
                     </NavLink>
@@ -228,6 +228,7 @@ function AppContent() {
                         isActive ? "nav-link active" : "nav-link"
                       }
                       to="/produccion"
+                      onClick={closeMenu}
                     >
                       Producción
                     </NavLink>
@@ -239,6 +240,7 @@ function AppContent() {
                         isActive ? "nav-link active" : "nav-link"
                       }
                       to="/envasado"
+                      onClick={closeMenu}
                     >
                       Envasado
                     </NavLink>
@@ -250,6 +252,7 @@ function AppContent() {
                         isActive ? "nav-link active" : "nav-link"
                       }
                       to="/barriles"
+                      onClick={closeMenu}
                     >
                       Barriles
                     </NavLink>
@@ -261,6 +264,7 @@ function AppContent() {
                         isActive ? "nav-link active" : "nav-link"
                       }
                       to="/movimientos-insumos"
+                      onClick={closeMenu}
                     >
                       Mov. insumos
                     </NavLink>
@@ -279,6 +283,7 @@ function AppContent() {
                       isActive ? "nav-link active" : "nav-link"
                     }
                     to="/clientes"
+                    onClick={closeMenu}
                   >
                     Clientes
                   </NavLink>
@@ -288,6 +293,7 @@ function AppContent() {
                       isActive ? "nav-link active" : "nav-link"
                     }
                     to="/cuentas-corrientes"
+                    onClick={closeMenu}
                   >
                     Ctas. corrientes
                   </NavLink>
@@ -297,6 +303,7 @@ function AppContent() {
                       isActive ? "nav-link active" : "nav-link"
                     }
                     to="/ventas"
+                    onClick={closeMenu}
                   >
                     Ventas
                   </NavLink>
@@ -306,6 +313,7 @@ function AppContent() {
                       isActive ? "nav-link active" : "nav-link"
                     }
                     to="/detalle-ventas"
+                    onClick={closeMenu}
                   >
                     Detalle ventas
                   </NavLink>
@@ -315,6 +323,7 @@ function AppContent() {
                       isActive ? "nav-link active" : "nav-link"
                     }
                     to="/precios"
+                    onClick={closeMenu}
                   >
                     Precios
                   </NavLink>
@@ -324,6 +333,7 @@ function AppContent() {
                       isActive ? "nav-link active" : "nav-link"
                     }
                     to="/costos"
+                    onClick={closeMenu}
                   >
                     Costos
                   </NavLink>
@@ -343,6 +353,7 @@ function AppContent() {
                           isActive ? "nav-link active" : "nav-link"
                         }
                         to="/cervezas"
+                        onClick={closeMenu}
                       >
                         Cervezas
                       </NavLink>
@@ -352,6 +363,7 @@ function AppContent() {
                           isActive ? "nav-link active" : "nav-link"
                         }
                         to="/formatos-envasado"
+                        onClick={closeMenu}
                       >
                         Formatos
                       </NavLink>
@@ -361,6 +373,7 @@ function AppContent() {
                           isActive ? "nav-link active" : "nav-link"
                         }
                         to="/presentaciones"
+                        onClick={closeMenu}
                       >
                         Presentaciones
                       </NavLink>
@@ -370,6 +383,7 @@ function AppContent() {
                           isActive ? "nav-link active" : "nav-link"
                         }
                         to="/recetas"
+                        onClick={closeMenu}
                       >
                         Recetas
                       </NavLink>
@@ -379,6 +393,7 @@ function AppContent() {
                           isActive ? "nav-link active" : "nav-link"
                         }
                         to="/ingredientes-receta"
+                        onClick={closeMenu}
                       >
                         Ingredientes
                       </NavLink>
@@ -388,6 +403,7 @@ function AppContent() {
                           isActive ? "nav-link active" : "nav-link"
                         }
                         to="/materiales-envasado"
+                        onClick={closeMenu}
                       >
                         Materiales
                       </NavLink>
@@ -397,6 +413,7 @@ function AppContent() {
                           isActive ? "nav-link active" : "nav-link"
                         }
                         to="/categorias"
+                        onClick={closeMenu}
                       >
                         Categorías
                       </NavLink>
@@ -406,6 +423,7 @@ function AppContent() {
                           isActive ? "nav-link active" : "nav-link"
                         }
                         to="/unidades"
+                        onClick={closeMenu}
                       >
                         Unidades
                       </NavLink>
@@ -418,6 +436,7 @@ function AppContent() {
                         isActive ? "nav-link active" : "nav-link"
                       }
                       to="/proveedores"
+                      onClick={closeMenu}
                     >
                       Proveedores
                     </NavLink>
@@ -436,6 +455,7 @@ function AppContent() {
                       isActive ? "nav-link active" : "nav-link"
                     }
                     to="/usuarios"
+                    onClick={closeMenu}
                   >
                     Usuarios
                   </NavLink>
@@ -480,22 +500,14 @@ function AppContent() {
           <Route
             path="/ventas"
             element={
-              hasFinancialAccess ? (
-                <SalesPage />
-              ) : (
-                <Navigate to="/" replace />
-              )
+              hasFinancialAccess ? <SalesPage /> : <Navigate to="/" replace />
             }
           />
 
           <Route
             path="/precios"
             element={
-              hasFinancialAccess ? (
-                <PricesPage />
-              ) : (
-                <Navigate to="/" replace />
-              )
+              hasFinancialAccess ? <PricesPage /> : <Navigate to="/" replace />
             }
           />
 
@@ -513,34 +525,20 @@ function AppContent() {
           <Route
             path="/produccion"
             element={
-              canOperate ? (
-                <ProductionPage />
-              ) : (
-                <Navigate to="/" replace />
-              )
+              canOperate ? <ProductionPage /> : <Navigate to="/" replace />
             }
           />
 
           <Route
             path="/envasado"
             element={
-              canOperate ? (
-                <PackagingPage />
-              ) : (
-                <Navigate to="/" replace />
-              )
+              canOperate ? <PackagingPage /> : <Navigate to="/" replace />
             }
           />
 
           <Route
             path="/barriles"
-            element={
-              canOperate ? (
-                <KegsPage />
-              ) : (
-                <Navigate to="/" replace />
-              )
-            }
+            element={canOperate ? <KegsPage /> : <Navigate to="/" replace />}
           />
 
           <Route
@@ -601,11 +599,7 @@ function AppContent() {
           <Route
             path="/cervezas"
             element={
-              canManageCatalogs ? (
-                <BeersPage />
-              ) : (
-                <Navigate to="/" replace />
-              )
+              canManageCatalogs ? <BeersPage /> : <Navigate to="/" replace />
             }
           />
 
@@ -634,11 +628,7 @@ function AppContent() {
           <Route
             path="/recetas"
             element={
-              canManageCatalogs ? (
-                <RecipesPage />
-              ) : (
-                <Navigate to="/" replace />
-              )
+              canManageCatalogs ? <RecipesPage /> : <Navigate to="/" replace />
             }
           />
 
@@ -678,22 +668,14 @@ function AppContent() {
           <Route
             path="/unidades"
             element={
-              canManageCatalogs ? (
-                <UnitsPage />
-              ) : (
-                <Navigate to="/" replace />
-              )
+              canManageCatalogs ? <UnitsPage /> : <Navigate to="/" replace />
             }
           />
 
           <Route
             path="/usuarios"
             element={
-              isAdministrator ? (
-                <UsersPage />
-              ) : (
-                <Navigate to="/" replace />
-              )
+              isAdministrator ? <UsersPage /> : <Navigate to="/" replace />
             }
           />
 
