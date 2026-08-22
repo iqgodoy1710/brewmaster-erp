@@ -19,7 +19,7 @@ def create_test_raw_material(client):
     raw_material_response = client.post(
         "/raw-materials/",
         json={
-            "code": "MALT-PALE",
+            
             "name": "Pale Malt",
             "category_id": category_response.json()["id"],
             "unit_id": unit_response.json()["id"],
@@ -36,7 +36,7 @@ def create_test_recipe(client):
     beer_response = client.post(
         "/beers/",
         json={
-            "code": "NEIPA",
+            
             "name": "New England IPA",
         },
     )

@@ -1,6 +1,5 @@
-from sqlalchemy.orm import Session
-
 from app.common.exceptions import (
+    BeerPresentationHasNoActivePriceError,
     BeerPresentationNotFoundError,
     InactiveBeerPresentationError,
     InvalidSaleStatusError,
@@ -8,6 +7,7 @@ from app.common.exceptions import (
     SaleNotFoundError,
 )
 from app.crud.beer_presentation import get_beer_presentation_by_id
+from app.crud.beer_presentation_price import get_active_beer_presentation_price
 from app.crud.sale import get_sale_by_id
 from app.crud.sale_item import (
     create_sale_item,
@@ -16,6 +16,7 @@ from app.crud.sale_item import (
 )
 from app.models.enums import SaleStatus
 from app.schemas.sale_item import SaleItemCreate
+from sqlalchemy.orm import Session
 
 
 class SaleItemService:
@@ -40,34 +41,38 @@ class SaleItemService:
             raise SaleNotFoundError("The sale does not exist.")
 
         if not sale.active or sale.status != SaleStatus.DRAFT:
-            raise InvalidSaleStatusError(
-                "Items can only be added to draft sales."
-            )
+            raise InvalidSaleStatusError("Items can only be added to draft sales.")
 
         beer_presentation = get_beer_presentation_by_id(
             db,
             sale_item_data.beer_presentation_id,
         )
         if not beer_presentation:
-            raise BeerPresentationNotFoundError(
-                "The beer presentation does not exist."
-            )
+            raise BeerPresentationNotFoundError("The beer presentation does not exist.")
 
         if not beer_presentation.active:
             raise InactiveBeerPresentationError(
                 "Cannot add an inactive beer presentation to a sale."
             )
 
-        existing_sale_item = (
-            get_sale_item_by_sale_id_and_beer_presentation_id(
-                db,
-                sale_item_data.sale_id,
-                sale_item_data.beer_presentation_id,
+        active_price = get_active_beer_presentation_price(
+            db,
+            beer_presentation.id,
+        )
+
+        if not active_price:
+            raise BeerPresentationHasNoActivePriceError(
+                "The beer presentation does not have an active price."
             )
+
+        existing_sale_item = get_sale_item_by_sale_id_and_beer_presentation_id(
+            db,
+            sale_item_data.sale_id,
+            sale_item_data.beer_presentation_id,
         )
         if existing_sale_item:
             raise SaleItemAlreadyExistsError(
                 "This beer presentation is already an item of the sale."
             )
 
-        return create_sale_item(db, sale_item_data)
+        return create_sale_item(db, sale_item_data, active_price.unit_price)

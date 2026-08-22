@@ -12,7 +12,7 @@ def create_test_raw_material(
     response = client.post(
         "/raw-materials/",
         json={
-            "code": code,
+            
             "name": name,
             "category_id": category_id,
             "unit_id": unit_id,
@@ -76,7 +76,7 @@ def test_get_raw_material_low_stock_alerts(client):
 
     assert len(alerts) == 1
     assert alerts[0]["raw_material_id"] == low_stock_material["id"]
-    assert alerts[0]["raw_material_code"] == "LOW-STOCK-TEST"
+    assert alerts[0]["raw_material_code"] == low_stock_material["code"]
     assert Decimal(alerts[0]["current_stock"]) == Decimal("0.000")
     assert Decimal(alerts[0]["minimum_stock"]) == Decimal("10.000")
     assert Decimal(alerts[0]["shortage_quantity"]) == Decimal("10.000")

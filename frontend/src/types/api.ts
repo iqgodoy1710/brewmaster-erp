@@ -200,17 +200,6 @@ export type Beer = {
   updated_at: string;
 };
 
-export type PackagingFormat = {
-  id: number;
-  code: string;
-  name: string;
-  capacity_liters: string;
-  description: string | null;
-  active: boolean;
-  created_at: string;
-  updated_at: string;
-};
-
 export type RecipeIngredient = {
   id: number;
   recipe_id: number;
@@ -278,7 +267,7 @@ export type UserRole = "admin" | "operator" | "management";
 
 export type AuthenticatedUser = {
   id: number;
-  email: string;
+  username: string;
   full_name: string;
   role: UserRole;
   active: boolean;
@@ -295,4 +284,166 @@ export type RawMaterialReference = {
   id: number;
   code: string;
   name: string;
+};
+
+export type BeerPresentationPrice = {
+  id: number;
+  beer_presentation_id: number;
+  unit_price: string;
+  effective_from: string;
+  notes: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BeerPresentationCostComponent = {
+  component_type: "beer" | "packaging";
+  raw_material_id: number;
+  raw_material_code: string;
+  raw_material_name: string;
+  unit_symbol: string;
+  quantity: string;
+  unit_cost: string;
+  subtotal: string;
+};
+
+export type BeerPresentationCostEstimate = {
+  beer_presentation_id: number;
+  beer_presentation_code: string;
+  beer_presentation_name: string;
+  packaging_volume_liters: string;
+  recipe_id: number;
+  recipe_version: number;
+  recipe_target_volume_liters: string;
+  beer_cost: string;
+  packaging_material_cost: string;
+  total_unit_cost: string;
+  components: BeerPresentationCostComponent[];
+};
+
+export type CustomerPaymentMethod = "cash" | "bank_transfer" | "card" | "other";
+
+export type CustomerPayment = {
+  id: number;
+  code: string;
+  customer_id: number;
+  amount: string;
+  payment_method: CustomerPaymentMethod;
+  reference: string | null;
+  notes: string | null;
+  occurred_at: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CustomerAccountMovementType =
+  | "sale_charge"
+  | "payment"
+  | "sale_cancellation";
+
+export type CustomerAccountMovement = {
+  id: number;
+  customer_id: number;
+  sale_id: number | null;
+  sale_code: string | null;
+  payment_id: number | null;
+  payment_code: string | null;
+  movement_type: CustomerAccountMovementType;
+  amount: string;
+  reference: string | null;
+  notes: string | null;
+  occurred_at: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CustomerAccount = {
+  customer_id: number;
+  customer_code: string;
+  customer_name: string;
+  balance: string;
+  movements: CustomerAccountMovement[];
+};
+
+export type PackagingFormatType = "bottle" | "keg" | "can" | "other";
+
+export type PackagingFormat = {
+  id: number;
+  code: string;
+  name: string;
+  capacity_liters: string;
+  format_type: PackagingFormatType;
+  description: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type KegFormFactor =
+  | "standard"
+  | "flat"
+  | "slim";
+
+export type KegStatus =
+  | "clean_available"
+  | "dirty"
+  | "filled"
+  | "at_customer"
+  | "tapped"
+  | "out_of_service";
+
+export type Keg = {
+  id: number;
+  code: string;
+  packaging_format_id: number;
+  form_factor: KegFormFactor;
+  status: KegStatus;
+  current_volume_liters: string;
+  beer_presentation_id: number | null;
+  production_batch_id: number | null;
+  customer_id: number | null;
+  notes: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type KegMovementType =
+  | "filling"
+  | "delivery"
+  | "return"
+  | "washing"
+  | "tapping"
+  | "remnant_transfer"
+  | "inventory_adjustment"
+  | "out_of_service";
+
+export type KegMovement = {
+  id: number;
+  keg_id: number;
+  movement_type: KegMovementType;
+  previous_status: KegStatus;
+  new_status: KegStatus;
+  resulting_volume_liters: string;
+  beer_presentation_id: number | null;
+  production_batch_id: number | null;
+  packaging_run_id: number | null;
+  sale_id: number | null;
+  customer_id: number | null;
+  reference: string | null;
+  notes: string | null;
+  occurred_at: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type KegRemnantTransferResponse = {
+  production_batch_id: number;
+  recovered_volume_liters: string;
+  resulting_available_bulk_volume_liters: string;
+  source_movements: KegMovement[];
 };

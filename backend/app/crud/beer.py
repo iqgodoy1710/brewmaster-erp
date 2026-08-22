@@ -37,8 +37,12 @@ def get_beer_by_name(
 def create_beer(
     db: Session,
     beer_data: BeerCreate,
+    code: str,
 ) -> Beer:
-    beer = Beer(**beer_data.model_dump())
+    beer = Beer(
+        code=code,
+        **beer_data.model_dump(),
+    )
 
     db.add(beer)
     db.commit()

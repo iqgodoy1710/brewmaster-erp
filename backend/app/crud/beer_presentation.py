@@ -41,8 +41,12 @@ def get_beer_presentation_by_beer_id_and_packaging_format_id(
 def create_beer_presentation(
     db: Session,
     presentation_data: BeerPresentationCreate,
+    code: str,
 ) -> BeerPresentation:
-    presentation = BeerPresentation(**presentation_data.model_dump())
+    presentation = BeerPresentation(
+        code=code,
+        **presentation_data.model_dump(),
+    )
 
     db.add(presentation)
     db.commit()

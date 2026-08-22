@@ -8,6 +8,19 @@ import {
 } from "react-router-dom";
 
 import "./App.css";
+import { AuthProvider } from "./lib/auth";
+import {
+  apiGet,
+  apiPost,
+  clearAccessToken,
+  getAccessToken,
+  
+  isDemoMode,
+  isAuthRequired,
+  setAccessToken,
+} from "./lib/api";
+import type { AuthenticatedUser, TokenResponse } from "./types/api";
+
 import DashboardPage from "./pages/DashboardPage";
 import RawMaterialsPage from "./pages/RawMaterialsPage";
 import FinishedProductsPage from "./pages/FinishedProductsPage";
@@ -27,28 +40,22 @@ import CategoriesPage from "./pages/CategoriesPage";
 import UnitsPage from "./pages/UnitsPage";
 import SaleDetailsPage from "./pages/SaleDetailsPage";
 import LoginPage from "./pages/LoginPage";
-import {
-  apiGet,
-  apiPost,
-  clearAccessToken,
-  getAccessToken,
-  isAuthRequired,
-  isDemoMode,
-  setAccessToken,
-} from "./lib/api";
-import type { AuthenticatedUser, TokenResponse } from "./types/api";
-import { AuthProvider } from "./lib/auth";
 import UsersPage from "./pages/UsersPage";
+import PricesPage from "./pages/PricesPage";
+import CostCalculatorPage from "./pages/CostCalculatorPage";
+import CustomerAccountsPage from "./pages/CustomerAccountsPage";
+import KegsPage from "./pages/KegsPage";
 
 function AppContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(isAuthRequired);
+  const [isSessionLoading, setIsSessionLoading] =
+    useState(isAuthRequired);
 
   useEffect(() => {
     async function loadSession() {
       if (!isAuthRequired || !getAccessToken()) {
-        setIsAuthLoading(false);
+        setIsSessionLoading(false);
         return;
       }
 
@@ -59,16 +66,19 @@ function AppContent() {
         clearAccessToken();
         setUser(null);
       } finally {
-        setIsAuthLoading(false);
+        setIsSessionLoading(false);
       }
     }
 
     void loadSession();
   }, []);
 
-  async function handleLogin(email: string, password: string): Promise<void> {
+  async function handleLogin(
+    username: string,
+    password: string,
+  ): Promise<void> {
     const tokenResponse = await apiPost<TokenResponse>("/auth/login", {
-      email,
+      username,
       password,
     });
 
@@ -89,7 +99,7 @@ function AppContent() {
     setIsMenuOpen(false);
   }
 
-  if (isAuthRequired && isAuthLoading) {
+  if (isAuthRequired && isSessionLoading) {
     return (
       <main className="login-page">
         <p>Verificando sesión...</p>
@@ -106,8 +116,27 @@ function AppContent() {
     );
   }
 
-  const hasFinancialAccess = !isAuthRequired || user?.role !== "operator";
-  const isAdministrator = user?.role === "admin";
+  const isAdministrator =
+    !isAuthRequired || user?.role === "admin";
+
+  const isOperator = user?.role === "operator";
+
+  const isManagement = user?.role === "management";
+
+  const hasFinancialAccess =
+    !isAuthRequired || isAdministrator || isManagement;
+
+  const canOperate =
+    !isAuthRequired || isAdministrator || isOperator;
+
+  const canManageCatalogs =
+    !isAuthRequired || isAdministrator || isOperator;
+
+  const canViewFinishedProducts =
+    !isAuthRequired ||
+    isAdministrator ||
+    isOperator ||
+    isManagement;
 
   return (
     <AuthProvider user={user}>
@@ -122,6 +151,7 @@ function AppContent() {
             {isAuthRequired && user && (
               <div className="session-controls">
                 <span>{user.full_name}</span>
+
                 <button
                   className="logout-button"
                   onClick={handleLogout}
@@ -147,192 +177,270 @@ function AppContent() {
             id="primary-navigation"
             aria-label="Navegación principal"
             className={`navigation ${isMenuOpen ? "navigation-open" : ""}`}
-            onClick={() => setIsMenuOpen(false)}
+            onClick={(event) => {
+              if ((event.target as HTMLElement).closest("a")) {
+                setIsMenuOpen(false);
+              }
+            }}
           >
             <NavLink
               className={({ isActive }) =>
                 isActive ? "nav-link active" : "nav-link"
               }
-              to="/"
               end
+              to="/"
             >
               Dashboard
             </NavLink>
 
-            {hasFinancialAccess && (
-              <NavLink
-                className={({ isActive }) =>
-                  isActive ? "nav-link active" : "nav-link"
-                }
-                to="/insumos"
-              >
-                Insumos
-              </NavLink>
+            {(canOperate ||
+              canViewFinishedProducts ||
+              hasFinancialAccess) && (
+              <details className="nav-group">
+                <summary>Operación</summary>
+
+                <div className="nav-group-menu">
+                  {hasFinancialAccess && (
+                    <NavLink
+                      className={({ isActive }) =>
+                        isActive ? "nav-link active" : "nav-link"
+                      }
+                      to="/insumos"
+                    >
+                      Insumos
+                    </NavLink>
+                  )}
+
+                  {canViewFinishedProducts && (
+                    <NavLink
+                      className={({ isActive }) =>
+                        isActive ? "nav-link active" : "nav-link"
+                      }
+                      to="/producto-terminado"
+                    >
+                      Producto terminado
+                    </NavLink>
+                  )}
+
+                  {canOperate && (
+                    <NavLink
+                      className={({ isActive }) =>
+                        isActive ? "nav-link active" : "nav-link"
+                      }
+                      to="/produccion"
+                    >
+                      Producción
+                    </NavLink>
+                  )}
+
+                  {canOperate && (
+                    <NavLink
+                      className={({ isActive }) =>
+                        isActive ? "nav-link active" : "nav-link"
+                      }
+                      to="/envasado"
+                    >
+                      Envasado
+                    </NavLink>
+                  )}
+
+                  {canOperate && (
+                    <NavLink
+                      className={({ isActive }) =>
+                        isActive ? "nav-link active" : "nav-link"
+                      }
+                      to="/barriles"
+                    >
+                      Barriles
+                    </NavLink>
+                  )}
+
+                  {hasFinancialAccess && (
+                    <NavLink
+                      className={({ isActive }) =>
+                        isActive ? "nav-link active" : "nav-link"
+                      }
+                      to="/movimientos-insumos"
+                    >
+                      Mov. insumos
+                    </NavLink>
+                  )}
+                </div>
+              </details>
             )}
 
-            <NavLink
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-              to="/producto-terminado"
-            >
-              Producto terminado
-            </NavLink>
-
             {hasFinancialAccess && (
-              <NavLink
-                className={({ isActive }) =>
-                  isActive ? "nav-link active" : "nav-link"
-                }
-                to="/ventas"
-              >
-                Ventas
-              </NavLink>
+              <details className="nav-group">
+                <summary>Comercial</summary>
+
+                <div className="nav-group-menu">
+                  <NavLink
+                    className={({ isActive }) =>
+                      isActive ? "nav-link active" : "nav-link"
+                    }
+                    to="/clientes"
+                  >
+                    Clientes
+                  </NavLink>
+
+                  <NavLink
+                    className={({ isActive }) =>
+                      isActive ? "nav-link active" : "nav-link"
+                    }
+                    to="/cuentas-corrientes"
+                  >
+                    Ctas. corrientes
+                  </NavLink>
+
+                  <NavLink
+                    className={({ isActive }) =>
+                      isActive ? "nav-link active" : "nav-link"
+                    }
+                    to="/ventas"
+                  >
+                    Ventas
+                  </NavLink>
+
+                  <NavLink
+                    className={({ isActive }) =>
+                      isActive ? "nav-link active" : "nav-link"
+                    }
+                    to="/detalle-ventas"
+                  >
+                    Detalle ventas
+                  </NavLink>
+
+                  <NavLink
+                    className={({ isActive }) =>
+                      isActive ? "nav-link active" : "nav-link"
+                    }
+                    to="/precios"
+                  >
+                    Precios
+                  </NavLink>
+
+                  <NavLink
+                    className={({ isActive }) =>
+                      isActive ? "nav-link active" : "nav-link"
+                    }
+                    to="/costos"
+                  >
+                    Costos
+                  </NavLink>
+                </div>
+              </details>
             )}
 
-            <NavLink
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-              to="/produccion"
-            >
-              Producción
-            </NavLink>
+            {(canManageCatalogs || hasFinancialAccess) && (
+              <details className="nav-group">
+                <summary>Configuración</summary>
 
-            <NavLink
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-              to="/envasado"
-            >
-              Envasado
-            </NavLink>
+                <div className="nav-group-menu">
+                  {canManageCatalogs && (
+                    <>
+                      <NavLink
+                        className={({ isActive }) =>
+                          isActive ? "nav-link active" : "nav-link"
+                        }
+                        to="/cervezas"
+                      >
+                        Cervezas
+                      </NavLink>
 
-            {hasFinancialAccess && (
-              <NavLink
-                className={({ isActive }) =>
-                  isActive ? "nav-link active" : "nav-link"
-                }
-                to="/movimientos-insumos"
-              >
-                Mov. insumos
-              </NavLink>
+                      <NavLink
+                        className={({ isActive }) =>
+                          isActive ? "nav-link active" : "nav-link"
+                        }
+                        to="/formatos-envasado"
+                      >
+                        Formatos
+                      </NavLink>
+
+                      <NavLink
+                        className={({ isActive }) =>
+                          isActive ? "nav-link active" : "nav-link"
+                        }
+                        to="/presentaciones"
+                      >
+                        Presentaciones
+                      </NavLink>
+
+                      <NavLink
+                        className={({ isActive }) =>
+                          isActive ? "nav-link active" : "nav-link"
+                        }
+                        to="/recetas"
+                      >
+                        Recetas
+                      </NavLink>
+
+                      <NavLink
+                        className={({ isActive }) =>
+                          isActive ? "nav-link active" : "nav-link"
+                        }
+                        to="/ingredientes-receta"
+                      >
+                        Ingredientes
+                      </NavLink>
+
+                      <NavLink
+                        className={({ isActive }) =>
+                          isActive ? "nav-link active" : "nav-link"
+                        }
+                        to="/materiales-envasado"
+                      >
+                        Materiales
+                      </NavLink>
+
+                      <NavLink
+                        className={({ isActive }) =>
+                          isActive ? "nav-link active" : "nav-link"
+                        }
+                        to="/categorias"
+                      >
+                        Categorías
+                      </NavLink>
+
+                      <NavLink
+                        className={({ isActive }) =>
+                          isActive ? "nav-link active" : "nav-link"
+                        }
+                        to="/unidades"
+                      >
+                        Unidades
+                      </NavLink>
+                    </>
+                  )}
+
+                  {hasFinancialAccess && (
+                    <NavLink
+                      className={({ isActive }) =>
+                        isActive ? "nav-link active" : "nav-link"
+                      }
+                      to="/proveedores"
+                    >
+                      Proveedores
+                    </NavLink>
+                  )}
+                </div>
+              </details>
             )}
-
-            {hasFinancialAccess && (
-              <NavLink
-                className={({ isActive }) =>
-                  isActive ? "nav-link active" : "nav-link"
-                }
-                to="/clientes"
-              >
-                Clientes
-              </NavLink>
-            )}
-
-            <NavLink
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-              to="/cervezas"
-            >
-              Cervezas
-            </NavLink>
-
-            <NavLink
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-              to="/formatos-envasado"
-            >
-              Formatos
-            </NavLink>
-
-            <NavLink
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-              to="/presentaciones"
-            >
-              Presentaciones
-            </NavLink>
-
-            <NavLink
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-              to="/recetas"
-            >
-              Recetas
-            </NavLink>
-
-            <NavLink
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-              to="/ingredientes-receta"
-            >
-              Ingredientes
-            </NavLink>
-
-            <NavLink
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-              to="/materiales-envasado"
-            >
-              Materiales
-            </NavLink>
-
-            {hasFinancialAccess && (
-              <NavLink
-                className={({ isActive }) =>
-                  isActive ? "nav-link active" : "nav-link"
-                }
-                to="/proveedores"
-              >
-                Proveedores
-              </NavLink>
-            )}
-
-            <NavLink
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-              to="/categorias"
-            >
-              Categorías
-            </NavLink>
-
-            <NavLink
-              className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
-              }
-              to="/unidades"
-            >
-              Unidades
-            </NavLink>
 
             {isAdministrator && (
-              <NavLink
-                className={({ isActive }) =>
-                  isActive ? "nav-link active" : "nav-link"
-                }
-                to="/usuarios"
-              >
-                Usuarios
-              </NavLink>
-            )}
+              <details className="nav-group">
+                <summary>Administración</summary>
 
-            {hasFinancialAccess && (
-              <NavLink
-                className={({ isActive }) =>
-                  isActive ? "nav-link active" : "nav-link"
-                }
-                to="/detalle-ventas"
-              >
-                Detalle ventas
-              </NavLink>
+                <div className="nav-group-menu">
+                  <NavLink
+                    className={({ isActive }) =>
+                      isActive ? "nav-link active" : "nav-link"
+                    }
+                    to="/usuarios"
+                  >
+                    Usuarios
+                  </NavLink>
+                </div>
+              </details>
             )}
           </nav>
         </header>
@@ -346,43 +454,251 @@ function AppContent() {
 
         <Routes>
           <Route path="/" element={<DashboardPage />} />
-          <Route path="/insumos" element={<RawMaterialsPage />} />
+
+          <Route
+            path="/insumos"
+            element={
+              hasFinancialAccess ? (
+                <RawMaterialsPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+
           <Route
             path="/producto-terminado"
-            element={<FinishedProductsPage />}
+            element={
+              canViewFinishedProducts ? (
+                <FinishedProductsPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
           />
-          <Route path="/ventas" element={<SalesPage />} />
-          <Route path="/produccion" element={<ProductionPage />} />
-          <Route path="/envasado" element={<PackagingPage />} />
+
+          <Route
+            path="/ventas"
+            element={
+              hasFinancialAccess ? (
+                <SalesPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/precios"
+            element={
+              hasFinancialAccess ? (
+                <PricesPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/costos"
+            element={
+              hasFinancialAccess ? (
+                <CostCalculatorPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/produccion"
+            element={
+              canOperate ? (
+                <ProductionPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/envasado"
+            element={
+              canOperate ? (
+                <PackagingPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/barriles"
+            element={
+              canOperate ? (
+                <KegsPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+
           <Route
             path="/movimientos-insumos"
-            element={<RawMaterialMovementsPage />}
+            element={
+              hasFinancialAccess ? (
+                <RawMaterialMovementsPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
           />
-          <Route path="/clientes" element={<CustomersPage />} />
-          <Route path="/cervezas" element={<BeersPage />} />
-          <Route path="/formatos-envasado" element={<PackagingFormatsPage />} />
-          <Route path="/presentaciones" element={<BeerPresentationsPage />} />
-          <Route path="/recetas" element={<RecipesPage />} />
+
+          <Route
+            path="/clientes"
+            element={
+              hasFinancialAccess ? (
+                <CustomersPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/cuentas-corrientes"
+            element={
+              hasFinancialAccess ? (
+                <CustomerAccountsPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/detalle-ventas"
+            element={
+              hasFinancialAccess ? (
+                <SaleDetailsPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/proveedores"
+            element={
+              hasFinancialAccess ? (
+                <SuppliersPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/cervezas"
+            element={
+              canManageCatalogs ? (
+                <BeersPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/formatos-envasado"
+            element={
+              canManageCatalogs ? (
+                <PackagingFormatsPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/presentaciones"
+            element={
+              canManageCatalogs ? (
+                <BeerPresentationsPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/recetas"
+            element={
+              canManageCatalogs ? (
+                <RecipesPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+
           <Route
             path="/ingredientes-receta"
-            element={<RecipeIngredientsPage />}
+            element={
+              canManageCatalogs ? (
+                <RecipeIngredientsPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
           />
+
           <Route
             path="/materiales-envasado"
-            element={<BeerPresentationPackagingMaterialsPage />}
+            element={
+              canManageCatalogs ? (
+                <BeerPresentationPackagingMaterialsPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
           />
-          <Route path="/proveedores" element={<SuppliersPage />} />
-          <Route path="/categorias" element={<CategoriesPage />} />
-          <Route path="/unidades" element={<UnitsPage />} />
-          <Route path="/detalle-ventas" element={<SaleDetailsPage />} />
-          <Route path="/login" element={<Navigate to="/" replace />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+
+          <Route
+            path="/categorias"
+            element={
+              canManageCatalogs ? (
+                <CategoriesPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+
+          <Route
+            path="/unidades"
+            element={
+              canManageCatalogs ? (
+                <UnitsPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+
           <Route
             path="/usuarios"
             element={
-              isAdministrator ? <UsersPage /> : <Navigate to="/" replace />
+              isAdministrator ? (
+                <UsersPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
             }
           />
+
+          <Route path="/login" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
     </AuthProvider>

@@ -12,8 +12,15 @@ import { hasRole, useCurrentUser } from "../lib/auth";
 const formatCurrency = (amount: string) =>
   new Intl.NumberFormat("es-ES", {
     style: "currency",
-    currency: "EUR",
+    currency: "USD",
+    currencyDisplay: "narrowSymbol",
   }).format(Number(amount));
+
+const formatQuantity = (value: string) =>
+  new Intl.NumberFormat("es-ES", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(value));
 
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat("es-ES", {
@@ -122,7 +129,7 @@ function DashboardPage() {
                         </span>
                       </div>
                       <span className="shortage">
-                        Faltan {alert.shortage_quantity}
+                        Faltan {formatQuantity(alert.shortage_quantity)}
                       </span>
                     </li>
                   ))}

@@ -7,7 +7,8 @@ import type { Sale, SaleDetail } from "../types/api";
 const formatCurrency = (value: string) =>
   new Intl.NumberFormat("es-ES", {
     style: "currency",
-    currency: "EUR",
+    currency: "USD",
+    currencyDisplay: "narrowSymbol",
   }).format(Number(value));
 
 const formatDate = (value: string | null) => {
@@ -69,9 +70,7 @@ function SaleDetailsPage() {
       setIsLoadingDetail(true);
       setError(null);
 
-      const data = await apiGet<SaleDetail>(
-        `/sales/${nextSaleCode}/detail`,
-      );
+      const data = await apiGet<SaleDetail>(`/sales/${nextSaleCode}/detail`);
 
       setSaleDetail(data);
     } catch (caughtError) {

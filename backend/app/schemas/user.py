@@ -6,7 +6,12 @@ from app.models.enums import UserRole
 
 
 class UserCreate(BaseModel):
-    email: str = Field(..., min_length=3, max_length=255)
+    username: str = Field(
+        ...,
+        min_length=3,
+        max_length=50,
+        pattern=r"^[a-zA-Z0-9._-]+$",
+    )
     full_name: str = Field(..., min_length=1, max_length=150)
     password: str = Field(..., min_length=8, max_length=128)
     role: UserRole = UserRole.OPERATOR
@@ -16,7 +21,12 @@ class UserCreate(BaseModel):
 
 class UserResponse(BaseModel):
     id: int
-    email: str
+    username: str = Field(
+        ...,
+        min_length=3,
+        max_length=50,
+        pattern=r"^[a-zA-Z0-9._-]+$",
+    )
     full_name: str
     role: UserRole
     active: bool
@@ -36,6 +46,12 @@ class UserUpdate(BaseModel):
         default=None,
         min_length=8,
         max_length=128,
+    )
+    username: str | None = Field(
+        default=None,
+        min_length=3,
+        max_length=50,
+        pattern=r"^[a-zA-Z0-9._-]+$",
     )
     role: UserRole | None = None
     active: bool | None = None

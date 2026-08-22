@@ -8,13 +8,13 @@ TEST_PASSWORD = "secure-password-123"
 
 def create_test_user(
     db,
-    email: str,
+    username: str,
     role: UserRole,
 ):
     return UserService.create(
         db,
         UserCreate(
-            email=email,
+            username=username,
             full_name="Test User",
             password=TEST_PASSWORD,
             role=role,
@@ -24,12 +24,12 @@ def create_test_user(
 
 def get_auth_headers(
     client,
-    email: str,
+    username: str,
 ) -> dict[str, str]:
     response = client.post(
         "/auth/login",
         json={
-            "email": email,
+            "username": username,
             "password": TEST_PASSWORD,
         },
     )
@@ -49,11 +49,11 @@ def test_login_returns_token_and_current_user_without_password_hash(
 ):
     user = create_test_user(
         db,
-        "admin@test.local",
+        "admin_test",
         UserRole.ADMIN,
     )
 
-    headers = get_auth_headers(client, user.email)
+    headers = get_auth_headers(client, user.username)
 
     response = client.get(
         "/auth/me",
@@ -61,7 +61,7 @@ def test_login_returns_token_and_current_user_without_password_hash(
     )
 
     assert response.status_code == 200
-    assert response.json()["email"] == user.email
+    assert response.json()["username"] == user.username
     assert response.json()["role"] == "admin"
     assert "password_hash" not in response.json()
 
@@ -72,20 +72,20 @@ def test_user_management_requires_an_administrator(
 ):
     admin = create_test_user(
         db,
-        "admin@test.local",
+        "admin_test",
         UserRole.ADMIN,
     )
     management = create_test_user(
         db,
-        "management@test.local",
+        "management_test",
         UserRole.MANAGEMENT,
     )
 
     management_headers = get_auth_headers(
         client,
-        management.email,
+        management.username,
     )
-    admin_headers = get_auth_headers(client, admin.email)
+    admin_headers = get_auth_headers(client, admin.username)
 
     response = client.get(
         "/users/",
@@ -97,7 +97,7 @@ def test_user_management_requires_an_administrator(
         "/users/",
         headers=admin_headers,
         json={
-            "email": "operator@test.local",
+            "username": "operator_test",
             "full_name": "Operator User",
             "password": TEST_PASSWORD,
             "role": "operator",
@@ -116,12 +116,12 @@ def test_sales_require_management_or_administrator_when_auth_is_enabled(
 ):
     management = create_test_user(
         db,
-        "management@test.local",
+        "management_test",
         UserRole.MANAGEMENT,
     )
     operator = create_test_user(
         db,
-        "operator@test.local",
+        "operator_test",
         UserRole.OPERATOR,
     )
 
@@ -133,11 +133,11 @@ def test_sales_require_management_or_administrator_when_auth_is_enabled(
 
     management_headers = get_auth_headers(
         client,
-        management.email,
+        management.username,
     )
     operator_headers = get_auth_headers(
         client,
-        operator.email,
+        operator.username,
     )
 
     assert client.get("/sales/").status_code == 401
@@ -162,18 +162,18 @@ def test_administrator_can_deactivate_another_user_but_not_self(
 ):
     admin = create_test_user(
         db,
-        "admin@test.local",
+        "admin_test",
         UserRole.ADMIN,
     )
     operator = create_test_user(
         db,
-        "operator@test.local",
+        "operator_test",
         UserRole.OPERATOR,
     )
 
     admin_headers = get_auth_headers(
         client,
-        admin.email,
+        admin.username,
     )
 
     response = client.patch(

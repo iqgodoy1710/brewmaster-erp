@@ -1,6 +1,7 @@
 from sqlalchemy import (
     CheckConstraint,
     Column,
+    Enum,
     Numeric,
     String,
     Text,
@@ -8,6 +9,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from app.common.base_model import BaseModel
+from app.models.enums import PackagingFormatType
 
 
 class PackagingFormat(BaseModel):
@@ -22,6 +24,16 @@ class PackagingFormat(BaseModel):
 
     code = Column(String(20), nullable=False, unique=True)
     name = Column(String(100), nullable=False, unique=True)
+    format_type = Column(
+        Enum(
+            PackagingFormatType,
+            name="packaging_format_type",
+            values_callable=lambda enum_class: [member.value for member in enum_class],
+        ),
+        nullable=False,
+        default=PackagingFormatType.OTHER,
+        server_default=PackagingFormatType.OTHER.value,
+    )
     capacity_liters = Column(
         Numeric(10, 3),
         nullable=False,

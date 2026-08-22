@@ -1,14 +1,13 @@
 from app.common.exceptions import (
-    PackagingFormatCodeAlreadyExistsError,
     PackagingFormatNameAlreadyExistsError,
 )
 from app.crud.packaging_format import (
     create_packaging_format,
-    get_packaging_format_by_code,
     get_packaging_format_by_name,
     get_packaging_formats,
 )
 from app.schemas.packaging_format import PackagingFormatCreate
+from app.services.code_service import generate_code
 from sqlalchemy.orm import Session
 
 
@@ -22,15 +21,6 @@ class PackagingFormatService:
         db: Session,
         packaging_format_data: PackagingFormatCreate,
     ):
-        existing_format_by_code = get_packaging_format_by_code(
-            db,
-            packaging_format_data.code,
-        )
-        if existing_format_by_code:
-            raise PackagingFormatCodeAlreadyExistsError(
-                "A packaging format with this code already exists."
-            )
-
         existing_format_by_name = get_packaging_format_by_name(
             db,
             packaging_format_data.name,
@@ -40,4 +30,13 @@ class PackagingFormatService:
                 "A packaging format with this name already exists."
             )
 
-        return create_packaging_format(db, packaging_format_data)
+        generated_code = generate_code(
+            db,
+            "packaging_format",
+        )
+
+        return create_packaging_format(
+            db,
+            packaging_format_data,
+            generated_code,
+        )

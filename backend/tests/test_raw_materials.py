@@ -20,7 +20,7 @@ def test_create_raw_material(client):
     response = client.post(
         "/raw-materials/",
         json={
-            "code": "MALT-001",
+            
             "name": "Pale Ale Malt",
             "category_id": category_id,
             "unit_id": unit_id,
@@ -34,7 +34,7 @@ def test_create_raw_material(client):
 
     data = response.json()
 
-    assert data["code"] == "MALT-001"
+    assert data["code"] == "INS-000001"
     assert data["name"] == "Pale Ale Malt"
     assert data["category_id"] == category_id
     assert data["unit_id"] == unit_id

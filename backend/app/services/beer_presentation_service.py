@@ -1,7 +1,6 @@
 from app.common.exceptions import (
     BeerNotFoundError,
     BeerPresentationAlreadyExistsError,
-    BeerPresentationCodeAlreadyExistsError,
     BeerPresentationNameAlreadyExistsError,
     BeerPresentationNotFoundError,
     InactiveBeerError,
@@ -26,6 +25,7 @@ from app.schemas.beer_presentation import (
 from app.schemas.inventory_alert import (
     BeerPresentationLowStockResponse,
 )
+from app.services.code_service import generate_code
 from sqlalchemy.orm import Session
 
 
@@ -76,20 +76,13 @@ class BeerPresentationService:
             presentation_data.packaging_format_id,
         )
         if not packaging_format:
-            raise PackagingFormatNotFoundError("The packaging format does not exist.")
+            raise PackagingFormatNotFoundError(
+                "The packaging format does not exist."
+            )
 
         if not packaging_format.active:
             raise InactivePackagingFormatError(
                 "Cannot create a presentation for an inactive packaging format."
-            )
-
-        existing_presentation_by_code = get_beer_presentation_by_code(
-            db,
-            presentation_data.code,
-        )
-        if existing_presentation_by_code:
-            raise BeerPresentationCodeAlreadyExistsError(
-                "A beer presentation with this code already exists."
             )
 
         existing_presentation_by_name = get_beer_presentation_by_name(
@@ -113,7 +106,16 @@ class BeerPresentationService:
                 "A presentation already exists for this beer and packaging format."
             )
 
-        return create_beer_presentation(db, presentation_data)
+        generated_code = generate_code(
+            db,
+            "beer_presentation",
+        )
+
+        return create_beer_presentation(
+            db,
+            presentation_data,
+            generated_code,
+        )
 
     @staticmethod
     def update_minimum_stock(
@@ -124,7 +126,9 @@ class BeerPresentationService:
         beer_presentation = get_beer_presentation_by_code(db, code)
 
         if not beer_presentation:
-            raise BeerPresentationNotFoundError("The beer presentation does not exist.")
+            raise BeerPresentationNotFoundError(
+                "The beer presentation does not exist."
+            )
 
         return update_beer_presentation_minimum_stock(
             db,

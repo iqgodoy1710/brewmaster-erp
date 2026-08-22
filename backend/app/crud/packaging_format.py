@@ -27,8 +27,12 @@ def get_packaging_format_by_name(
 def create_packaging_format(
     db: Session,
     packaging_format_data: PackagingFormatCreate,
+    code: str,
 ) -> PackagingFormat:
-    packaging_format = PackagingFormat(**packaging_format_data.model_dump())
+    packaging_format = PackagingFormat(
+        code=code,
+        **packaging_format_data.model_dump(),
+    )
 
     db.add(packaging_format)
     db.commit()

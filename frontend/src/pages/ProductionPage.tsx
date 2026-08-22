@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import "../App.css";
 import { apiGet, apiPost } from "../lib/api";
 import type {
+  Beer,
   ProductionBatch,
   RawMaterialPlanningProjection,
   Recipe,
@@ -11,8 +12,8 @@ import { hasRole, useCurrentUser } from "../lib/auth";
 
 const formatNumber = (value: string) =>
   new Intl.NumberFormat("es-ES", {
-    minimumFractionDigits: 3,
-    maximumFractionDigits: 3,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(Number(value));
 
 const formatDate = (value: string) =>
@@ -38,6 +39,7 @@ function ProductionPage() {
     RawMaterialPlanningProjection[]
   >([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [beers, setBeers] = useState<Beer[]>([]);
   const [batchCode, setBatchCode] = useState("");
   const [recipeId, setRecipeId] = useState("");
   const [plannedVolume, setPlannedVolume] = useState("");
@@ -56,17 +58,20 @@ function ProductionPage() {
 
   const loadProductionData = useCallback(async () => {
     try {
-      const [batchesData, projectionsData, recipesData] = await Promise.all([
-        apiGet<ProductionBatch[]>("/production-batches/"),
-        apiGet<RawMaterialPlanningProjection[]>(
-          "/production-batches/planning/raw-material-requirements",
-        ),
-        apiGet<Recipe[]>("/recipes/"),
-      ]);
+      const [batchesData, projectionsData, recipesData, beersData] =
+        await Promise.all([
+          apiGet<ProductionBatch[]>("/production-batches/"),
+          apiGet<RawMaterialPlanningProjection[]>(
+            "/production-batches/planning/raw-material-requirements",
+          ),
+          apiGet<Recipe[]>("/recipes/"),
+          apiGet<Beer[]>("/beers/"),
+        ]);
 
       setBatches(batchesData);
       setProjections(projectionsData);
       setRecipes(recipesData);
+      setBeers(beersData);
       setHasLoaded(true);
     } catch (caughtError) {
       setError(
@@ -196,6 +201,16 @@ function ProductionPage() {
     () => projections.filter((projection) => projection.has_shortage).length,
     [projections],
   );
+  const recipeLabel = (recipe: Recipe) => {
+    const beerName =
+      beers.find((beer) => beer.id === recipe.beer_id)?.name ??
+      `Cerveza #${recipe.beer_id}`;
+
+    return (
+      `${beerName} · Versión ${recipe.version} · ` +
+      `${formatNumber(recipe.target_volume_liters)} L`
+    );
+  };
 
   return (
     <main className="dashboard">
@@ -243,9 +258,7 @@ function ProductionPage() {
                       <option value="">Seleccioná una receta</option>
                       {recipes.map((recipe) => (
                         <option key={recipe.id} value={recipe.id}>
-                          Receta #{recipe.id} · Versión {recipe.version}
-                          {" · "}
-                          {formatNumber(recipe.target_volume_liters)} L
+                          {recipeLabel(recipe)}
                         </option>
                       ))}
                     </select>

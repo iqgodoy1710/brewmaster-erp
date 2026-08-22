@@ -8,11 +8,12 @@ import { hasRole, useCurrentUser } from "../lib/auth";
 function BeerPresentationsPage() {
   const currentUser = useCurrentUser();
 
-  const canManageCatalog = hasRole(currentUser, "admin");
+  const canManageCatalog =
+    hasRole(currentUser, "admin") || hasRole(currentUser, "operator");
   const [presentations, setPresentations] = useState<BeerPresentation[]>([]);
   const [beers, setBeers] = useState<Beer[]>([]);
   const [formats, setFormats] = useState<PackagingFormat[]>([]);
-  const [code, setCode] = useState("");
+
   const [name, setName] = useState("");
   const [beerId, setBeerId] = useState("");
   const [formatId, setFormatId] = useState("");
@@ -56,8 +57,8 @@ function BeerPresentationsPage() {
 
     const stock = Number(minimumStock);
 
-    if (!code.trim() || !name.trim() || !beerId || !formatId) {
-      setError("Completá código, nombre, cerveza y formato.");
+    if (!name.trim() || !beerId || !formatId) {
+      setError("Completá nombre, cerveza y formato.");
       return;
     }
 
@@ -74,7 +75,6 @@ function BeerPresentationsPage() {
       const presentation = await apiPost<BeerPresentation>(
         "/beer-presentations/",
         {
-          code: code.trim(),
           name: name.trim(),
           beer_id: Number(beerId),
           packaging_format_id: Number(formatId),
@@ -83,7 +83,6 @@ function BeerPresentationsPage() {
         },
       );
 
-      setCode("");
       setName("");
       setBeerId("");
       setFormatId("");
@@ -135,17 +134,6 @@ function BeerPresentationsPage() {
 
               <form className="sale-form" onSubmit={createPresentation}>
                 <div className="form-grid">
-                  <label>
-                    Código
-                    <input
-                      maxLength={30}
-                      onChange={(event) => setCode(event.target.value)}
-                      placeholder="IPA-BOT-500"
-                      required
-                      value={code}
-                    />
-                  </label>
-
                   <label>
                     Nombre
                     <input

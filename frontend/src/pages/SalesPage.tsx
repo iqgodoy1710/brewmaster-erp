@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { FormEvent } from "react";
 
 import "../App.css";
 import { apiGet, apiPost } from "../lib/api";
 import type {
   BeerPresentation,
+  BeerPresentationPrice,
   CompletedSaleReportItem,
   Customer,
+  Keg,
+  PackagingFormat,
   Sale,
   SaleItem,
 } from "../types/api";
@@ -21,7 +25,8 @@ type SaleLine = {
 const formatCurrency = (amount: string) =>
   new Intl.NumberFormat("es-ES", {
     style: "currency",
-    currency: "EUR",
+    currency: "USD",
+    currencyDisplay: "narrowSymbol",
   }).format(Number(amount));
 
 const formatDate = (value: string) =>
@@ -30,42 +35,69 @@ const formatDate = (value: string) =>
     timeStyle: "short",
   }).format(new Date(value));
 
+const kegFormFactorLabels = {
+  standard: "Estándar",
+  flat: "Flat",
+  slim: "Slim",
+};
+
 function SalesPage() {
   const [sales, setSales] = useState<CompletedSaleReportItem[]>([]);
   const [allSales, setAllSales] = useState<Sale[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [presentations, setPresentations] = useState<BeerPresentation[]>([]);
+  const [packagingFormats, setPackagingFormats] = useState<
+    PackagingFormat[]
+  >([]);
+  const [kegs, setKegs] = useState<Keg[]>([]);
+
   const [lines, setLines] = useState<SaleLine[]>([]);
-  const [saleCode, setSaleCode] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [notes, setNotes] = useState("");
   const [presentationId, setPresentationId] = useState("");
   const [quantity, setQuantity] = useState("1");
-  const [unitPrice, setUnitPrice] = useState("0.00");
+  const [activePrice, setActivePrice] =
+    useState<BeerPresentationPrice | null>(null);
+  const [isPriceLoading, setIsPriceLoading] = useState(false);
+
   const [createdSale, setCreatedSale] = useState<Sale | null>(null);
+  const [selectedKegIds, setSelectedKegIds] = useState<number[]>([]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
+
   const [saleToCancelCode, setSaleToCancelCode] = useState("");
   const [cancellationReason, setCancellationReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
-      const [salesData, allSalesData, customersData, presentationsData] =
-        await Promise.all([
-          apiGet<CompletedSaleReportItem[]>("/sales/report"),
-          apiGet<Sale[]>("/sales/"),
-          apiGet<Customer[]>("/customers/"),
-          apiGet<BeerPresentation[]>("/beer-presentations/"),
-        ]);
+      const [
+        salesData,
+        allSalesData,
+        customersData,
+        presentationsData,
+        packagingFormatsData,
+        kegsData,
+      ] = await Promise.all([
+        apiGet<CompletedSaleReportItem[]>("/sales/report"),
+        apiGet<Sale[]>("/sales/"),
+        apiGet<Customer[]>("/customers/"),
+        apiGet<BeerPresentation[]>("/beer-presentations/"),
+        apiGet<PackagingFormat[]>("/packaging-formats/"),
+        apiGet<Keg[]>("/kegs/"),
+      ]);
 
       setSales(salesData);
       setAllSales(allSalesData);
       setCustomers(customersData);
       setPresentations(presentationsData);
+      setPackagingFormats(packagingFormatsData);
+      setKegs(kegsData);
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -78,8 +110,38 @@ function SalesPage() {
   }, []);
 
   useEffect(() => {
-    loadData();
+    void loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    async function loadActivePrice() {
+      if (!presentationId) {
+        setActivePrice(null);
+        return;
+      }
+
+      setIsPriceLoading(true);
+      setActivePrice(null);
+
+      try {
+        const prices = await apiGet<BeerPresentationPrice[]>(
+          `/beer-presentations/${presentationId}/prices`,
+        );
+
+        setActivePrice(prices.find((price) => price.active) ?? null);
+      } catch (caughtError) {
+        setError(
+          caughtError instanceof Error
+            ? caughtError.message
+            : "No se pudo cargar el precio de la presentación.",
+        );
+      } finally {
+        setIsPriceLoading(false);
+      }
+    }
+
+    void loadActivePrice();
+  }, [presentationId]);
 
   const totalUnits = useMemo(
     () => sales.reduce((total, sale) => total + sale.total_units, 0),
@@ -108,12 +170,105 @@ function SalesPage() {
     [allSales],
   );
 
+  const kegPresentationIds = useMemo(() => {
+    const kegFormatIds = new Set(
+      packagingFormats
+        .filter((format) => format.format_type === "keg")
+        .map((format) => format.id),
+    );
+
+    return new Set(
+      presentations
+        .filter((presentation) =>
+          kegFormatIds.has(presentation.packaging_format_id),
+        )
+        .map((presentation) => presentation.id),
+    );
+  }, [packagingFormats, presentations]);
+
+  const kegLines = useMemo(
+    () =>
+      lines.filter((line) =>
+        kegPresentationIds.has(line.beerPresentationId),
+      ),
+    [kegPresentationIds, lines],
+  );
+
+  const requiredKegQuantity = useMemo(
+    () => kegLines.reduce((total, line) => total + line.quantity, 0),
+    [kegLines],
+  );
+
+  const compatibleFilledKegs = useMemo(
+    () =>
+      kegs.filter(
+        (keg) =>
+          keg.active &&
+          keg.status === "filled" &&
+          keg.beer_presentation_id !== null &&
+          kegLines.some(
+            (line) => line.beerPresentationId === keg.beer_presentation_id,
+          ),
+      ),
+    [kegs, kegLines],
+  );
+
+  function getRequiredKegQuantityForPresentation(
+    beerPresentationId: number,
+  ): number {
+    return (
+      kegLines.find(
+        (line) => line.beerPresentationId === beerPresentationId,
+      )?.quantity ?? 0
+    );
+  }
+
+  function getSelectedKegQuantityForPresentation(
+    beerPresentationId: number,
+  ): number {
+    return selectedKegIds.filter((kegId) => {
+      const keg = kegs.find((item) => item.id === kegId);
+
+      return keg?.beer_presentation_id === beerPresentationId;
+    }).length;
+  }
+
+  function toggleKegSelection(kegId: number) {
+  const keg = kegs.find((item) => item.id === kegId);
+  const beerPresentationId = keg?.beer_presentation_id;
+
+  if (beerPresentationId === null || beerPresentationId === undefined) {
+    return;
+  }
+
+  setSelectedKegIds((currentIds) => {
+    if (currentIds.includes(kegId)) {
+      return currentIds.filter((id) => id !== kegId);
+    }
+
+    const requiredQuantity = getRequiredKegQuantityForPresentation(
+      beerPresentationId,
+    );
+
+    const selectedQuantity = currentIds.filter((id) => {
+      const selectedKeg = kegs.find((item) => item.id === id);
+
+      return selectedKeg?.beer_presentation_id === beerPresentationId;
+    }).length;
+
+    if (selectedQuantity >= requiredQuantity) {
+      return currentIds;
+    }
+
+    return [...currentIds, kegId];
+  });
+}
+
   function addLine() {
     const selectedPresentation = presentations.find(
       (presentation) => presentation.id === Number(presentationId),
     );
     const parsedQuantity = Number(quantity);
-    const parsedUnitPrice = Number(unitPrice);
 
     setError(null);
     setSuccess(null);
@@ -128,8 +283,8 @@ function SalesPage() {
       return;
     }
 
-    if (!Number.isFinite(parsedUnitPrice) || parsedUnitPrice < 0) {
-      setError("El precio unitario debe ser igual o mayor a cero.");
+    if (!activePrice) {
+      setError("La presentación seleccionada no tiene un precio activo.");
       return;
     }
 
@@ -152,13 +307,12 @@ function SalesPage() {
         beerPresentationCode: selectedPresentation.code,
         beerPresentationName: selectedPresentation.name,
         quantity: parsedQuantity,
-        unitPrice: parsedUnitPrice.toFixed(2),
+        unitPrice: activePrice.unit_price,
       },
     ]);
 
     setPresentationId("");
     setQuantity("1");
-    setUnitPrice("0.00");
   }
 
   function removeLine(beerPresentationId: number) {
@@ -169,13 +323,8 @@ function SalesPage() {
     );
   }
 
-  async function createDraft(event: React.FormEvent<HTMLFormElement>) {
+  async function createDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
-    if (!saleCode.trim()) {
-      setError("Ingresá un código para la venta.");
-      return;
-    }
 
     if (!customerId) {
       setError("Seleccioná un cliente.");
@@ -193,7 +342,6 @@ function SalesPage() {
 
     try {
       const sale = await apiPost<Sale>("/sales/", {
-        code: saleCode.trim(),
         customer_id: Number(customerId),
         notes: notes.trim() || null,
       });
@@ -203,11 +351,11 @@ function SalesPage() {
           sale_id: sale.id,
           beer_presentation_id: line.beerPresentationId,
           quantity: line.quantity,
-          unit_price: line.unitPrice,
         });
       }
 
       setCreatedSale(sale);
+      setSelectedKegIds([]);
       setSuccess(`El borrador ${sale.code} fue creado. Ya podés completarlo.`);
     } catch (caughtError) {
       setError(
@@ -225,6 +373,18 @@ function SalesPage() {
       return;
     }
 
+    if (
+      requiredKegQuantity > 0 &&
+      selectedKegIds.length !== requiredKegQuantity
+    ) {
+      setError(
+        `Seleccioná ${requiredKegQuantity} barril${
+          requiredKegQuantity === 1 ? "" : "es"
+        } para completar esta venta.`,
+      );
+      return;
+    }
+
     setError(null);
     setSuccess(null);
     setIsCompleting(true);
@@ -232,6 +392,9 @@ function SalesPage() {
     try {
       const completedSale = await apiPost<Sale>(
         `/sales/${encodeURIComponent(createdSale.code)}/complete`,
+        {
+          keg_ids: selectedKegIds,
+        },
       );
 
       setCreatedSale(completedSale);
@@ -251,7 +414,7 @@ function SalesPage() {
     }
   }
 
-  async function cancelSale(event: React.FormEvent<HTMLFormElement>) {
+  async function cancelSale(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!saleToCancelCode) {
@@ -292,13 +455,12 @@ function SalesPage() {
 
   function startNewSale() {
     setLines([]);
-    setSaleCode("");
     setCustomerId("");
     setNotes("");
     setPresentationId("");
     setQuantity("1");
-    setUnitPrice("0.00");
     setCreatedSale(null);
+    setSelectedKegIds([]);
     setError(null);
     setSuccess(null);
   }
@@ -326,12 +488,88 @@ function SalesPage() {
           <section className="panel sales-form-panel">
             <h2>Nueva venta</h2>
 
+            <p className="form-help">
+              El código de venta se asignará automáticamente al crear el
+              borrador.
+            </p>
+
             {createdSale ? (
               <div className="sale-result">
                 <p>
                   Venta <strong>{createdSale.code}</strong> en estado{" "}
                   <strong>{createdSale.status}</strong>.
                 </p>
+
+                {createdSale.status === "draft" && requiredKegQuantity > 0 && (
+                  <div className="sale-line-editor">
+                    <h3>Barriles para entregar</h3>
+
+                    <p className="form-help">
+                      Seleccioná los barriles físicos llenos que se entregarán
+                      al cliente.
+                    </p>
+
+                    {compatibleFilledKegs.length === 0 ? (
+                      <p className="empty-state">
+                        No hay barriles llenos compatibles disponibles.
+                      </p>
+                    ) : (
+                      <div className="checkbox-list">
+                        {compatibleFilledKegs.map((keg) => {
+                          const isSelected = selectedKegIds.includes(keg.id);
+                          const presentation = presentations.find(
+                            (item) => item.id === keg.beer_presentation_id,
+                          );
+                          const requiredForPresentation =
+                            keg.beer_presentation_id === null
+                              ? 0
+                              : getRequiredKegQuantityForPresentation(
+                                  keg.beer_presentation_id,
+                                );
+                          const selectedForPresentation =
+                            keg.beer_presentation_id === null
+                              ? 0
+                              : getSelectedKegQuantityForPresentation(
+                                  keg.beer_presentation_id,
+                                );
+
+                          return (
+                            <label key={keg.id} className="checkbox-option">
+                              <input
+                                checked={isSelected}
+                                disabled={
+                                  !isSelected &&
+                                  selectedForPresentation >=
+                                    requiredForPresentation
+                                }
+                                onChange={() => toggleKegSelection(keg.id)}
+                                type="checkbox"
+                              />
+
+                              <span>
+                                <strong>{keg.code}</strong>
+                                {" · "}
+                                {presentation?.name ??
+                                  "Presentación desconocida"}
+                                {" · "}
+                                {keg.current_volume_liters} L
+                                {keg.form_factor !== "standard" &&
+                                  ` · ${
+                                    kegFormFactorLabels[keg.form_factor]
+                                  }`}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <p className="form-help">
+                      Seleccionados: {selectedKegIds.length} de{" "}
+                      {requiredKegQuantity}.
+                    </p>
+                  </div>
+                )}
 
                 <div className="form-actions">
                   {createdSale.status === "draft" && (
@@ -357,17 +595,6 @@ function SalesPage() {
               <form className="sale-form" onSubmit={createDraft}>
                 <div className="form-grid">
                   <label>
-                    Código de venta
-                    <input
-                      maxLength={30}
-                      onChange={(event) => setSaleCode(event.target.value)}
-                      placeholder="SALE-001"
-                      required
-                      value={saleCode}
-                    />
-                  </label>
-
-                  <label>
                     Cliente
                     <select
                       onChange={(event) => setCustomerId(event.target.value)}
@@ -375,6 +602,7 @@ function SalesPage() {
                       value={customerId}
                     >
                       <option value="">Seleccioná un cliente</option>
+
                       {customers.map((customer) => (
                         <option key={customer.id} value={customer.id}>
                           {customer.code} · {customer.name}
@@ -407,6 +635,7 @@ function SalesPage() {
                         value={presentationId}
                       >
                         <option value="">Seleccioná una presentación</option>
+
                         {presentations.map((presentation) => (
                           <option key={presentation.id} value={presentation.id}>
                             {presentation.code} · {presentation.name}
@@ -429,19 +658,26 @@ function SalesPage() {
                     </label>
 
                     <label>
-                      Precio unitario
+                      Precio de lista
                       <input
-                        min="0"
-                        onChange={(event) => setUnitPrice(event.target.value)}
-                        step="0.01"
-                        type="number"
-                        value={unitPrice}
+                        disabled
+                        type="text"
+                        value={
+                          isPriceLoading
+                            ? "Cargando precio..."
+                            : activePrice
+                              ? formatCurrency(activePrice.unit_price)
+                              : presentationId
+                                ? "Sin precio activo"
+                                : "Seleccioná una presentación"
+                        }
                       />
                     </label>
                   </div>
 
                   <button
                     className="secondary-button"
+                    disabled={!activePrice || isPriceLoading}
                     onClick={addLine}
                     type="button"
                   >
@@ -489,6 +725,7 @@ function SalesPage() {
               </form>
             )}
           </section>
+
           <section className="panel sales-form-panel">
             <h2>Cancelar venta</h2>
 
@@ -509,6 +746,7 @@ function SalesPage() {
                       value={saleToCancelCode}
                     >
                       <option value="">Seleccioná una venta</option>
+
                       {cancellableSales.map((sale) => (
                         <option key={sale.id} value={sale.code}>
                           {sale.code} ·{" "}
@@ -575,6 +813,7 @@ function SalesPage() {
                       <th>Importe</th>
                     </tr>
                   </thead>
+
                   <tbody>
                     {sales.map((sale) => (
                       <tr key={sale.sale_id}>

@@ -11,11 +11,15 @@ def get_user_by_id(
     return db.query(User).filter(User.id == user_id).first()
 
 
-def get_user_by_email(
+def get_user_by_username(
     db: Session,
-    email: str,
+    username: str,
 ) -> User | None:
-    return db.query(User).filter(User.email == email).first()
+    return (
+        db.query(User)
+        .filter(User.username == username)
+        .first()
+    )
 
 
 def create_user(
@@ -24,7 +28,7 @@ def create_user(
     password_hash: str,
 ) -> User:
     user = User(
-        email=user_data.email,
+        username=user_data.username,
         full_name=user_data.full_name,
         password_hash=password_hash,
         role=user_data.role,

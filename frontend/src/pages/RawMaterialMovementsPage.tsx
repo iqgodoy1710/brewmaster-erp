@@ -11,8 +11,8 @@ import type {
 
 const formatNumber = (value: string) =>
   new Intl.NumberFormat("es-ES", {
-    minimumFractionDigits: 3,
-    maximumFractionDigits: 3,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(Number(value));
 
 const formatCurrency = (value: string | null) =>
@@ -20,7 +20,8 @@ const formatCurrency = (value: string | null) =>
     ? "—"
     : new Intl.NumberFormat("es-ES", {
         style: "currency",
-        currency: "EUR",
+        currency: "USD",
+        currencyDisplay: "narrowSymbol",
       }).format(Number(value));
 
 const formatDate = (value: string) =>
@@ -51,9 +52,7 @@ const manualMovementTypes: RawMaterialMovementType[] = [
 function RawMaterialMovementsPage() {
   const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [movements, setMovements] = useState<
-    RawMaterialStockMovement[]
-  >([]);
+  const [movements, setMovements] = useState<RawMaterialStockMovement[]>([]);
   const [rawMaterialId, setRawMaterialId] = useState("");
   const [movementType, setMovementType] =
     useState<RawMaterialMovementType>("purchase_receipt");
@@ -132,9 +131,7 @@ function RawMaterialMovementsPage() {
 
   const requiresSupplier = movementType === "purchase_receipt";
 
-  async function createMovement(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
+  async function createMovement(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const parsedQuantity = Number(quantity);
@@ -195,10 +192,7 @@ function RawMaterialMovementsPage() {
         `El movimiento ${movementLabels[movement.movement_type]} fue registrado.`,
       );
 
-      await Promise.all([
-        loadBaseData(),
-        loadMovements(rawMaterialId),
-      ]);
+      await Promise.all([loadBaseData(), loadMovements(rawMaterialId)]);
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -240,18 +234,13 @@ function RawMaterialMovementsPage() {
                 <label>
                   Insumo
                   <select
-                    onChange={(event) =>
-                      setRawMaterialId(event.target.value)
-                    }
+                    onChange={(event) => setRawMaterialId(event.target.value)}
                     required
                     value={rawMaterialId}
                   >
                     <option value="">Seleccioná un insumo</option>
                     {rawMaterials.map((rawMaterial) => (
-                      <option
-                        key={rawMaterial.id}
-                        value={rawMaterial.id}
-                      >
+                      <option key={rawMaterial.id} value={rawMaterial.id}>
                         {rawMaterial.code} · {rawMaterial.name}
                       </option>
                     ))}
@@ -306,9 +295,7 @@ function RawMaterialMovementsPage() {
                   <label>
                     Proveedor
                     <select
-                      onChange={(event) =>
-                        setSupplierId(event.target.value)
-                      }
+                      onChange={(event) => setSupplierId(event.target.value)}
                       required
                       value={supplierId}
                     >
@@ -394,9 +381,7 @@ function RawMaterialMovementsPage() {
                       return (
                         <tr key={movement.id}>
                           <td>{formatDate(movement.occurred_at)}</td>
-                          <td>
-                            {movementLabels[movement.movement_type]}
-                          </td>
+                          <td>{movementLabels[movement.movement_type]}</td>
                           <td>{formatNumber(movement.quantity)}</td>
                           <td>{supplier?.name ?? "—"}</td>
                           <td>{formatCurrency(movement.unit_cost)}</td>

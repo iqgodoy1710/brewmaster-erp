@@ -1,5 +1,4 @@
 from app.common.exceptions import (
-    BeerCodeAlreadyExistsError,
     BeerNameAlreadyExistsError,
 )
 from app.crud.beer import (
@@ -9,6 +8,7 @@ from app.crud.beer import (
     get_beers,
 )
 from app.schemas.beer import BeerCreate
+from app.services.code_service import generate_code
 from sqlalchemy.orm import Session
 
 
@@ -22,22 +22,15 @@ class BeerService:
         db: Session,
         beer_data: BeerCreate,
     ):
-        existing_beer_by_code = get_beer_by_code(
-            db,
-            beer_data.code,
-        )
-        if existing_beer_by_code:
-            raise BeerCodeAlreadyExistsError(
-                "A beer with this code already exists."
-            )
-
         existing_beer_by_name = get_beer_by_name(
             db,
             beer_data.name,
         )
         if existing_beer_by_name:
-            raise BeerNameAlreadyExistsError(
-                "A beer with this name already exists."
-            )
+            raise BeerNameAlreadyExistsError("A beer with this name already exists.")
 
-        return create_beer(db, beer_data)
+        return create_beer(
+            db,
+            beer_data,
+            generate_code(db, "beer"),
+        )

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import "../App.css";
 import { apiGet, apiPost } from "../lib/api";
 import type {
+  Beer,
   RawMaterialReference,
   Recipe,
   RecipeIngredient,
@@ -11,15 +12,17 @@ import { hasRole, useCurrentUser } from "../lib/auth";
 
 const formatNumber = (value: string) =>
   new Intl.NumberFormat("es-ES", {
-    minimumFractionDigits: 3,
-    maximumFractionDigits: 3,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(Number(value));
 
 function RecipeIngredientsPage() {
   const currentUser = useCurrentUser();
 
-  const canManageCatalog = hasRole(currentUser, "admin");
+  const canManageCatalog =
+    hasRole(currentUser, "admin") || hasRole(currentUser, "operator");
   const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [beers, setBeers] = useState<Beer[]>([]);
   const [rawMaterials, setRawMaterials] = useState<RawMaterialReference[]>([]);
   const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
   const [recipeId, setRecipeId] = useState("");
@@ -33,13 +36,15 @@ function RecipeIngredientsPage() {
 
   const loadBaseData = useCallback(async () => {
     try {
-      const [recipesData, rawMaterialsData] = await Promise.all([
+      const [recipesData, rawMaterialsData, beersData] = await Promise.all([
         apiGet<Recipe[]>("/recipes/"),
         apiGet<RawMaterialReference[]>("/raw-materials/references"),
+        apiGet<Beer[]>("/beers/"),
       ]);
 
       setRecipes(recipesData);
       setRawMaterials(rawMaterialsData);
+      setBeers(beersData);
       setHasLoaded(true);
     } catch (caughtError) {
       setError(
@@ -133,6 +138,16 @@ function RecipeIngredientsPage() {
   const rawMaterialName = (id: number) =>
     rawMaterials.find((rawMaterial) => rawMaterial.id === id)?.name ?? "—";
 
+  const recipeLabel = (recipe: Recipe) => {
+    const beerName =
+      beers.find((beer) => beer.id === recipe.beer_id)?.name ??
+      `Cerveza #${recipe.beer_id}`;
+
+    return (
+      `${beerName} · Versión ${recipe.version} · ` +
+      `${formatNumber(recipe.target_volume_liters)} L`
+    );
+  };
   return (
     <main className="dashboard">
       <section className="page-heading">
@@ -167,7 +182,7 @@ function RecipeIngredientsPage() {
                       <option value="">Seleccioná una receta</option>
                       {recipes.map((recipe) => (
                         <option key={recipe.id} value={recipe.id}>
-                          Receta #{recipe.id} · Versión {recipe.version}
+                          {recipeLabel(recipe)}
                         </option>
                       ))}
                     </select>
@@ -224,7 +239,7 @@ function RecipeIngredientsPage() {
                   <option value="">Seleccioná una receta</option>
                   {recipes.map((recipe) => (
                     <option key={recipe.id} value={recipe.id}>
-                      Receta #{recipe.id} · Versión {recipe.version}
+                      {recipeLabel(recipe)}
                     </option>
                   ))}
                 </select>
@@ -235,7 +250,7 @@ function RecipeIngredientsPage() {
           <section className="panel">
             <h2>
               {selectedRecipe
-                ? `Ingredientes de la receta #${selectedRecipe.id}`
+                ? `Ingredientes de ${recipeLabel(selectedRecipe)}`
                 : "Ingredientes de la receta"}
             </h2>
 

@@ -2,8 +2,26 @@ def create_test_customer(client):
     response = client.post(
         "/customers/",
         json={
-            "code": "CLI-SALE-TEST",
+            
             "name": "Sale Test Customer",
+        },
+    )
+
+    assert response.status_code == 201
+
+    return response.json()
+
+
+def create_active_presentation_price(
+    client,
+    beer_presentation_id: int,
+    unit_price: str = "4.50",
+):
+    response = client.post(
+        "/beer-presentation-prices/",
+        json={
+            "beer_presentation_id": beer_presentation_id,
+            "unit_price": unit_price,
         },
     )
 
@@ -18,7 +36,6 @@ def test_create_sale_as_draft(client):
     creation_response = client.post(
         "/sales/",
         json={
-            "code": "SALE-TEST-001",
             "customer_id": customer["id"],
             "notes": "Test sale.",
         },
@@ -31,6 +48,7 @@ def test_create_sale_as_draft(client):
     assert sale["customer_id"] == customer["id"]
     assert sale["status"] == "draft"
     assert sale["completed_at"] is None
+    assert sale["code"] == "VEN-000001"
 
     list_response = client.get("/sales/")
 
@@ -42,7 +60,7 @@ def create_test_beer_presentation(client):
     beer_response = client.post(
         "/beers/",
         json={
-            "code": "IPA-SALE-TEST",
+            
             "name": "IPA Sale Test",
         },
     )
@@ -53,7 +71,7 @@ def create_test_beer_presentation(client):
     packaging_format_response = client.post(
         "/packaging-formats/",
         json={
-            "code": "BOTTLE-SALE-TEST",
+            
             "name": "Bottle Sale Test",
             "capacity_liters": "0.500",
         },
@@ -65,7 +83,7 @@ def create_test_beer_presentation(client):
     beer_presentation_response = client.post(
         "/beer-presentations/",
         json={
-            "code": "IPA-B500-SALE-TEST",
+            
             "name": "IPA Bottle 500 ml Sale Test",
             "beer_id": beer["id"],
             "packaging_format_id": packaging_format["id"],
@@ -83,10 +101,15 @@ def test_create_and_get_sale_items(client):
     sale = client.post(
         "/sales/",
         json={
-            "code": "SALE-TEST-001",
             "customer_id": customer["id"],
         },
     ).json()
+
+    create_active_presentation_price(
+        client,
+        beer_presentation["id"],
+        "4.50",
+    )
 
     creation_response = client.post(
         "/sale-items/",
@@ -94,7 +117,6 @@ def test_create_and_get_sale_items(client):
             "sale_id": sale["id"],
             "beer_presentation_id": beer_presentation["id"],
             "quantity": 5,
-            "unit_price": "4.50",
         },
     )
 
@@ -109,6 +131,7 @@ def test_create_and_get_sale_items(client):
 
     assert list_response.status_code == 200
     assert list_response.json() == [sale_item]
+
 
 def test_complete_sale_consumes_finished_product_stock(client):
     customer = create_test_customer(client)
@@ -128,10 +151,15 @@ def test_complete_sale_consumes_finished_product_stock(client):
     sale = client.post(
         "/sales/",
         json={
-            "code": "SALE-TEST-001",
             "customer_id": customer["id"],
         },
     ).json()
+
+    create_active_presentation_price(
+        client,
+        beer_presentation["id"],
+        "4.50",
+    )
 
     sale_item_response = client.post(
         "/sale-items/",
@@ -139,14 +167,11 @@ def test_complete_sale_consumes_finished_product_stock(client):
             "sale_id": sale["id"],
             "beer_presentation_id": beer_presentation["id"],
             "quantity": 5,
-            "unit_price": "4.50",
         },
     )
     assert sale_item_response.status_code == 201
 
-    completion_response = client.post(
-        f"/sales/{sale['code']}/complete"
-    )
+    completion_response = client.post(f"/sales/{sale['code']}/complete")
 
     assert completion_response.status_code == 200
 
@@ -172,30 +197,39 @@ def test_complete_sale_consumes_finished_product_stock(client):
     assert movements[0]["quantity"] == 5
     assert movements[0]["reference"] == sale["code"]
 
+    account_response = client.get(f"/customers/{customer['id']}/account")
+
+    assert account_response.status_code == 200
+
+    account = account_response.json()
+
+    assert account["balance"] == "22.50"
+    assert len(account["movements"]) == 1
+    assert account["movements"][0]["movement_type"] == "sale_charge"
+    assert account["movements"][0]["sale_id"] == sale["id"]
+    assert account["movements"][0]["sale_code"] == sale["code"]
+
+
 def test_cannot_complete_sale_without_items(client):
     customer = create_test_customer(client)
 
     sale = client.post(
         "/sales/",
         json={
-            "code": "SALE-TEST-NO-ITEMS",
             "customer_id": customer["id"],
         },
     ).json()
 
-    response = client.post(
-        f"/sales/{sale['code']}/complete"
-    )
+    response = client.post(f"/sales/{sale['code']}/complete")
 
     assert response.status_code == 409
-    assert response.json() == {
-        "detail": "Cannot complete a sale without items."
-    }
+    assert response.json() == {"detail": "Cannot complete a sale without items."}
 
     sales = client.get("/sales/").json()
 
     assert sales[0]["status"] == "draft"
     assert sales[0]["completed_at"] is None
+
 
 def test_complete_sale_with_insufficient_stock_is_atomic(client):
     customer = create_test_customer(client)
@@ -215,10 +249,15 @@ def test_complete_sale_with_insufficient_stock_is_atomic(client):
     sale = client.post(
         "/sales/",
         json={
-            "code": "SALE-TEST-INSUFFICIENT",
             "customer_id": customer["id"],
         },
     ).json()
+
+    create_active_presentation_price(
+        client,
+        beer_presentation["id"],
+        "4.50",
+    )
 
     sale_item_response = client.post(
         "/sale-items/",
@@ -226,7 +265,6 @@ def test_complete_sale_with_insufficient_stock_is_atomic(client):
             "sale_id": sale["id"],
             "beer_presentation_id": beer_presentation["id"],
             "quantity": 10,
-            "unit_price": "4.50",
         },
     )
     assert sale_item_response.status_code == 201
@@ -256,6 +294,7 @@ def test_complete_sale_with_insufficient_stock_is_atomic(client):
     assert sales[0]["status"] == "draft"
     assert sales[0]["completed_at"] is None
 
+
 def test_completed_sale_cannot_be_completed_again(client):
     customer = create_test_customer(client)
     beer_presentation = create_test_beer_presentation(client)
@@ -274,10 +313,15 @@ def test_completed_sale_cannot_be_completed_again(client):
     sale = client.post(
         "/sales/",
         json={
-            "code": "SALE-TEST-DOUBLE-COMPLETE",
             "customer_id": customer["id"],
         },
     ).json()
+
+    create_active_presentation_price(
+        client,
+        beer_presentation["id"],
+        "4.50",
+    )
 
     sale_item_response = client.post(
         "/sale-items/",
@@ -285,19 +329,14 @@ def test_completed_sale_cannot_be_completed_again(client):
             "sale_id": sale["id"],
             "beer_presentation_id": beer_presentation["id"],
             "quantity": 5,
-            "unit_price": "4.50",
         },
     )
     assert sale_item_response.status_code == 201
 
-    first_completion_response = client.post(
-        f"/sales/{sale['code']}/complete"
-    )
+    first_completion_response = client.post(f"/sales/{sale['code']}/complete")
     assert first_completion_response.status_code == 200
 
-    second_completion_response = client.post(
-        f"/sales/{sale['code']}/complete"
-    )
+    second_completion_response = client.post(f"/sales/{sale['code']}/complete")
 
     assert second_completion_response.status_code == 409
     assert second_completion_response.json() == {
@@ -311,6 +350,7 @@ def test_completed_sale_cannot_be_completed_again(client):
         if presentation["id"] == beer_presentation["id"]
     )
     assert updated_presentation["current_stock"] == 5
+
 
 def test_cancel_completed_sale_returns_finished_product_stock(client):
     customer = create_test_customer(client)
@@ -330,10 +370,15 @@ def test_cancel_completed_sale_returns_finished_product_stock(client):
     sale = client.post(
         "/sales/",
         json={
-            "code": "SALE-TEST-CANCEL",
             "customer_id": customer["id"],
         },
     ).json()
+
+    create_active_presentation_price(
+        client,
+        beer_presentation["id"],
+        "4.50",
+    )
 
     sale_item_response = client.post(
         "/sale-items/",
@@ -341,14 +386,11 @@ def test_cancel_completed_sale_returns_finished_product_stock(client):
             "sale_id": sale["id"],
             "beer_presentation_id": beer_presentation["id"],
             "quantity": 5,
-            "unit_price": "4.50",
         },
     )
     assert sale_item_response.status_code == 201
 
-    completion_response = client.post(
-        f"/sales/{sale['code']}/complete"
-    )
+    completion_response = client.post(f"/sales/{sale['code']}/complete")
     assert completion_response.status_code == 200
 
     cancellation_response = client.post(
@@ -365,10 +407,7 @@ def test_cancel_completed_sale_returns_finished_product_stock(client):
     assert cancelled_sale["status"] == "cancelled"
     assert cancelled_sale["completed_at"] is not None
     assert cancelled_sale["cancelled_at"] is not None
-    assert (
-        cancelled_sale["cancellation_reason"]
-        == "Customer cancelled the order."
-    )
+    assert cancelled_sale["cancellation_reason"] == "Customer cancelled the order."
 
     beer_presentations = client.get("/beer-presentations/").json()
     updated_presentation = next(
@@ -387,13 +426,30 @@ def test_cancel_completed_sale_returns_finished_product_stock(client):
     assert movements[0]["quantity"] == 5
     assert movements[0]["reference"] == sale["code"]
 
+    account_response = client.get(
+        f"/customers/{customer['id']}/account"
+    )
+
+    assert account_response.status_code == 200
+
+    account = account_response.json()
+
+    assert account["balance"] == "0.00"
+    assert [
+        movement["movement_type"]
+        for movement in account["movements"]
+    ] == [
+        "sale_cancellation",
+        "sale_charge",
+    ]
+
+
 def test_cancel_draft_sale_does_not_change_stock(client):
     customer = create_test_customer(client)
 
     sale = client.post(
         "/sales/",
         json={
-            "code": "SALE-TEST-CANCEL-DRAFT",
             "customer_id": customer["id"],
         },
     ).json()
@@ -412,10 +468,8 @@ def test_cancel_draft_sale_does_not_change_stock(client):
     assert cancelled_sale["status"] == "cancelled"
     assert cancelled_sale["completed_at"] is None
     assert cancelled_sale["cancelled_at"] is not None
-    assert (
-        cancelled_sale["cancellation_reason"]
-        == "Draft no longer needed."
-    )
+    assert cancelled_sale["cancellation_reason"] == "Draft no longer needed."
+
 
 def test_cancelled_sale_cannot_be_cancelled_again(client):
     customer = create_test_customer(client)
@@ -423,7 +477,6 @@ def test_cancelled_sale_cannot_be_cancelled_again(client):
     sale = client.post(
         "/sales/",
         json={
-            "code": "SALE-TEST-DOUBLE-CANCEL",
             "customer_id": customer["id"],
         },
     ).json()
@@ -448,13 +501,14 @@ def test_cancelled_sale_cannot_be_cancelled_again(client):
         "detail": "Only draft or completed sales can be cancelled."
     }
 
+
 def test_get_sale_detail_includes_customer_items_and_total(client):
     beer_presentation = create_test_beer_presentation(client)
 
     customer_response = client.post(
         "/customers/",
         json={
-            "code": "CUSTOMER-DETAIL",
+            
             "name": "Detail Customer",
         },
     )
@@ -465,7 +519,6 @@ def test_get_sale_detail_includes_customer_items_and_total(client):
     sale_response = client.post(
         "/sales/",
         json={
-            "code": "SALE-DETAIL-001",
             "customer_id": customer["id"],
             "notes": "Sale detail report test.",
         },
@@ -473,6 +526,11 @@ def test_get_sale_detail_includes_customer_items_and_total(client):
     assert sale_response.status_code == 201
 
     sale = sale_response.json()
+    create_active_presentation_price(
+        client,
+        beer_presentation["id"],
+        "4.50",
+    )
 
     item_response = client.post(
         "/sale-items/",
@@ -480,18 +538,17 @@ def test_get_sale_detail_includes_customer_items_and_total(client):
             "sale_id": sale["id"],
             "beer_presentation_id": beer_presentation["id"],
             "quantity": 3,
-            "unit_price": "4.50",
         },
     )
     assert item_response.status_code == 201
 
-    response = client.get("/sales/SALE-DETAIL-001/detail")
+    response = client.get(f"/sales/{sale['code']}/detail")
 
     assert response.status_code == 200
 
     detail = response.json()
 
-    assert detail["code"] == "SALE-DETAIL-001"
+    assert detail["code"] == sale["code"]
     assert detail["customer_id"] == customer["id"]
     assert detail["customer_name"] == "Detail Customer"
     assert detail["status"] == "draft"
@@ -526,10 +583,15 @@ def test_completed_sales_report_only_includes_completed_sales(client):
     completed_sale = client.post(
         "/sales/",
         json={
-            "code": "SALE-REPORT-COMPLETED",
             "customer_id": customer["id"],
         },
     ).json()
+
+    create_active_presentation_price(
+        client,
+        beer_presentation["id"],
+        "4.50",
+    )
 
     item_response = client.post(
         "/sale-items/",
@@ -537,20 +599,16 @@ def test_completed_sales_report_only_includes_completed_sales(client):
             "sale_id": completed_sale["id"],
             "beer_presentation_id": beer_presentation["id"],
             "quantity": 3,
-            "unit_price": "4.50",
         },
     )
     assert item_response.status_code == 201
 
-    completion_response = client.post(
-        f"/sales/{completed_sale['code']}/complete"
-    )
+    completion_response = client.post(f"/sales/{completed_sale['code']}/complete")
     assert completion_response.status_code == 200
 
     client.post(
         "/sales/",
         json={
-            "code": "SALE-REPORT-DRAFT",
             "customer_id": customer["id"],
         },
     )
@@ -563,9 +621,46 @@ def test_completed_sales_report_only_includes_completed_sales(client):
 
     assert len(report) == 1
     assert report[0]["sale_id"] == completed_sale["id"]
-    assert report[0]["sale_code"] == "SALE-REPORT-COMPLETED"
+    assert report[0]["sale_code"] == completed_sale["code"]
     assert report[0]["customer_id"] == customer["id"]
     assert report[0]["customer_name"] == customer["name"]
     assert report[0]["total_units"] == 3
     assert report[0]["total_amount"] == "13.50"
     assert report[0]["completed_at"] is not None
+
+
+def test_cannot_add_sale_item_without_an_active_price(client):
+    beer_presentation = create_test_beer_presentation(
+        client,
+    )
+
+    customer_response = client.post(
+        "/customers/",
+        json={
+            
+            "name": "Customer Without Price",
+        },
+    )
+    assert customer_response.status_code == 201
+
+    sale_response = client.post(
+        "/sales/",
+        json={
+            "customer_id": customer_response.json()["id"],
+        },
+    )
+    assert sale_response.status_code == 201
+
+    response = client.post(
+        "/sale-items/",
+        json={
+            "sale_id": sale_response.json()["id"],
+            "beer_presentation_id": beer_presentation["id"],
+            "quantity": 1,
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "detail": ("The beer presentation does not have an active price.")
+    }

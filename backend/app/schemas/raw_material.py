@@ -5,7 +5,7 @@ from datetime import datetime
 
 
 class RawMaterialBase(BaseModel):
-    code: str = Field(..., max_length=20)
+    
     name: str = Field(..., max_length=100)
     category_id: int
     unit_id: int
@@ -22,6 +22,7 @@ class RawMaterialCreate(RawMaterialBase):
 
 class RawMaterialResponse(RawMaterialBase):
     id: int
+    code: str
 
     active: bool
 
@@ -33,13 +34,18 @@ class RawMaterialResponse(RawMaterialBase):
 
 
 class RawMaterialUpdate(BaseModel):
-    code: Optional[str] = None
+    
     name: Optional[str] = None
 
     category_id: Optional[int] = None
     unit_id: Optional[int] = None
 
     minimum_stock: Optional[Decimal] = Field(default=None, ge=0)
+
+    current_cost: Optional[Decimal] = Field(
+        default=None,
+        ge=0,
+    )
 
     description: Optional[str] = None
 

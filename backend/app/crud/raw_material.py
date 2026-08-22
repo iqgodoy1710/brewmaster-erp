@@ -13,11 +13,20 @@ def get_raw_materials(db: Session):
         .all()
     )
 
-def create_raw_material(db: Session, raw_material_data: RawMaterialCreate):
-    db_raw_material = RawMaterial(**raw_material_data.model_dump())
+def create_raw_material(
+    db: Session,
+    raw_material_data: RawMaterialCreate,
+    code: str,
+):
+    db_raw_material = RawMaterial(
+        code=code,
+        **raw_material_data.model_dump(),
+    )
+
     db.add(db_raw_material)
     db.commit()
     db.refresh(db_raw_material)
+
     return db_raw_material
 
 def get_raw_material_by_code(db: Session, code: str):

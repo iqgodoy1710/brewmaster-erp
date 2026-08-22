@@ -217,7 +217,7 @@ class SaleItemAlreadyExistsError(Exception):
 
 
 # Exceptions related to USERS
-class UserEmailAlreadyExistsError(Exception):
+class UsernameAlreadyExistsError(Exception):
     pass
 
 
@@ -234,4 +234,43 @@ class UserNotFoundError(Exception):
 
 
 class InvalidUserUpdateError(Exception):
+    pass
+
+class BeerPresentationHasNoActivePriceError(Exception):
+    pass
+
+class InvalidBeerPresentationCostEstimateError(Exception):
+    pass
+
+# Exceptions related to KEGS
+class KegCodeAlreadyExistsError(Exception):
+    pass
+
+
+class InvalidKegPackagingFormatError(Exception):
+    pass
+
+
+class PackagingRunNotFoundError(Exception):
+    pass
+
+class InactiveKegError(Exception):
+    pass
+
+class InvalidKegFillingError(Exception):
+    pass
+
+class KegNotFoundError(Exception):
+    pass
+
+class InvalidKegDeliveryError(Exception):
+    pass
+
+class InvalidKegReturnError(Exception):
+    pass
+
+class InvalidKegWashingError(Exception):
+    pass
+
+class InvalidKegRemnantTransferError(Exception):
     pass

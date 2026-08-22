@@ -2,7 +2,7 @@ def create_test_beer(client):
     response = client.post(
         "/beers/",
         json={
-            "code": "NEIPA",
+            
             "name": "New England IPA",
         },
     )

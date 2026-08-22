@@ -7,7 +7,7 @@ from app.services.user_service import UserService
 
 
 def main() -> None:
-    email = input("Administrator email: ").strip().lower()
+    username = input("Administrator username: ").strip().lower()
     full_name = input("Administrator full name: ").strip()
     password = getpass("Password: ")
     password_confirmation = getpass("Confirm password: ")
@@ -21,7 +21,7 @@ def main() -> None:
         user = UserService.create(
             db,
             UserCreate(
-                email=email,
+                username=username,
                 full_name=full_name,
                 password=password,
                 role=UserRole.ADMIN,
@@ -31,7 +31,7 @@ def main() -> None:
         db.close()
 
     print(
-        f"Administrator created: {user.email} "
+        f"Administrator created: {user.username} "
         f"({user.role.value})"
     )
 

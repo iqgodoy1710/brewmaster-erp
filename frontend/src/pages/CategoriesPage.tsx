@@ -8,7 +8,9 @@ import { hasRole, useCurrentUser } from "../lib/auth";
 function CategoriesPage() {
   const currentUser = useCurrentUser();
 
-  const canManageCatalog = hasRole(currentUser, "admin");
+  const canManageCatalog =
+  hasRole(currentUser, "admin") ||
+  hasRole(currentUser, "operator");
   const [categories, setCategories] = useState<Category[]>([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");

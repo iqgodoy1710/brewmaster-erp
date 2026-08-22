@@ -1,14 +1,14 @@
 from app.common.exceptions import (
     InvalidUserUpdateError,
-    UserEmailAlreadyExistsError,
+    UsernameAlreadyExistsError,
     UserNotFoundError,
 )
 from app.core.security import hash_password
 from app.crud.user import (
     create_user,
     get_active_administrator_count,
-    get_user_by_email,
     get_user_by_id,
+    get_user_by_username,
     get_users,
     update_user,
 )
@@ -28,19 +28,19 @@ class UserService:
         db: Session,
         user_data: UserCreate,
     ):
-        normalized_email = user_data.email.strip().lower()
+        normalized_username = user_data.username.strip().lower()
 
-        existing_user = get_user_by_email(
+        existing_user = get_user_by_username(
             db,
-            normalized_email,
+            normalized_username,
         )
         if existing_user:
-            raise UserEmailAlreadyExistsError(
-                "A user with this email already exists."
+            raise UsernameAlreadyExistsError(
+                "A user with this username already exists."
             )
 
         normalized_user_data = user_data.model_copy(
-            update={"email": normalized_email}
+            update={"username": normalized_username}
         )
 
         return create_user(
@@ -62,52 +62,47 @@ class UserService:
             raise UserNotFoundError("The user does not exist.")
 
         update_data = user_data.model_dump(exclude_unset=True)
+        if "username" in update_data:
+            normalized_username = update_data["username"].strip().lower()
+
+            existing_user = get_user_by_username(
+                db,
+                normalized_username,
+            )
+            if existing_user and existing_user.id != user.id:
+                raise UsernameAlreadyExistsError(
+                    "A user with this username already exists."
+                )
+
+            update_data["username"] = normalized_username
 
         if not update_data:
-            raise InvalidUserUpdateError(
-                "At least one field must be provided."
-            )
+            raise InvalidUserUpdateError("At least one field must be provided.")
 
         requested_role = update_data.get("role")
         requested_active = update_data.get("active")
 
         if user.id == current_user.id:
             if requested_active is False:
-                raise InvalidUserUpdateError(
-                    "You cannot deactivate your own account."
-                )
+                raise InvalidUserUpdateError("You cannot deactivate your own account.")
 
-            if (
-                requested_role is not None
-                and requested_role != UserRole.ADMIN
-            ):
+            if requested_role is not None and requested_role != UserRole.ADMIN:
                 raise InvalidUserUpdateError(
                     "You cannot remove your own administrator role."
                 )
 
-        removes_administrator = (
-            user.role == UserRole.ADMIN
-            and (
-                requested_active is False
-                or (
-                    requested_role is not None
-                    and requested_role != UserRole.ADMIN
-                )
-            )
+        removes_administrator = user.role == UserRole.ADMIN and (
+            requested_active is False
+            or (requested_role is not None and requested_role != UserRole.ADMIN)
         )
 
-        if (
-            removes_administrator
-            and get_active_administrator_count(db) <= 1
-        ):
+        if removes_administrator and get_active_administrator_count(db) <= 1:
             raise InvalidUserUpdateError(
                 "At least one active administrator is required."
             )
 
         if "password" in update_data:
-            update_data["password_hash"] = hash_password(
-                update_data.pop("password")
-            )
+            update_data["password_hash"] = hash_password(update_data.pop("password"))
 
         return update_user(
             db,

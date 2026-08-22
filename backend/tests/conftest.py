@@ -27,9 +27,11 @@ def clean_database():
                 "TRUNCATE TABLE "
                 "raw_materials, raw_material_categories, units, suppliers, "
                 "raw_material_stock_movements, beers, recipes, recipe_ingredients, "
-                "production_batches, packaging_formats, beer_presentations, "
+                "production_batches, packaging_formats, kegs, keg_movements, beer_presentations, "
                 "beer_presentation_packaging_materials, packaging_runs, "
-                "beer_presentation_stock_movements, customers, sales, sale_items, users "
+                "beer_presentation_stock_movements, customers, sales, sale_items, users, "
+                "code_sequences, beer_presentation_prices, "
+                "customer_payments, customer_account_movements "
                 "RESTART IDENTITY CASCADE"
             )
         )
@@ -42,9 +44,11 @@ def clean_database():
                 "TRUNCATE TABLE "
                 "raw_materials, raw_material_categories, units, suppliers, "
                 "raw_material_stock_movements, beers, recipes, recipe_ingredients, "
-                "production_batches, packaging_formats, beer_presentations, "
+                "production_batches, packaging_formats, kegs, keg_movements, beer_presentations, "
                 "beer_presentation_packaging_materials, packaging_runs, "
-                "beer_presentation_stock_movements, customers, sales, sale_items, users "
+                "beer_presentation_stock_movements, customers, sales, sale_items, users, "
+                "code_sequences, beer_presentation_prices, "
+                "customer_payments, customer_account_movements "
                 "RESTART IDENTITY CASCADE"
             )
         )

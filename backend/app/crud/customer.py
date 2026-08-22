@@ -48,8 +48,12 @@ def get_customer_by_id(
 def create_customer(
     db: Session,
     customer_data: CustomerCreate,
+    code: str,
 ) -> Customer:
-    customer = Customer(**customer_data.model_dump())
+    customer = Customer(
+        code=code,
+        **customer_data.model_dump(),
+    )
 
     db.add(customer)
     db.commit()

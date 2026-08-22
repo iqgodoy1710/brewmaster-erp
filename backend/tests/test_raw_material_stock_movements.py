@@ -26,7 +26,7 @@ def test_purchase_receipt_increases_raw_material_stock(client):
     raw_material = client.post(
         "/raw-materials/",
         json={
-            "code": "MALT-001",
+            
             "name": "Pale Ale Malt",
             "category_id": category["id"],
             "unit_id": unit["id"],
@@ -89,7 +89,7 @@ def test_outbound_movement_cannot_make_stock_negative(client):
     raw_material = client.post(
         "/raw-materials/",
         json={
-            "code": "MALT-001",
+            
             "name": "Pale Ale Malt",
             "category_id": category["id"],
             "unit_id": unit["id"],

@@ -19,3 +19,12 @@ class Customer(BaseModel):
         "Sale",
         back_populates="customer",
     )
+
+    payments = relationship(
+        "CustomerPayment",
+        back_populates="customer",
+    )
+    account_movements = relationship(
+        "CustomerAccountMovement",
+        back_populates="customer",
+    )

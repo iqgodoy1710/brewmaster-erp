@@ -6,7 +6,7 @@ def create_test_beer_presentation(
     beer_response = client.post(
         "/beers/",
         json={
-            "code": f"BEER-{suffix}",
+            
             "name": f"Beer Alert {suffix}",
         },
     )
@@ -17,7 +17,7 @@ def create_test_beer_presentation(
     packaging_format_response = client.post(
         "/packaging-formats/",
         json={
-            "code": f"FORMAT-{suffix}",
+            
             "name": f"Format Alert {suffix}",
             "capacity_liters": "0.500",
         },
@@ -29,7 +29,7 @@ def create_test_beer_presentation(
     presentation_response = client.post(
         "/beer-presentations/",
         json={
-            "code": f"PRESENT-{suffix}",
+            
             "name": f"Presentation Alert {suffix}",
             "beer_id": beer["id"],
             "packaging_format_id": packaging_format["id"],

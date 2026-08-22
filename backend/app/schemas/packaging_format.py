@@ -1,11 +1,11 @@
 from datetime import datetime
 from decimal import Decimal
 
+from app.models.enums import PackagingFormatType
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class PackagingFormatBase(BaseModel):
-    code: str = Field(..., min_length=1, max_length=20)
     name: str = Field(..., min_length=1, max_length=100)
     capacity_liters: Decimal = Field(
         ...,
@@ -14,6 +14,7 @@ class PackagingFormatBase(BaseModel):
         decimal_places=3,
     )
     description: str | None = None
+    format_type: PackagingFormatType = PackagingFormatType.OTHER
 
 
 class PackagingFormatCreate(PackagingFormatBase):
@@ -22,6 +23,7 @@ class PackagingFormatCreate(PackagingFormatBase):
 
 class PackagingFormatResponse(PackagingFormatBase):
     id: int
+    code: str
     active: bool
     created_at: datetime
     updated_at: datetime

@@ -9,7 +9,6 @@ from app.common.exceptions import (
     InsufficientStockError,
     InvalidPackagingRunError,
     InvalidProductionBatchStatusError,
-    PackagingRunCodeAlreadyExistsError,
     ProductionBatchNotFoundError,
     RawMaterialNotFoundError,
 )
@@ -25,7 +24,6 @@ from app.crud.beer_presentation_stock_movement import (
 )
 from app.crud.packaging_run import (
     create_packaging_run,
-    get_packaging_run_by_code,
     get_packaging_runs,
 )
 from app.crud.production_batch import (
@@ -41,6 +39,7 @@ from app.crud.raw_material_stock_movement import (
 )
 from app.models.enums import ProductionBatchStatus
 from app.schemas.packaging_run import PackagingRunCreate
+from app.services.code_service import generate_code
 from sqlalchemy.orm import Session
 
 
@@ -54,14 +53,6 @@ class PackagingRunService:
         db: Session,
         packaging_run_data: PackagingRunCreate,
     ):
-        existing_packaging_run = get_packaging_run_by_code(
-            db,
-            packaging_run_data.code,
-        )
-        if existing_packaging_run:
-            raise PackagingRunCodeAlreadyExistsError(
-                "A packaging run with this code already exists."
-            )
 
         production_batch = get_production_batch_by_id(
             db,
@@ -147,11 +138,16 @@ class PackagingRunService:
         new_presentation_stock = (
             beer_presentation.current_stock + packaging_run_data.packaged_quantity
         )
+        generated_code = generate_code(
+            db,
+            "packaging_run",
+        )
 
         try:
             packaging_run = create_packaging_run(
                 db,
                 packaging_run_data,
+                generated_code,
                 packaged_volume_liters,
             )
             create_packaging_receipt_movement(

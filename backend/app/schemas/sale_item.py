@@ -4,24 +4,17 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class SaleItemBase(BaseModel):
+class SaleItemCreate(BaseModel):
     sale_id: int = Field(..., gt=0)
     beer_presentation_id: int = Field(..., gt=0)
     quantity: int = Field(..., gt=0)
-    unit_price: Decimal = Field(
-        ...,
-        ge=0,
-        max_digits=10,
-        decimal_places=2,
-    )
 
-
-class SaleItemCreate(SaleItemBase):
     model_config = ConfigDict(extra="forbid")
 
 
-class SaleItemResponse(SaleItemBase):
+class SaleItemResponse(SaleItemCreate):
     id: int
+    unit_price: Decimal
     active: bool
     created_at: datetime
     updated_at: datetime

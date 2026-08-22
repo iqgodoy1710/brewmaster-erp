@@ -5,7 +5,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class SaleBase(BaseModel):
-    code: str = Field(..., min_length=1, max_length=30)
     customer_id: int = Field(..., gt=0)
     notes: str | None = None
 
@@ -16,6 +15,7 @@ class SaleCreate(SaleBase):
 
 class SaleResponse(SaleBase):
     id: int
+    code: str
     active: bool
     status: SaleStatus
     completed_at: datetime | None
@@ -26,8 +26,12 @@ class SaleResponse(SaleBase):
 
     model_config = ConfigDict(from_attributes=True)
 
-
 class SaleCancel(BaseModel):
     cancellation_reason: str | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+class SaleComplete(BaseModel):
+    keg_ids: list[int] = Field(default_factory=list)
 
     model_config = ConfigDict(extra="forbid")

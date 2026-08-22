@@ -12,8 +12,8 @@ import { hasRole, useCurrentUser } from "../lib/auth";
 
 const formatNumber = (value: string) =>
   new Intl.NumberFormat("es-ES", {
-    minimumFractionDigits: 3,
-    maximumFractionDigits: 3,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(Number(value));
 
 const formatDate = (value: string) =>
@@ -30,7 +30,7 @@ function PackagingPage() {
   const [batches, setBatches] = useState<ProductionBatch[]>([]);
   const [presentations, setPresentations] = useState<BeerPresentation[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [runCode, setRunCode] = useState("");
+
   const [batchId, setBatchId] = useState("");
   const [presentationId, setPresentationId] = useState("");
   const [packagedQuantity, setPackagedQuantity] = useState("");
@@ -118,11 +118,6 @@ function PackagingPage() {
 
     const quantity = Number(packagedQuantity);
 
-    if (!runCode.trim()) {
-      setError("Ingresá un código para la corrida de envasado.");
-      return;
-    }
-
     if (!batchId) {
       setError("Seleccioná un lote completado.");
       return;
@@ -144,14 +139,12 @@ function PackagingPage() {
 
     try {
       const run = await apiPost<PackagingRun>("/packaging-runs/", {
-        code: runCode.trim(),
         production_batch_id: Number(batchId),
         beer_presentation_id: Number(presentationId),
         packaged_quantity: quantity,
         notes: notes.trim() || null,
       });
 
-      setRunCode("");
       setBatchId("");
       setPresentationId("");
       setPackagedQuantity("");
@@ -195,18 +188,12 @@ function PackagingPage() {
               <h2>Nueva corrida de envasado</h2>
 
               <form className="sale-form" onSubmit={createPackagingRun}>
-                <div className="form-grid">
-                  <label>
-                    Código de corrida
-                    <input
-                      maxLength={30}
-                      onChange={(event) => setRunCode(event.target.value)}
-                      placeholder="PACK-IPA-B500-003"
-                      required
-                      value={runCode}
-                    />
-                  </label>
+                <p className="form-help">
+                  El código de corrida se asignará automáticamente al registrar
+                  el envasado.
+                </p>
 
+                <div className="form-grid">
                   <label>
                     Lote completado
                     <select
@@ -218,6 +205,7 @@ function PackagingPage() {
                       value={batchId}
                     >
                       <option value="">Seleccioná un lote</option>
+
                       {eligibleBatches.map((batch) => (
                         <option key={batch.id} value={batch.id}>
                           {batch.code} · Granel:{" "}

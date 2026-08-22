@@ -52,3 +52,8 @@ class Sale(BaseModel):
         "BeerPresentationStockMovement",
         back_populates="sale",
     )
+
+    customer_account_movements = relationship(
+        "CustomerAccountMovement",
+        back_populates="sale",
+    )

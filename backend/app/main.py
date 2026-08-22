@@ -9,12 +9,15 @@ from app.api.exception_handlers import (
     beer_presentation_conflict_handler,
     beer_presentation_packaging_material_conflict_handler,
     category_name_already_exists_handler,
+    cost_estimate_conflict_handler,
     customer_already_exists_handler,
     insufficient_permissions_handler,
     insufficient_stock_handler,
     invalid_credentials_handler,
     invalid_stock_movement_handler,
     invalid_user_update_handler,
+    keg_conflict_handler,
+    keg_not_found_handler,
     packaging_format_already_exists_handler,
     packaging_run_conflict_handler,
     production_batch_completion_conflict_handler,
@@ -29,8 +32,14 @@ from app.api.exception_handlers import (
     user_already_exists_handler,
 )
 from app.api.v1.endpoints.auth import router as auth_router
+from app.api.v1.endpoints.beer_presentation_cost_estimates import (
+    router as beer_presentation_cost_estimate_router,
+)
 from app.api.v1.endpoints.beer_presentation_packaging_materials import (
     router as beer_presentation_packaging_material_router,
+)
+from app.api.v1.endpoints.beer_presentation_prices import (
+    router as beer_presentation_price_router,
 )
 from app.api.v1.endpoints.beer_presentation_stock_movements import (
     router as beer_presentation_stock_movement_router,
@@ -40,7 +49,14 @@ from app.api.v1.endpoints.beer_presentations import (
 )
 from app.api.v1.endpoints.beers import router as beer_router
 from app.api.v1.endpoints.categories import router as category_router
+from app.api.v1.endpoints.customer_accounts import (
+    router as customer_account_router,
+)
 from app.api.v1.endpoints.customers import router as customer_router
+from app.api.v1.endpoints.keg_movements import (
+    router as keg_movements_router,
+)
+from app.api.v1.endpoints.kegs import router as kegs_router
 from app.api.v1.endpoints.packaging_formats import router as packaging_format_router
 from app.api.v1.endpoints.packaging_runs import (
     router as packaging_run_router,
@@ -63,6 +79,7 @@ from app.common.exceptions import (
     BeerNotFoundError,
     BeerPresentationAlreadyExistsError,
     BeerPresentationCodeAlreadyExistsError,
+    BeerPresentationHasNoActivePriceError,
     BeerPresentationHasNoPackagingMaterialsError,
     BeerPresentationNameAlreadyExistsError,
     BeerPresentationNotFoundError,
@@ -75,6 +92,7 @@ from app.common.exceptions import (
     InactiveBeerError,
     InactiveBeerPresentationError,
     InactiveCustomerError,
+    InactiveKegError,
     InactivePackagingFormatError,
     InactiveRawMaterialError,
     InactiveRecipeError,
@@ -82,13 +100,22 @@ from app.common.exceptions import (
     InsufficientBulkBeerError,
     InsufficientPermissionsError,
     InsufficientStockError,
+    InvalidBeerPresentationCostEstimateError,
     InvalidBeerPresentationStockMovementError,
     InvalidCredentialsError,
+    InvalidKegDeliveryError,
+    InvalidKegFillingError,
+    InvalidKegPackagingFormatError,
+    InvalidKegRemnantTransferError,
+    InvalidKegReturnError,
+    InvalidKegWashingError,
     InvalidPackagingRunError,
     InvalidProductionBatchStatusError,
     InvalidSaleStatusError,
     InvalidStockMovementError,
     InvalidUserUpdateError,
+    KegCodeAlreadyExistsError,
+    KegNotFoundError,
     PackagingFormatCodeAlreadyExistsError,
     PackagingFormatNameAlreadyExistsError,
     PackagingFormatNotFoundError,
@@ -111,7 +138,7 @@ from app.common.exceptions import (
     UnitNameAlreadyExistsError,
     UnitNotFoundError,
     UnitSymbolAlreadyExistsError,
-    UserEmailAlreadyExistsError,
+    UsernameAlreadyExistsError,
     UserNotFoundError,
 )
 
@@ -366,7 +393,7 @@ app.add_exception_handler(
 )
 
 app.add_exception_handler(
-    UserEmailAlreadyExistsError,
+    UsernameAlreadyExistsError,
     user_already_exists_handler,
 )
 
@@ -380,6 +407,60 @@ app.add_exception_handler(
     invalid_user_update_handler,
 )
 
+app.add_exception_handler(
+    BeerPresentationHasNoActivePriceError,
+    sale_conflict_handler,
+)
+
+app.add_exception_handler(
+    InvalidBeerPresentationCostEstimateError,
+    cost_estimate_conflict_handler,
+)
+
+app.add_exception_handler(
+    KegCodeAlreadyExistsError,
+    keg_conflict_handler,
+)
+
+app.add_exception_handler(
+    InvalidKegPackagingFormatError,
+    keg_conflict_handler,
+)
+
+app.add_exception_handler(
+    KegNotFoundError,
+    keg_not_found_handler,
+)
+
+app.add_exception_handler(
+    InactiveKegError,
+    keg_conflict_handler,
+)
+
+app.add_exception_handler(
+    InvalidKegFillingError,
+    keg_conflict_handler,
+)
+
+app.add_exception_handler(
+    InvalidKegDeliveryError,
+    keg_conflict_handler,
+)
+
+app.add_exception_handler(
+    InvalidKegReturnError,
+    keg_conflict_handler,
+)
+
+app.add_exception_handler(
+    InvalidKegWashingError,
+    keg_conflict_handler,
+)
+
+app.add_exception_handler(
+    InvalidKegRemnantTransferError,
+    keg_conflict_handler,
+)
 
 @app.get("/")
 def home():
@@ -423,3 +504,13 @@ app.include_router(sale_item_router)
 app.include_router(auth_router)
 
 app.include_router(user_router)
+
+app.include_router(beer_presentation_price_router)
+
+app.include_router(beer_presentation_cost_estimate_router)
+
+app.include_router(customer_account_router)
+
+app.include_router(kegs_router)
+
+app.include_router(keg_movements_router)

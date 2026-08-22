@@ -1,7 +1,12 @@
 from app.api.auth_dependencies import require_roles
 from app.db.dependencies import get_db
 from app.models.enums import UserRole
-from app.schemas.sale import SaleCancel, SaleCreate, SaleResponse
+from app.schemas.sale import (
+    SaleCancel,
+    SaleComplete,
+    SaleCreate,
+    SaleResponse,
+)
 from app.schemas.sale_detail import SaleDetailResponse
 from app.schemas.sale_report import SaleReportItemResponse
 from app.services.sale_service import SaleService
@@ -68,9 +73,14 @@ def read_sale_detail(
 )
 def complete_sale(
     code: str,
+    completion_data: SaleComplete | None = None,
     db: Session = Depends(get_db),
 ):
-    return SaleService.complete(db, code)
+    return SaleService.complete(
+        db,
+        code,
+        completion_data,
+    )
 
 
 @router.post(

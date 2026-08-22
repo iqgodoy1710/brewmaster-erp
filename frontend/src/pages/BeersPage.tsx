@@ -8,9 +8,11 @@ import { hasRole, useCurrentUser } from "../lib/auth";
 function BeersPage() {
   const currentUser = useCurrentUser();
 
-  const canManageCatalog = hasRole(currentUser, "admin");
+  const canManageCatalog =
+  hasRole(currentUser, "admin") ||
+  hasRole(currentUser, "operator");
   const [beers, setBeers] = useState<Beer[]>([]);
-  const [code, setCode] = useState("");
+  
   const [name, setName] = useState("");
   const [style, setStyle] = useState("");
   const [description, setDescription] = useState("");
@@ -43,10 +45,7 @@ function BeersPage() {
   async function createBeer(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!code.trim()) {
-      setError("Ingresá un código para la cerveza.");
-      return;
-    }
+    
 
     if (!name.trim()) {
       setError("Ingresá el nombre de la cerveza.");
@@ -59,13 +58,13 @@ function BeersPage() {
 
     try {
       const beer = await apiPost<Beer>("/beers/", {
-        code: code.trim(),
+        
         name: name.trim(),
         style: style.trim() || null,
         description: description.trim() || null,
       });
 
-      setCode("");
+      
       setName("");
       setStyle("");
       setDescription("");
@@ -109,16 +108,7 @@ function BeersPage() {
 
               <form className="sale-form" onSubmit={createBeer}>
                 <div className="form-grid">
-                  <label>
-                    Código
-                    <input
-                      maxLength={20}
-                      onChange={(event) => setCode(event.target.value)}
-                      placeholder="IPA-001"
-                      required
-                      value={code}
-                    />
-                  </label>
+                  
 
                   <label>
                     Nombre

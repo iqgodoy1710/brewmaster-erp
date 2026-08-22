@@ -2,21 +2,29 @@ import { useCallback, useEffect, useState } from "react";
 
 import "../App.css";
 import { apiGet, apiPost } from "../lib/api";
-import type { PackagingFormat } from "../types/api";
+import type { PackagingFormat, PackagingFormatType } from "../types/api";
 import { hasRole, useCurrentUser } from "../lib/auth";
 
 const formatNumber = (value: string) =>
   new Intl.NumberFormat("es-ES", {
-    minimumFractionDigits: 3,
-    maximumFractionDigits: 3,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(Number(value));
+
+const formatTypeLabels: Record<PackagingFormatType, string> = {
+  bottle: "Botella",
+  keg: "Barril",
+  can: "Lata",
+  other: "Otro",
+};
 
 function PackagingFormatsPage() {
   const currentUser = useCurrentUser();
-
-  const canManageCatalog = hasRole(currentUser, "admin");
+  const [formatType, setFormatType] = useState<PackagingFormatType>("other");
+  const canManageCatalog =
+    hasRole(currentUser, "admin") || hasRole(currentUser, "operator");
   const [formats, setFormats] = useState<PackagingFormat[]>([]);
-  const [code, setCode] = useState("");
+
   const [name, setName] = useState("");
   const [capacityLiters, setCapacityLiters] = useState("");
   const [description, setDescription] = useState("");
@@ -51,8 +59,8 @@ function PackagingFormatsPage() {
 
     const capacity = Number(capacityLiters);
 
-    if (!code.trim() || !name.trim()) {
-      setError("Ingresá código y nombre para el formato.");
+    if (!name.trim()) {
+      setError("Ingresá un nombre para el formato.");
       return;
     }
 
@@ -67,16 +75,16 @@ function PackagingFormatsPage() {
 
     try {
       const format = await apiPost<PackagingFormat>("/packaging-formats/", {
-        code: code.trim(),
         name: name.trim(),
         capacity_liters: capacityLiters,
         description: description.trim() || null,
+        format_type: formatType,
       });
 
-      setCode("");
       setName("");
       setCapacityLiters("");
       setDescription("");
+      setFormatType("other");
       setSuccess(`El formato ${format.name} fue creado correctamente.`);
 
       await loadFormats();
@@ -116,17 +124,6 @@ function PackagingFormatsPage() {
               <form className="sale-form" onSubmit={createFormat}>
                 <div className="form-grid">
                   <label>
-                    Código
-                    <input
-                      maxLength={20}
-                      onChange={(event) => setCode(event.target.value)}
-                      placeholder="CAN-473"
-                      required
-                      value={code}
-                    />
-                  </label>
-
-                  <label>
                     Nombre
                     <input
                       maxLength={100}
@@ -151,6 +148,21 @@ function PackagingFormatsPage() {
                       type="number"
                       value={capacityLiters}
                     />
+                  </label>
+
+                  <label>
+                    Tipo de formato
+                    <select
+                      value={formatType}
+                      onChange={(event) =>
+                        setFormatType(event.target.value as PackagingFormatType)
+                      }
+                    >
+                      <option value="other">Otro</option>
+                      <option value="bottle">Botella</option>
+                      <option value="keg">Barril</option>
+                      <option value="can">Lata</option>
+                    </select>
                   </label>
 
                   <label>
@@ -189,6 +201,7 @@ function PackagingFormatsPage() {
                     <tr>
                       <th>Código</th>
                       <th>Formato</th>
+                      <th>Tipo</th>
                       <th>Capacidad</th>
                       <th>Descripción</th>
                     </tr>
@@ -198,6 +211,7 @@ function PackagingFormatsPage() {
                       <tr key={format.id}>
                         <td>{format.code}</td>
                         <td>{format.name}</td>
+                        <td>{formatTypeLabels[format.format_type]}</td>
                         <td>{formatNumber(format.capacity_liters)} L</td>
                         <td>{format.description ?? "—"}</td>
                       </tr>

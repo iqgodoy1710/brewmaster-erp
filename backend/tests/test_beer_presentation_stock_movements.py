@@ -2,7 +2,7 @@ def create_test_beer_presentation(client):
     beer_response = client.post(
         "/beers/",
         json={
-            "code": "IPA-STOCK-TEST",
+           
             "name": "IPA Stock Test",
         },
     )
@@ -13,7 +13,7 @@ def create_test_beer_presentation(client):
     packaging_format_response = client.post(
         "/packaging-formats/",
         json={
-            "code": "BOTTLE-STOCK-TEST",
+            
             "name": "Bottle Stock Test",
             "capacity_liters": "0.500",
         },
@@ -25,7 +25,7 @@ def create_test_beer_presentation(client):
     beer_presentation_response = client.post(
         "/beer-presentations/",
         json={
-            "code": "IPA-B500-STOCK-TEST",
+            
             "name": "IPA Bottle 500 ml Stock Test",
             "beer_id": beer["id"],
             "packaging_format_id": packaging_format["id"],

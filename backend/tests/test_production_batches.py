@@ -20,7 +20,6 @@ def create_test_raw_material(client):
     raw_material_response = client.post(
         "/raw-materials/",
         json={
-            "code": "MALT-PALE",
             "name": "Pale Malt",
             "category_id": category_response.json()["id"],
             "unit_id": unit_response.json()["id"],
@@ -39,7 +38,7 @@ def create_test_recipe_with_ingredient(client):
     beer_response = client.post(
         "/beers/",
         json={
-            "code": "NEIPA",
+           
             "name": "New England IPA",
         },
     )
@@ -66,6 +65,7 @@ def create_test_recipe_with_ingredient(client):
         },
     )
     assert ingredient_response.status_code == 201
+    recipe["raw_material_code"] = raw_material["code"]
 
     return recipe
 
@@ -94,13 +94,14 @@ def test_create_production_batch(client):
     assert Decimal(data["available_bulk_volume_liters"]) == Decimal("0")
     assert data["active"] is True
 
+
 def test_create_production_batch_without_recipe_ingredients_returns_conflict(
     client,
 ):
     beer_response = client.post(
         "/beers/",
         json={
-            "code": "STOUT",
+            
             "name": "Dry Stout",
         },
     )
@@ -127,10 +128,9 @@ def test_create_production_batch_without_recipe_ingredients_returns_conflict(
 
     assert response.status_code == 409
     assert response.json() == {
-        "detail": (
-            "Cannot plan a production batch for a recipe without ingredients."
-        )
+        "detail": ("Cannot plan a production batch for a recipe without ingredients.")
     }
+
 
 def test_duplicate_production_batch_code_returns_conflict(client):
     recipe = create_test_recipe_with_ingredient(client)
@@ -149,6 +149,7 @@ def test_duplicate_production_batch_code_returns_conflict(client):
     assert response.json() == {
         "detail": "A production batch with this code already exists."
     }
+
 
 def test_get_production_batches_returns_active_batches(client):
     recipe = create_test_recipe_with_ingredient(client)
@@ -172,12 +173,13 @@ def test_get_production_batches_returns_active_batches(client):
     assert data[0]["code"] == "PB-IPA-001"
     assert data[0]["status"] == "planned"
 
+
 def test_planning_production_batch_does_not_change_raw_material_stock(
     client,
 ):
     recipe = create_test_recipe_with_ingredient(client)
 
-    raw_material_response = client.get("/raw-materials/MALT-PALE")
+    raw_material_response = client.get(f"/raw-materials/{recipe['raw_material_code']}")
     assert raw_material_response.status_code == 200
 
     raw_material = raw_material_response.json()
@@ -202,18 +204,21 @@ def test_planning_production_batch_does_not_change_raw_material_stock(
     )
     assert production_batch_response.status_code == 201
 
-    updated_raw_material_response = client.get("/raw-materials/MALT-PALE")
+    updated_raw_material_response = client.get(
+        f"/raw-materials/{recipe['raw_material_code']}"
+    )
     assert updated_raw_material_response.status_code == 200
 
     updated_raw_material = updated_raw_material_response.json()
     assert Decimal(updated_raw_material["current_stock"]) == Decimal("150.000")
+
 
 def test_raw_material_planning_projection_calculates_scaled_consumption(
     client,
 ):
     recipe = create_test_recipe_with_ingredient(client)
 
-    raw_material_response = client.get("/raw-materials/MALT-PALE")
+    raw_material_response = client.get(f"/raw-materials/{recipe['raw_material_code']}")
     assert raw_material_response.status_code == 200
 
     raw_material = raw_material_response.json()
@@ -238,9 +243,7 @@ def test_raw_material_planning_projection_calculates_scaled_consumption(
     )
     assert production_batch_response.status_code == 201
 
-    response = client.get(
-        "/production-batches/planning/raw-material-requirements"
-    )
+    response = client.get("/production-batches/planning/raw-material-requirements")
 
     assert response.status_code == 200
 
@@ -258,7 +261,7 @@ def test_raw_material_planning_projection_calculates_scaled_consumption(
 def test_raw_material_planning_projection_detects_shortage(client):
     recipe = create_test_recipe_with_ingredient(client)
 
-    raw_material_response = client.get("/raw-materials/MALT-PALE")
+    raw_material_response = client.get(f"/raw-materials/{recipe['raw_material_code']}")
     assert raw_material_response.status_code == 200
 
     raw_material = raw_material_response.json()
@@ -283,9 +286,7 @@ def test_raw_material_planning_projection_detects_shortage(client):
     )
     assert production_batch_response.status_code == 201
 
-    response = client.get(
-        "/production-batches/planning/raw-material-requirements"
-    )
+    response = client.get("/production-batches/planning/raw-material-requirements")
 
     assert response.status_code == 200
 
@@ -294,12 +295,13 @@ def test_raw_material_planning_projection_detects_shortage(client):
     assert Decimal(projection["projected_available_stock"]) == Decimal("-50.000")
     assert projection["has_shortage"] is True
 
+
 def test_complete_production_batch_consumes_stock_and_produces_bulk_beer(
     client,
 ):
     recipe = create_test_recipe_with_ingredient(client)
 
-    raw_material_response = client.get("/raw-materials/MALT-PALE")
+    raw_material_response = client.get(f"/raw-materials/{recipe['raw_material_code']}")
     assert raw_material_response.status_code == 200
 
     raw_material = raw_material_response.json()
@@ -337,21 +339,19 @@ def test_complete_production_batch_consumes_stock_and_produces_bulk_beer(
 
     completed_batch = completion_response.json()
     assert completed_batch["status"] == "completed"
-    assert Decimal(
-        completed_batch["produced_volume_liters"]
-    ) == Decimal("470.000")
-    assert Decimal(
-        completed_batch["available_bulk_volume_liters"]
-    ) == Decimal("470.000")
+    assert Decimal(completed_batch["produced_volume_liters"]) == Decimal("470.000")
+    assert Decimal(completed_batch["available_bulk_volume_liters"]) == Decimal(
+        "470.000"
+    )
     assert completed_batch["completed_at"] is not None
 
     updated_raw_material_response = client.get(
-        "/raw-materials/MALT-PALE"
+        f"/raw-materials/{recipe['raw_material_code']}"
     )
     assert updated_raw_material_response.status_code == 200
-    assert Decimal(
-        updated_raw_material_response.json()["current_stock"]
-    ) == Decimal("50.000")
+    assert Decimal(updated_raw_material_response.json()["current_stock"]) == Decimal(
+        "50.000"
+    )
 
     movements_response = client.get(
         f"/raw-material-stock-movements/{raw_material['id']}"
@@ -383,7 +383,7 @@ def test_complete_production_batch_with_insufficient_stock_is_atomic(
 ):
     recipe = create_test_recipe_with_ingredient(client)
 
-    raw_material_response = client.get("/raw-materials/MALT-PALE")
+    raw_material_response = client.get(f"/raw-materials/{recipe['raw_material_code']}")
     assert raw_material_response.status_code == 200
 
     raw_material = raw_material_response.json()
@@ -421,12 +421,12 @@ def test_complete_production_batch_with_insufficient_stock_is_atomic(
     }
 
     updated_raw_material_response = client.get(
-        "/raw-materials/MALT-PALE"
+        f"/raw-materials/{recipe['raw_material_code']}"
     )
     assert updated_raw_material_response.status_code == 200
-    assert Decimal(
-        updated_raw_material_response.json()["current_stock"]
-    ) == Decimal("50.000")
+    assert Decimal(updated_raw_material_response.json()["current_stock"]) == Decimal(
+        "50.000"
+    )
 
     movements_response = client.get(
         f"/raw-material-stock-movements/{raw_material['id']}"
@@ -444,15 +444,13 @@ def test_complete_production_batch_with_insufficient_stock_is_atomic(
     batch = production_batches_response.json()[0]
     assert batch["status"] == "planned"
     assert batch["produced_volume_liters"] is None
-    assert Decimal(
-        batch["available_bulk_volume_liters"]
-    ) == Decimal("0.000")
+    assert Decimal(batch["available_bulk_volume_liters"]) == Decimal("0.000")
 
 
 def test_completed_production_batch_cannot_be_completed_again(client):
     recipe = create_test_recipe_with_ingredient(client)
 
-    raw_material_response = client.get("/raw-materials/MALT-PALE")
+    raw_material_response = client.get(f"/raw-materials/{recipe['raw_material_code']}")
     assert raw_material_response.status_code == 200
 
     raw_material = raw_material_response.json()
@@ -496,6 +494,7 @@ def test_completed_production_batch_cannot_be_completed_again(client):
         "detail": "Only planned production batches can be completed."
     }
 
+
 def test_manual_production_consumption_is_rejected(client):
     category = client.post(
         "/categories/",
@@ -513,7 +512,6 @@ def test_manual_production_consumption_is_rejected(client):
     raw_material = client.post(
         "/raw-materials/",
         json={
-            "code": "MALT-001",
             "name": "Pale Ale Malt",
             "category_id": category["id"],
             "unit_id": unit["id"],

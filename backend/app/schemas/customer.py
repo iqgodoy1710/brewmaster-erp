@@ -4,7 +4,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class CustomerBase(BaseModel):
-    code: str = Field(..., min_length=1, max_length=20)
     name: str = Field(..., min_length=1, max_length=150)
     tax_id: str | None = Field(default=None, max_length=30)
     email: str | None = Field(default=None, max_length=100)
@@ -19,6 +18,7 @@ class CustomerCreate(CustomerBase):
 
 class CustomerResponse(CustomerBase):
     id: int
+    code: str
     active: bool
     created_at: datetime
     updated_at: datetime

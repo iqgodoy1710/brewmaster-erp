@@ -8,7 +8,9 @@ import { hasRole, useCurrentUser } from "../lib/auth";
 function UnitsPage() {
   const currentUser = useCurrentUser();
 
-  const canManageCatalog = hasRole(currentUser, "admin");
+  const canManageCatalog =
+  hasRole(currentUser, "admin") ||
+  hasRole(currentUser, "operator");
   const [units, setUnits] = useState<Unit[]>([]);
   const [name, setName] = useState("");
   const [symbol, setSymbol] = useState("");

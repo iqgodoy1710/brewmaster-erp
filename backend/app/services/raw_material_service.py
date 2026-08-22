@@ -1,6 +1,5 @@
 from app.common.exceptions import (
     CategoryNotFoundError,
-    RawMaterialCodeAlreadyExistsError,
     RawMaterialNotFoundError,
     UnitNotFoundError,
 )
@@ -16,6 +15,7 @@ from app.crud.raw_material import (
 from app.crud.unit import get_unit_by_id
 from app.schemas.inventory_alert import RawMaterialLowStockResponse
 from app.schemas.raw_material import RawMaterialCreate, RawMaterialUpdate
+from app.services.code_service import generate_code
 from sqlalchemy.orm import Session
 
 
@@ -27,14 +27,7 @@ class RawMaterialService:
 
     @staticmethod
     def create(db: Session, raw_material_data: RawMaterialCreate):
-        existing_raw_material = get_raw_material_by_code(
-            db,
-            raw_material_data.code,
-        )
-        if existing_raw_material:
-            raise RawMaterialCodeAlreadyExistsError(
-                "A raw material with this code already exists."
-            )
+              
 
         category = get_category_by_id(db, raw_material_data.category_id)
         if not category:
@@ -44,7 +37,11 @@ class RawMaterialService:
         if not unit:
             raise UnitNotFoundError("The selected unit does not exist.")
 
-        return create_raw_material(db, raw_material_data)
+        return create_raw_material(
+            db,
+            raw_material_data,
+            generate_code(db, "raw_material"),
+        )
 
     @staticmethod
     def get_by_code(db: Session, code: str):
@@ -64,16 +61,6 @@ class RawMaterialService:
         raw_material = RawMaterialService.get_by_code(db, code)
 
         update_data = raw_material_data.model_dump(exclude_unset=True)
-
-        if "code" in update_data and update_data["code"] != raw_material.code:
-            existing_raw_material = get_raw_material_by_code(
-                db,
-                update_data["code"],
-            )
-            if existing_raw_material:
-                raise RawMaterialCodeAlreadyExistsError(
-                    "A raw material with this code already exists."
-                )
 
         if "category_id" in update_data:
             category = get_category_by_id(db, update_data["category_id"])
@@ -112,8 +99,7 @@ class RawMaterialService:
                 current_stock=raw_material.current_stock,
                 minimum_stock=raw_material.minimum_stock,
                 shortage_quantity=(
-                    raw_material.minimum_stock
-                    - raw_material.current_stock
+                    raw_material.minimum_stock - raw_material.current_stock
                 ),
             )
             for raw_material, unit in rows

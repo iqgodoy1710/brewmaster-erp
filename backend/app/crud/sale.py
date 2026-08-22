@@ -40,8 +40,12 @@ def get_sale_by_id(
 def create_sale(
     db: Session,
     sale_data: SaleCreate,
+    code: str,
 ) -> Sale:
-    sale = Sale(**sale_data.model_dump())
+    sale = Sale(
+        code=code,
+        **sale_data.model_dump(),
+    )
 
     db.add(sale)
     db.commit()

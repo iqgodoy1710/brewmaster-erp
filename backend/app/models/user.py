@@ -7,8 +7,8 @@ from app.models.enums import UserRole
 class User(BaseModel):
     __tablename__ = "users"
 
-    email = Column(
-        String(255),
+    username = Column(
+        String(50),
         nullable=False,
         unique=True,
     )
@@ -24,9 +24,7 @@ class User(BaseModel):
         Enum(
             UserRole,
             name="user_role",
-            values_callable=lambda enum_class: [
-                member.value for member in enum_class
-            ],
+            values_callable=lambda enum_class: [member.value for member in enum_class],
         ),
         nullable=False,
         default=UserRole.OPERATOR,

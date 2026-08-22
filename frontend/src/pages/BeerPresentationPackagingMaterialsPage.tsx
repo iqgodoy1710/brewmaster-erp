@@ -11,14 +11,15 @@ import { hasRole, useCurrentUser } from "../lib/auth";
 
 const formatQuantity = (value: string) =>
   new Intl.NumberFormat("es-ES", {
-    minimumFractionDigits: 3,
-    maximumFractionDigits: 3,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(Number(value));
 
 function BeerPresentationPackagingMaterialsPage() {
   const currentUser = useCurrentUser();
 
-  const canManageCatalog = hasRole(currentUser, "admin");
+  const canManageCatalog =
+    hasRole(currentUser, "admin") || hasRole(currentUser, "operator");
   const [presentations, setPresentations] = useState<BeerPresentation[]>([]);
   const [rawMaterials, setRawMaterials] = useState<RawMaterialReference[]>([]);
   const [materials, setMaterials] = useState<

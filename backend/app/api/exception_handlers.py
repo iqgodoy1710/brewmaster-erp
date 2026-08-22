@@ -4,6 +4,7 @@ from app.common.exceptions import (
     BeerNotFoundError,
     BeerPresentationAlreadyExistsError,
     BeerPresentationCodeAlreadyExistsError,
+    BeerPresentationHasNoActivePriceError,
     BeerPresentationHasNoPackagingMaterialsError,
     BeerPresentationNameAlreadyExistsError,
     BeerPresentationNotFoundError,
@@ -16,6 +17,7 @@ from app.common.exceptions import (
     InactiveBeerError,
     InactiveBeerPresentationError,
     InactiveCustomerError,
+    InactiveKegError,
     InactivePackagingFormatError,
     InactiveRawMaterialError,
     InactiveRecipeError,
@@ -23,13 +25,22 @@ from app.common.exceptions import (
     InsufficientBulkBeerError,
     InsufficientPermissionsError,
     InsufficientStockError,
+    InvalidBeerPresentationCostEstimateError,
     InvalidBeerPresentationStockMovementError,
     InvalidCredentialsError,
+    InvalidKegDeliveryError,
+    InvalidKegFillingError,
+    InvalidKegPackagingFormatError,
+    InvalidKegRemnantTransferError,
+    InvalidKegReturnError,
+    InvalidKegWashingError,
     InvalidPackagingRunError,
     InvalidProductionBatchStatusError,
     InvalidSaleStatusError,
     InvalidStockMovementError,
     InvalidUserUpdateError,
+    KegCodeAlreadyExistsError,
+    KegNotFoundError,
     PackagingFormatCodeAlreadyExistsError,
     PackagingFormatNameAlreadyExistsError,
     PackagingFormatNotFoundError,
@@ -52,7 +63,7 @@ from app.common.exceptions import (
     UnitNameAlreadyExistsError,
     UnitNotFoundError,
     UnitSymbolAlreadyExistsError,
-    UserEmailAlreadyExistsError,
+    UsernameAlreadyExistsError,
     UserNotFoundError,
 )
 from fastapi import Request
@@ -264,6 +275,7 @@ async def sale_conflict_handler(
         | InvalidSaleStatusError
         | SaleHasNoItemsError
         | SaleItemAlreadyExistsError
+        | BeerPresentationHasNoActivePriceError
     ),
 ) -> JSONResponse:
     return JSONResponse(
@@ -295,7 +307,7 @@ async def insufficient_permissions_handler(
 
 async def user_already_exists_handler(
     request: Request,
-    error: UserEmailAlreadyExistsError,
+    error: UsernameAlreadyExistsError,
 ) -> JSONResponse:
     return JSONResponse(
         status_code=409,
@@ -309,5 +321,41 @@ async def invalid_user_update_handler(
 ) -> JSONResponse:
     return JSONResponse(
         status_code=409,
+        content={"detail": str(error)},
+    )
+
+async def cost_estimate_conflict_handler(
+    request: Request,
+    error: InvalidBeerPresentationCostEstimateError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=409,
+        content={"detail": str(error)},
+    )
+
+async def keg_conflict_handler(
+    request: Request,
+    error: (
+        KegCodeAlreadyExistsError
+        | InvalidKegPackagingFormatError
+        | InactiveKegError
+        | InvalidKegFillingError
+        | InvalidKegDeliveryError
+        | InvalidKegReturnError
+        | InvalidKegWashingError
+        | InvalidKegRemnantTransferError
+    ),
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=409,
+        content={"detail": str(error)},
+    )
+
+async def keg_not_found_handler(
+    request: Request,
+    error: KegNotFoundError,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=404,
         content={"detail": str(error)},
     )

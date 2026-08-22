@@ -5,9 +5,11 @@ from app.common.exceptions import (
     CustomerNotFoundError,
     InactiveBeerPresentationError,
     InactiveCustomerError,
+    InactiveKegError,
     InsufficientBeerPresentationStockError,
+    InvalidKegDeliveryError,
     InvalidSaleStatusError,
-    SaleCodeAlreadyExistsError,
+    KegNotFoundError,
     SaleHasNoItemsError,
     SaleNotFoundError,
 )
@@ -20,6 +22,15 @@ from app.crud.beer_presentation_stock_movement import (
     create_sale_movement,
 )
 from app.crud.customer import get_customer_by_id
+from app.crud.customer_account_movement import (
+    create_customer_account_movement,
+)
+from app.crud.keg import (
+    get_keg_by_id,
+    update_keg_state,
+)
+from app.crud.keg_movement import create_keg_movement
+from app.crud.packaging_format import get_packaging_format_by_id
 from app.crud.sale import (
     cancel_sale,
     complete_sale,
@@ -30,13 +41,24 @@ from app.crud.sale import (
     get_sales,
 )
 from app.crud.sale_item import get_sale_items
-from app.models.enums import SaleStatus
-from app.schemas.sale import SaleCancel, SaleCreate
+from app.models.enums import (
+    CustomerAccountMovementType,
+    KegMovementType,
+    KegStatus,
+    PackagingFormatType,
+    SaleStatus,
+)
+from app.schemas.sale import (
+    SaleCancel,
+    SaleComplete,
+    SaleCreate,
+)
 from app.schemas.sale_detail import (
     SaleDetailItemResponse,
     SaleDetailResponse,
 )
 from app.schemas.sale_report import SaleReportItemResponse
+from app.services.code_service import generate_code
 from sqlalchemy.orm import Session
 
 
@@ -81,32 +103,43 @@ class SaleService:
                 "Cannot create a sale for an inactive customer."
             )
 
-        existing_sale = get_sale_by_code(
+        return create_sale(
             db,
-            sale_data.code,
+            sale_data,
+            generate_code(db, "sale"),
         )
-        if existing_sale:
-            raise SaleCodeAlreadyExistsError("A sale with this code already exists.")
-
-        return create_sale(db, sale_data)
 
     @staticmethod
     def complete(
         db: Session,
         code: str,
+        completion_data: SaleComplete | None = None,
     ):
         sale = get_sale_by_code(db, code)
         if not sale:
             raise SaleNotFoundError("The sale does not exist.")
 
         if not sale.active or sale.status != SaleStatus.DRAFT:
-            raise InvalidSaleStatusError("Only draft sales can be completed.")
+            raise InvalidSaleStatusError(
+                "Only draft sales can be completed."
+            )
 
         sale_items = get_sale_items(db, sale.id)
         if not sale_items:
-            raise SaleHasNoItemsError("Cannot complete a sale without items.")
+            raise SaleHasNoItemsError(
+                "Cannot complete a sale without items."
+            )
+
+        sale_total = sum(
+            (
+                sale_item.quantity * sale_item.unit_price
+                for sale_item in sale_items
+            ),
+            Decimal("0.00"),
+        )
 
         presentation_sales = []
+        required_keg_quantities: dict[int, int] = {}
 
         for sale_item in sale_items:
             beer_presentation = get_beer_presentation_by_id(
@@ -128,7 +161,75 @@ class SaleService:
                     "There is not enough stock for a beer presentation."
                 )
 
-            presentation_sales.append((beer_presentation, sale_item.quantity))
+            packaging_format = get_packaging_format_by_id(
+                db,
+                beer_presentation.packaging_format_id,
+            )
+            if not packaging_format:
+                raise InvalidKegDeliveryError(
+                    "A beer presentation packaging format does not exist."
+                )
+
+            if packaging_format.format_type == PackagingFormatType.KEG:
+                required_keg_quantities[beer_presentation.id] = (
+                    sale_item.quantity
+                )
+
+            presentation_sales.append(
+                (beer_presentation, sale_item.quantity)
+            )
+
+        keg_ids = (
+            completion_data.keg_ids
+            if completion_data is not None
+            else []
+        )
+
+        if len(keg_ids) != len(set(keg_ids)):
+            raise InvalidKegDeliveryError(
+                "A keg can only be assigned once to a sale."
+            )
+
+        assigned_keg_quantities: dict[int, int] = {}
+        kegs_to_deliver = []
+
+        for keg_id in keg_ids:
+            keg = get_keg_by_id(db, keg_id)
+
+            if not keg:
+                raise KegNotFoundError("The keg does not exist.")
+
+            if not keg.active:
+                raise InactiveKegError(
+                    "Cannot deliver an inactive keg."
+                )
+
+            if keg.status != KegStatus.FILLED:
+                raise InvalidKegDeliveryError(
+                    "Only filled kegs can be delivered."
+                )
+
+            if (
+                keg.beer_presentation_id
+                not in required_keg_quantities
+            ):
+                raise InvalidKegDeliveryError(
+                    "The keg beer presentation is not included in the sale."
+                )
+
+            assigned_keg_quantities[keg.beer_presentation_id] = (
+                assigned_keg_quantities.get(
+                    keg.beer_presentation_id,
+                    0,
+                )
+                + 1
+            )
+            kegs_to_deliver.append(keg)
+
+        if assigned_keg_quantities != required_keg_quantities:
+            raise InvalidKegDeliveryError(
+                "The assigned kegs do not match the keg quantities of the sale."
+            )
 
         try:
             for beer_presentation, quantity in presentation_sales:
@@ -145,6 +246,44 @@ class SaleService:
                     beer_presentation,
                     beer_presentation.current_stock - quantity,
                 )
+
+            for keg in kegs_to_deliver:
+                create_keg_movement(
+                    db,
+                    keg_id=keg.id,
+                    movement_type=KegMovementType.DELIVERY,
+                    previous_status=keg.status,
+                    new_status=KegStatus.AT_CUSTOMER,
+                    resulting_volume_liters=keg.current_volume_liters,
+                    beer_presentation_id=keg.beer_presentation_id,
+                    production_batch_id=keg.production_batch_id,
+                    sale_id=sale.id,
+                    customer_id=sale.customer_id,
+                    reference=sale.code,
+                    notes=(
+                        f"Keg delivery for sale {sale.code}."
+                    ),
+                )
+
+                update_keg_state(
+                    db,
+                    keg,
+                    status=KegStatus.AT_CUSTOMER,
+                    current_volume_liters=keg.current_volume_liters,
+                    beer_presentation_id=keg.beer_presentation_id,
+                    production_batch_id=keg.production_batch_id,
+                    customer_id=sale.customer_id,
+                )
+
+            create_customer_account_movement(
+                db,
+                customer_id=sale.customer_id,
+                sale_id=sale.id,
+                movement_type=CustomerAccountMovementType.SALE_CHARGE,
+                amount=sale_total,
+                reference=sale.code,
+                notes=f"Account charge for sale {sale.code}.",
+            )
 
             complete_sale(db, sale)
             db.commit()
@@ -193,6 +332,10 @@ class SaleService:
         sale_items = get_sale_items(db, sale.id)
         if not sale_items:
             raise SaleHasNoItemsError("Cannot cancel a completed sale without items.")
+        sale_total = sum(
+            (sale_item.quantity * sale_item.unit_price for sale_item in sale_items),
+            Decimal("0.00"),
+        )
 
         presentation_returns = []
 
@@ -223,7 +366,15 @@ class SaleService:
                     beer_presentation,
                     beer_presentation.current_stock + quantity,
                 )
-
+            create_customer_account_movement(
+                db,
+                customer_id=sale.customer_id,
+                sale_id=sale.id,
+                movement_type=(CustomerAccountMovementType.SALE_CANCELLATION),
+                amount=sale_total,
+                reference=sale.code,
+                notes=(f"Account reversal for cancelled sale {sale.code}."),
+            )
             cancel_sale(
                 db,
                 sale,

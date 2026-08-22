@@ -3,10 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import "../App.css";
 import { apiGet, apiPatch, apiPost } from "../lib/api";
 import { useCurrentUser } from "../lib/auth";
-import type {
-  AuthenticatedUser,
-  UserRole,
-} from "../types/api";
+import type { AuthenticatedUser, UserRole } from "../types/api";
 
 const roleLabels: Record<UserRole, string> = {
   admin: "Administrador",
@@ -17,17 +14,18 @@ const roleLabels: Record<UserRole, string> = {
 function UsersPage() {
   const currentUser = useCurrentUser();
   const [users, setUsers] = useState<AuthenticatedUser[]>([]);
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>("operator");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [updatingUserId, setUpdatingUserId] = useState<number | null>(
-    null,
-  );
+  const [updatingUserId, setUpdatingUserId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [editedUsernames, setEditedUsernames] = useState<
+    Record<number, string>
+  >({});
 
   const loadUsers = useCallback(async () => {
     try {
@@ -48,9 +46,7 @@ function UsersPage() {
     void loadUsers();
   }, [loadUsers]);
 
-  async function createUser(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
+  async function createUser(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setError(null);
@@ -59,14 +55,14 @@ function UsersPage() {
 
     try {
       const user = await apiPost<AuthenticatedUser>("/users/", {
-        email: email.trim(),
+        username: username.trim(),
         full_name: fullName.trim(),
         password,
         role,
       });
 
       setUsers((currentUsers) => [...currentUsers, user]);
-      setEmail("");
+      setUsername("");
       setFullName("");
       setPassword("");
       setRole("operator");
@@ -87,6 +83,7 @@ function UsersPage() {
     data: {
       active?: boolean;
       role?: UserRole;
+      username?: string;
     },
   ) {
     setError(null);
@@ -146,12 +143,16 @@ function UsersPage() {
             </label>
 
             <label>
-              Correo electrónico
+              Nombre de usuario
               <input
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) => setUsername(event.target.value)}
                 required
-                type="email"
-                value={email}
+                type="text"
+                value={username}
+                autoComplete="username"
+                minLength={3}
+                maxLength={50}
+                pattern="[A-Za-z0-9._-]+"
               />
             </label>
           </div>
@@ -171,9 +172,7 @@ function UsersPage() {
             <label>
               Rol
               <select
-                onChange={(event) =>
-                  setRole(event.target.value as UserRole)
-                }
+                onChange={(event) => setRole(event.target.value as UserRole)}
                 value={role}
               >
                 <option value="operator">Operador</option>
@@ -199,8 +198,8 @@ function UsersPage() {
             <table>
               <thead>
                 <tr>
+                  <th>Nombre</th>
                   <th>Usuario</th>
-                  <th>Correo</th>
                   <th>Rol</th>
                   <th>Estado</th>
                   <th>Acciones</th>
@@ -214,7 +213,37 @@ function UsersPage() {
                   return (
                     <tr key={user.id}>
                       <td>{user.full_name}</td>
-                      <td>{user.email}</td>
+                      <td>
+                        {isCurrentUser ? (
+                          user.username
+                        ) : (
+                          <div className="inline-actions">
+                            <input
+                              aria-label={`Usuario de ${user.full_name}`}
+                              onChange={(event) =>
+                                setEditedUsernames((currentValues) => ({
+                                  ...currentValues,
+                                  [user.id]: event.target.value,
+                                }))
+                              }
+                              type="text"
+                              value={editedUsernames[user.id] ?? user.username}
+                            />
+                            <button
+                              disabled={isUpdating}
+                              onClick={() =>
+                                void updateUser(user.id, {
+                                  username:
+                                    editedUsernames[user.id] ?? user.username,
+                                })
+                              }
+                              type="button"
+                            >
+                              Guardar
+                            </button>
+                          </div>
+                        )}
+                      </td>
                       <td>
                         {isCurrentUser ? (
                           roleLabels[user.role]
@@ -234,9 +263,7 @@ function UsersPage() {
                           </select>
                         )}
                       </td>
-                      <td>
-                        {user.active ? "Activo" : "Inactivo"}
-                      </td>
+                      <td>{user.active ? "Activo" : "Inactivo"}</td>
                       <td>
                         {isCurrentUser ? (
                           "Sesión actual"

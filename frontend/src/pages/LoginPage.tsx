@@ -6,7 +6,7 @@ import "../App.css";
 
 type LoginPageProps = {
   onLogin: (
-    email: string,
+    username: string,
     password: string,
   ) => Promise<void>;
 };
@@ -14,7 +14,7 @@ type LoginPageProps = {
 function LoginPage({
   onLogin,
 }: LoginPageProps) {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +37,7 @@ function LoginPage({
     setIsSubmitting(true);
 
     try {
-      await onLogin(email, password);
+      await onLogin(username, password);
       navigate(redirectPath, { replace: true });
     } catch (caughtError) {
       setError(
@@ -59,13 +59,13 @@ function LoginPage({
 
         <form className="login-form" onSubmit={handleSubmit}>
           <label>
-            Correo electrónico
+            Nombre de usuario
             <input
-              autoComplete="email"
-              onChange={(event) => setEmail(event.target.value)}
+              autoComplete="username"
+              onChange={(event) => setUsername(event.target.value)}
               required
-              type="email"
-              value={email}
+              type="username"
+              value={username}
             />
           </label>
 

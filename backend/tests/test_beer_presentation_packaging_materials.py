@@ -18,7 +18,7 @@ def create_beer_presentation_and_raw_material(client):
     raw_material = client.post(
         "/raw-materials/",
         json={
-            "code": "BOTTLE-500",
+            
             "name": "500 ml Bottle",
             "category_id": category["id"],
             "unit_id": unit["id"],
@@ -30,7 +30,7 @@ def create_beer_presentation_and_raw_material(client):
     beer = client.post(
         "/beers/",
         json={
-            "code": "IPA",
+            
             "name": "India Pale Ale",
         },
     ).json()
@@ -38,7 +38,7 @@ def create_beer_presentation_and_raw_material(client):
     packaging_format = client.post(
         "/packaging-formats/",
         json={
-            "code": "BOTTLE-500",
+            
             "name": "Bottle 500 ml",
             "capacity_liters": "0.500",
         },
@@ -47,7 +47,7 @@ def create_beer_presentation_and_raw_material(client):
     beer_presentation = client.post(
         "/beer-presentations/",
         json={
-            "code": "IPA-B500",
+            
             "name": "IPA Bottle 500 ml",
             "beer_id": beer["id"],
             "packaging_format_id": packaging_format["id"],
