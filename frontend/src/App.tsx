@@ -75,10 +75,16 @@ function AppContent() {
     username: string,
     password: string,
   ): Promise<void> {
-    const tokenResponse = await apiPost<TokenResponse>("/auth/login", {
-      username,
-      password,
-    });
+    const tokenResponse = await apiPost<TokenResponse>(
+      "/auth/login",
+      {
+        username,
+        password,
+      },
+      {
+        retryOnTemporaryFailure: true,
+      },
+    );
 
     setAccessToken(tokenResponse.access_token);
 

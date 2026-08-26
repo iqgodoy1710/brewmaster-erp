@@ -469,6 +469,9 @@ app.add_exception_handler(
     related_resource_not_found_handler,
 )
 
+@app.get("/health", tags=["Health"])
+def health():
+    return {"status": "ok"}
 
 @app.get("/")
 def home():

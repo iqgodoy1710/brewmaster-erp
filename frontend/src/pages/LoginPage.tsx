@@ -5,15 +5,10 @@ import { useLocation, useNavigate } from "react-router-dom";
 import "../App.css";
 
 type LoginPageProps = {
-  onLogin: (
-    username: string,
-    password: string,
-  ) => Promise<void>;
+  onLogin: (username: string, password: string) => Promise<void>;
 };
 
-function LoginPage({
-  onLogin,
-}: LoginPageProps) {
+function LoginPage({ onLogin }: LoginPageProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,9 +24,7 @@ function LoginPage({
       } | null
     )?.from?.pathname ?? "/";
 
-  async function handleSubmit(
-    event: FormEvent<HTMLFormElement>,
-  ) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     setIsSubmitting(true);
@@ -84,6 +77,12 @@ function LoginPage({
           {error && (
             <p className="error-message" role="alert">
               {error}
+            </p>
+          )}
+          {isSubmitting && (
+            <p className="form-help" role="status">
+              Conectando con el servidor. La primera conexión puede tardar unos
+              segundos.
             </p>
           )}
 
