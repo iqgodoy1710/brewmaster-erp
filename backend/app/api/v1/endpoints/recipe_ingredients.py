@@ -4,6 +4,7 @@ from app.models.enums import UserRole
 from app.schemas.recipe_ingredient import (
     RecipeIngredientCreate,
     RecipeIngredientResponse,
+    RecipeIngredientUpdate,
 )
 from app.services.recipe_ingredient_service import RecipeIngredientService
 from fastapi import APIRouter, Depends, Path, status
@@ -38,16 +39,56 @@ def read_recipe_ingredients(
     "/recipe-ingredients/",
     response_model=RecipeIngredientResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[
-        Depends(
-            require_roles(
-                UserRole.ADMIN,
-            )
-        )
-    ],
+    dependencies=[Depends(require_roles(UserRole.ADMIN, UserRole.OPERATOR))],
 )
 def create_recipe_ingredient(
     ingredient: RecipeIngredientCreate,
     db: Session = Depends(get_db),
 ):
     return RecipeIngredientService.create(db, ingredient)
+
+
+@router.patch(
+    "/recipe-ingredients/{ingredient_id}",
+    response_model=RecipeIngredientResponse,
+    dependencies=[
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+                UserRole.OPERATOR,
+            )
+        )
+    ],
+)
+def update_recipe_ingredient(
+    ingredient_id: int = Path(..., gt=0),
+    ingredient: RecipeIngredientUpdate = ...,
+    db: Session = Depends(get_db),
+):
+    return RecipeIngredientService.update(
+        db,
+        ingredient_id,
+        ingredient,
+    )
+
+
+@router.delete(
+    "/recipe-ingredients/{ingredient_id}",
+    response_model=RecipeIngredientResponse,
+    dependencies=[
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+                UserRole.OPERATOR,
+            )
+        )
+    ],
+)
+def deactivate_recipe_ingredient(
+    ingredient_id: int = Path(..., gt=0),
+    db: Session = Depends(get_db),
+):
+    return RecipeIngredientService.deactivate(
+        db,
+        ingredient_id,
+    )

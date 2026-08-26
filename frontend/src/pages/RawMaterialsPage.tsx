@@ -180,6 +180,8 @@ function RawMaterialsPage() {
       setIsSaving(false);
     }
   }
+  const unitSymbol = (unitId: number) =>
+  units.find((unit) => unit.id === unitId)?.symbol ?? "—";
 
   return (
     <main className="dashboard">
@@ -310,6 +312,7 @@ function RawMaterialsPage() {
                   <th>Código</th>
                   <th>Insumo</th>
                   <th>Stock actual</th>
+                  <th>Unidad</th>
                   <th>Stock mínimo</th>
                   <th>Costo actual</th>
                   <th>Acciones</th>
@@ -321,6 +324,7 @@ function RawMaterialsPage() {
                     <td>{rawMaterial.code}</td>
                     <td>{rawMaterial.name}</td>
                     <td>{formatNumber(rawMaterial.current_stock)}</td>
+                    <td>{unitSymbol(rawMaterial.unit_id)}</td>
                     <td>{formatNumber(rawMaterial.minimum_stock)}</td>
                     <td>{formatCurrency(rawMaterial.current_cost)}</td>
                     <td>

@@ -284,6 +284,8 @@ export type RawMaterialReference = {
   id: number;
   code: string;
   name: string;
+  category_id: number;
+  unit_symbol: string;
 };
 
 export type BeerPresentationPrice = {

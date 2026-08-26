@@ -19,6 +19,18 @@ class RecipeIngredientCreate(RecipeIngredientBase):
     model_config = ConfigDict(extra="forbid")
 
 
+class RecipeIngredientUpdate(BaseModel):
+    raw_material_id: int = Field(..., gt=0)
+    required_quantity: Decimal = Field(
+        ...,
+        gt=0,
+        max_digits=10,
+        decimal_places=3,
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class RecipeIngredientResponse(RecipeIngredientBase):
     id: int
     active: bool

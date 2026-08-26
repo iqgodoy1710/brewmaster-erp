@@ -101,3 +101,17 @@ def get_raw_materials_at_or_below_minimum_stock(
         .order_by(RawMaterial.name)
         .all()
     )
+
+def get_raw_material_references(
+    db: Session,
+):
+    return (
+        db.query(RawMaterial, Unit)
+        .join(
+            Unit,
+            RawMaterial.unit_id == Unit.id,
+        )
+        .filter(RawMaterial.active.is_(True))
+        .order_by(RawMaterial.name)
+        .all()
+    )

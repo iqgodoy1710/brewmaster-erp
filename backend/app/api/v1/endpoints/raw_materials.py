@@ -90,7 +90,7 @@ def read_raw_material_low_stock_alerts(
 def read_raw_material_references(
     db: Session = Depends(get_db),
 ):
-    return RawMaterialService.get_all(db)
+    return RawMaterialService.get_references(db)
 
 @router.get(
     "/{code}",

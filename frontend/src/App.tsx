@@ -203,10 +203,10 @@ function AppContent() {
                       className={({ isActive }) =>
                         isActive ? "nav-link active" : "nav-link"
                       }
-                      to="/insumos"
+                      to="/movimientos-insumos"
                       onClick={closeMenu}
                     >
-                      Insumos
+                      Mov. insumos
                     </NavLink>
                   )}
 
@@ -255,18 +255,6 @@ function AppContent() {
                       onClick={closeMenu}
                     >
                       Barriles
-                    </NavLink>
-                  )}
-
-                  {hasFinancialAccess && (
-                    <NavLink
-                      className={({ isActive }) =>
-                        isActive ? "nav-link active" : "nav-link"
-                      }
-                      to="/movimientos-insumos"
-                      onClick={closeMenu}
-                    >
-                      Mov. insumos
                     </NavLink>
                   )}
                 </div>
@@ -346,6 +334,18 @@ function AppContent() {
                 <summary>Configuración</summary>
 
                 <div className="nav-group-menu">
+                  {hasFinancialAccess && (
+                    <NavLink
+                      className={({ isActive }) =>
+                        isActive ? "nav-link active" : "nav-link"
+                      }
+                      to="/insumos"
+                      onClick={closeMenu}
+                    >
+                      Insumos
+                    </NavLink>
+                  )}
+
                   {canManageCatalogs && (
                     <>
                       <NavLink

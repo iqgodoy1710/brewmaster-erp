@@ -8,6 +8,7 @@ from app.crud.raw_material import (
     create_raw_material,
     deactivate_raw_material,
     get_raw_material_by_code,
+    get_raw_material_references,
     get_raw_materials,
     get_raw_materials_at_or_below_minimum_stock,
     update_raw_material,
@@ -15,6 +16,9 @@ from app.crud.raw_material import (
 from app.crud.unit import get_unit_by_id
 from app.schemas.inventory_alert import RawMaterialLowStockResponse
 from app.schemas.raw_material import RawMaterialCreate, RawMaterialUpdate
+from app.schemas.raw_material_reference import (
+    RawMaterialReferenceResponse,
+)
 from app.services.code_service import generate_code
 from sqlalchemy.orm import Session
 
@@ -27,7 +31,6 @@ class RawMaterialService:
 
     @staticmethod
     def create(db: Session, raw_material_data: RawMaterialCreate):
-              
 
         category = get_category_by_id(db, raw_material_data.category_id)
         if not category:
@@ -101,6 +104,24 @@ class RawMaterialService:
                 shortage_quantity=(
                     raw_material.minimum_stock - raw_material.current_stock
                 ),
+            )
+            for raw_material, unit in rows
+        ]
+
+
+    @staticmethod
+    def get_references(
+        db: Session,
+    ) -> list[RawMaterialReferenceResponse]:
+        rows = get_raw_material_references(db)
+
+        return [
+            RawMaterialReferenceResponse(
+                id=raw_material.id,
+                code=raw_material.code,
+                name=raw_material.name,
+                category_id=raw_material.category_id,
+                unit_symbol=unit.symbol,
             )
             for raw_material, unit in rows
         ]

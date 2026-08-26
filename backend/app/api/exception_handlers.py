@@ -51,6 +51,7 @@ from app.common.exceptions import (
     RawMaterialNotFoundError,
     RecipeHasNoIngredientsError,
     RecipeIngredientAlreadyExistsError,
+    RecipeIngredientNotFoundError,
     RecipeNotFoundError,
     RecipeVersionAlreadyExistsError,
     SaleCodeAlreadyExistsError,
@@ -93,7 +94,8 @@ async def related_resource_not_found_handler(
     | BeerPresentationNotFoundError
     | CustomerNotFoundError
     | SaleNotFoundError
-    | UserNotFoundError,
+    | UserNotFoundError
+    | RecipeIngredientNotFoundError,
 ) -> JSONResponse:
     return JSONResponse(
         status_code=404,
@@ -324,6 +326,7 @@ async def invalid_user_update_handler(
         content={"detail": str(error)},
     )
 
+
 async def cost_estimate_conflict_handler(
     request: Request,
     error: InvalidBeerPresentationCostEstimateError,
@@ -332,6 +335,7 @@ async def cost_estimate_conflict_handler(
         status_code=409,
         content={"detail": str(error)},
     )
+
 
 async def keg_conflict_handler(
     request: Request,
@@ -350,6 +354,7 @@ async def keg_conflict_handler(
         status_code=409,
         content={"detail": str(error)},
     )
+
 
 async def keg_not_found_handler(
     request: Request,

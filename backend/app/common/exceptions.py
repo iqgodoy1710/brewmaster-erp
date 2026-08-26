@@ -274,3 +274,6 @@ class InvalidKegWashingError(Exception):
 
 class InvalidKegRemnantTransferError(Exception):
     pass
+
+class RecipeIngredientNotFoundError(Exception):
+    pass
