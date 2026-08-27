@@ -1,4 +1,5 @@
 from sqlalchemy import (
+    TIMESTAMP,
     CheckConstraint,
     Column,
     Enum,
@@ -7,7 +8,6 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
-    TIMESTAMP,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -35,9 +35,7 @@ class KegMovement(BaseModel):
         Enum(
             KegMovementType,
             name="keg_movement_type",
-            values_callable=lambda enum_class: [
-                member.value for member in enum_class
-            ],
+            values_callable=lambda enum_class: [member.value for member in enum_class],
         ),
         nullable=False,
     )
@@ -45,9 +43,7 @@ class KegMovement(BaseModel):
         Enum(
             KegStatus,
             name="keg_status",
-            values_callable=lambda enum_class: [
-                member.value for member in enum_class
-            ],
+            values_callable=lambda enum_class: [member.value for member in enum_class],
         ),
         nullable=False,
     )
@@ -55,9 +51,7 @@ class KegMovement(BaseModel):
         Enum(
             KegStatus,
             name="keg_status",
-            values_callable=lambda enum_class: [
-                member.value for member in enum_class
-            ],
+            values_callable=lambda enum_class: [member.value for member in enum_class],
         ),
         nullable=False,
     )
@@ -90,6 +84,11 @@ class KegMovement(BaseModel):
         ForeignKey("customers.id"),
         nullable=True,
     )
+    performed_by_user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=True,
+    )
     reference = Column(String(100), nullable=True)
     notes = Column(Text, nullable=True)
     occurred_at = Column(
@@ -107,3 +106,11 @@ class KegMovement(BaseModel):
     packaging_run = relationship("PackagingRun")
     sale = relationship("Sale")
     customer = relationship("Customer")
+    performed_by_user = relationship("User")
+
+    @property
+    def performed_by_username(self) -> str | None:
+        if not self.performed_by_user:
+            return None
+
+        return self.performed_by_user.username

@@ -29,12 +29,15 @@ class KegMovementResponse(BaseModel):
     packaging_run_id: int | None
     sale_id: int | None
     customer_id: int | None
+    performed_by_user_id: int | None
+    performed_by_username: str | None
     reference: str | None
     notes: str | None
     occurred_at: datetime
     active: bool
     created_at: datetime
     updated_at: datetime
+    
 
     model_config = ConfigDict(from_attributes=True)
 

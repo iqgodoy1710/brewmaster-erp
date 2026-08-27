@@ -435,6 +435,8 @@ export type KegMovement = {
   packaging_run_id: number | null;
   sale_id: number | null;
   customer_id: number | null;
+  performed_by_user_id: number | null;
+  performed_by_username: string | null;
   reference: string | null;
   notes: string | null;
   occurred_at: string;

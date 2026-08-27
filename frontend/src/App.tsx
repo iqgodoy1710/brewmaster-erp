@@ -5,6 +5,7 @@ import {
   NavLink,
   Route,
   Routes,
+  useLocation,
 } from "react-router-dom";
 
 import "./App.css";
@@ -44,11 +45,14 @@ import PricesPage from "./pages/PricesPage";
 import CostCalculatorPage from "./pages/CostCalculatorPage";
 import CustomerAccountsPage from "./pages/CustomerAccountsPage";
 import KegsPage from "./pages/KegsPage";
+import KegQrPage from "./pages/KegQrPage";
+import KegQrLabelPage from "./pages/KegQrLabelPage";
 
 function AppContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [isSessionLoading, setIsSessionLoading] = useState(isAuthRequired);
+  const location = useLocation();
 
   useEffect(() => {
     async function loadSession() {
@@ -115,7 +119,10 @@ function AppContent() {
     return (
       <Routes>
         <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route
+          path="*"
+          element={<Navigate replace state={{ from: location }} to="/login" />}
+        />
       </Routes>
     );
   }
@@ -539,6 +546,17 @@ function AppContent() {
             path="/envasado"
             element={
               canOperate ? <PackagingPage /> : <Navigate to="/" replace />
+            }
+          />
+          <Route
+            path="/barriles/qr/:code"
+            element={canOperate ? <KegQrPage /> : <Navigate to="/" replace />}
+          />
+
+          <Route
+            path="/barriles/etiqueta/:code"
+            element={
+              canOperate ? <KegQrLabelPage /> : <Navigate to="/" replace />
             }
           />
 

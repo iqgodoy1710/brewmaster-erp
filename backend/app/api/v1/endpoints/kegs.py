@@ -56,6 +56,27 @@ def create_keg(
 ):
     return KegService.create(db, keg)
 
+@router.get(
+    "/by-code/{code}",
+    response_model=KegResponse,
+    dependencies=[
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+                UserRole.OPERATOR,
+                UserRole.MANAGEMENT,
+            )
+        )
+    ],
+)
+def read_keg_by_code(
+    code: str,
+    db: Session = Depends(get_db),
+):
+    return KegService.get_by_code(
+        db,
+        code,
+    )
 
 @router.get(
     "/{keg_id}/movements",

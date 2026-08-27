@@ -1,11 +1,10 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import func
-from sqlalchemy.orm import Session
-
 from app.models.enums import KegMovementType, KegStatus
 from app.models.keg_movement import KegMovement
+from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 
 def get_keg_movements(
@@ -57,6 +56,7 @@ def create_keg_movement(
     reference: str | None = None,
     notes: str | None = None,
     occurred_at: datetime | None = None,
+    performed_by_user_id: int | None = None,
 ) -> KegMovement:
     movement = KegMovement(
         keg_id=keg_id,
@@ -72,6 +72,7 @@ def create_keg_movement(
         reference=reference,
         notes=notes,
         occurred_at=occurred_at,
+        performed_by_user_id=performed_by_user_id,
     )
 
     db.add(movement)

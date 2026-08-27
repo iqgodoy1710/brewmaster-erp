@@ -665,3 +665,52 @@ th:last-child {
   color: #52647f;
   font-size: 0.9rem;
 }
+
+.inline-link-button {
+  display: inline-block;
+  padding: 0.4rem 0.65rem;
+  border-radius: 6px;
+  color: #fff;
+  background: #172033;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.qr-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  max-width: 34rem;
+  margin: 0 auto 1rem;
+  text-align: center;
+}
+
+.qr-label h2 {
+  margin-top: 0;
+}
+
+@media (max-width: 720px) {
+  .qr-label {
+    flex-direction: column;
+  }
+}
+
+@media print {
+  .topbar,
+  .demo-banner,
+  .print-hidden {
+    display: none !important;
+  }
+
+  .dashboard {
+    width: 100%;
+    padding: 0;
+  }
+
+  .qr-label {
+    border: 0;
+    box-shadow: none;
+  }
+}

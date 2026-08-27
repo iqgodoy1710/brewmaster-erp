@@ -2,6 +2,7 @@ from app.common.exceptions import (
     InactivePackagingFormatError,
     InvalidKegPackagingFormatError,
     KegCodeAlreadyExistsError,
+    KegNotFoundError,
     PackagingFormatNotFoundError,
 )
 from app.crud.keg import (
@@ -60,3 +61,18 @@ class KegService:
             keg_data,
             normalized_code,
         )
+
+    @staticmethod
+    def get_by_code(
+        db: Session,
+        code: str,
+    ):
+        keg = get_keg_by_code(
+            db,
+            code.strip().upper(),
+        )
+
+        if not keg or not keg.active:
+            raise KegNotFoundError("The keg does not exist.")
+
+        return keg

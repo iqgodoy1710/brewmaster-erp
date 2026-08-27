@@ -51,6 +51,7 @@ class KegMovementService:
     def fill(
         db: Session,
         filling_data: KegFillCreate,
+        performed_by_user_id: int | None = None,
     ):
         keg = get_keg_by_id(db, filling_data.keg_id)
 
@@ -117,6 +118,7 @@ class KegMovementService:
                     or f"Keg filling from packaging run {packaging_run.code}."
                 ),
                 occurred_at=filling_data.occurred_at,
+                performed_by_user_id=performed_by_user_id,
             )
 
             update_keg_state(
@@ -142,6 +144,7 @@ class KegMovementService:
     def return_keg(
         db: Session,
         return_data: KegReturnCreate,
+        performed_by_user_id: int | None = None,
     ):
         keg = get_keg_by_id(db, return_data.keg_id)
 
@@ -178,6 +181,7 @@ class KegMovementService:
                 reference=keg.code,
                 notes=(return_data.notes or f"Keg return for {keg.code}."),
                 occurred_at=return_data.occurred_at,
+                performed_by_user_id=performed_by_user_id,
             )
 
             update_keg_state(
@@ -208,6 +212,7 @@ class KegMovementService:
     def wash(
         db: Session,
         washing_data: KegWashCreate,
+        performed_by_user_id: int | None = None,
     ):
         keg = get_keg_by_id(db, washing_data.keg_id)
 
@@ -234,6 +239,7 @@ class KegMovementService:
                 reference=keg.code,
                 notes=(washing_data.notes or f"Keg washing for {keg.code}."),
                 occurred_at=washing_data.occurred_at,
+                performed_by_user_id=performed_by_user_id,
             )
 
             update_keg_state(
@@ -259,6 +265,7 @@ class KegMovementService:
     def transfer_remnants(
         db: Session,
         transfer_data: KegRemnantTransferCreate,
+        performed_by_user_id: int | None = None,
     ) -> KegRemnantTransferResponse:
         if (
             len(transfer_data.source_keg_ids)
@@ -376,6 +383,7 @@ class KegMovementService:
                         )
                     ),
                     occurred_at=transfer_data.occurred_at,
+                    performed_by_user_id=performed_by_user_id,
                 )
                 source_movements.append(movement)
 

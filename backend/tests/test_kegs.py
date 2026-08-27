@@ -123,3 +123,27 @@ def test_get_kegs_returns_active_kegs(client):
         "K20-F-001",
         "K20-S-001",
     }
+
+def test_get_keg_by_code_returns_active_keg(client):
+    packaging_format = create_test_keg_format(client)
+
+    create_response = client.post(
+        "/kegs/",
+        json={
+            "code": "K20-F-001",
+            "packaging_format_id": packaging_format["id"],
+            "form_factor": "flat",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    keg = create_response.json()
+
+    response = client.get(
+        f"/kegs/by-code/{keg['code'].lower()}"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["id"] == keg["id"]
+    assert response.json()["code"] == keg["code"]

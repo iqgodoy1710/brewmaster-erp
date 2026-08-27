@@ -15,6 +15,7 @@ import type {
   PackagingFormat,
   PackagingRun,
 } from "../types/api";
+import { Link } from "react-router-dom";
 
 const formFactorLabels: Record<KegFormFactor, string> = {
   standard: "Estándar",
@@ -848,6 +849,7 @@ function KegsPage() {
                       <th>Variante</th>
                       <th>Estado</th>
                       <th>Volumen actual</th>
+                      <th>Etiqueta</th>
                     </tr>
                   </thead>
 
@@ -859,6 +861,14 @@ function KegsPage() {
                         <td>{formFactorLabels[keg.form_factor]}</td>
                         <td>{statusLabels[keg.status]}</td>
                         <td>{formatVolume(keg.current_volume_liters)} L</td>
+                        <td>
+                          <Link
+                            className="inline-link-button"
+                            to={`/barriles/etiqueta/${encodeURIComponent(keg.code)}`}
+                          >
+                            Ver QR
+                          </Link>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -904,6 +914,7 @@ function KegsPage() {
                           <th>Estado</th>
                           <th>Volumen resultante</th>
                           <th>Referencia</th>
+                          <th>Operador</th>
                         </tr>
                       </thead>
 
@@ -923,6 +934,10 @@ function KegsPage() {
                               {formatVolume(movement.resulting_volume_liters)} L
                             </td>
                             <td>{movement.reference ?? "—"}</td>
+                            <td>
+                              {movement.performed_by_username ??
+                                "Sistema / histórico"}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
