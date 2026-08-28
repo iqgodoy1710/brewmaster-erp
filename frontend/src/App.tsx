@@ -47,6 +47,7 @@ import CustomerAccountsPage from "./pages/CustomerAccountsPage";
 import KegsPage from "./pages/KegsPage";
 import KegQrPage from "./pages/KegQrPage";
 import KegQrLabelPage from "./pages/KegQrLabelPage";
+import KegQrLabelsPage from "./pages/KegQrLabelsPage";
 
 function AppContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -557,6 +558,13 @@ function AppContent() {
             path="/barriles/etiqueta/:code"
             element={
               canOperate ? <KegQrLabelPage /> : <Navigate to="/" replace />
+            }
+          />
+
+          <Route
+            path="/barriles/etiquetas"
+            element={
+              canOperate ? <KegQrLabelsPage /> : <Navigate to="/" replace />
             }
           />
 

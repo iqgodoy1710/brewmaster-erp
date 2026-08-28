@@ -834,7 +834,11 @@ function KegsPage() {
 
           <section className="panel">
             <h2>Barriles registrados</h2>
-
+            {canOperateKegs && (
+              <Link className="inline-link-button" to="/barriles/etiquetas">
+                Imprimir etiquetas QR
+              </Link>
+            )}
             {kegs.length === 0 ? (
               <p className="empty-state">
                 Todavía no hay barriles registrados.

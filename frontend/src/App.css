@@ -714,3 +714,84 @@ th:last-child {
     box-shadow: none;
   }
 }
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.keg-label-selection {
+  max-height: 24rem;
+  overflow-y: auto;
+}
+
+.qr-print-sheet {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 40mm);
+  gap: 2mm;
+  justify-content: center;
+}
+
+.qr-print-label {
+  display: flex;
+  box-sizing: border-box;
+  width: 40mm;
+  height: 50mm;
+  padding: 2mm;
+  border: 0.3mm solid #172033;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1mm;
+  text-align: center;
+  overflow: hidden;
+}
+
+.qr-print-label svg {
+  width: 27mm;
+  height: 27mm;
+}
+
+.qr-print-label strong {
+  font-size: 10pt;
+}
+
+.qr-print-label span {
+  font-size: 7pt;
+  line-height: 1.15;
+}
+
+.qr-print-label small {
+  margin-top: 1mm;
+  color: #52647f;
+  font-size: 6pt;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 8mm;
+  }
+
+  .topbar,
+  .demo-banner,
+  .print-hidden {
+    display: none !important;
+  }
+
+  .app-shell,
+  .dashboard {
+    width: auto;
+    min-height: 0;
+    padding: 0;
+    background: #fff;
+  }
+
+  .qr-print-sheet {
+    grid-template-columns: repeat(4, 40mm);
+    gap: 2mm;
+    justify-content: start;
+  }
+}
