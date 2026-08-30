@@ -37,7 +37,10 @@ from app.crud.raw_material import (
 from app.crud.raw_material_stock_movement import (
     create_packaging_material_consumption_movement,
 )
-from app.models.enums import ProductionBatchStatus
+from app.models.enums import (
+    PackagingFormatType,
+    ProductionBatchStatus,
+)
 from app.schemas.packaging_run import PackagingRunCreate
 from app.services.code_service import generate_code
 from sqlalchemy.orm import Session
@@ -84,6 +87,10 @@ class PackagingRunService:
         if production_batch.recipe.beer_id != beer_presentation.beer_id:
             raise InvalidPackagingRunError(
                 "The beer presentation does not match the production batch beer."
+            )
+        if beer_presentation.packaging_format.format_type != PackagingFormatType.KEG:
+            raise InvalidPackagingRunError(
+                "Primary packaging runs can only use keg presentations."
             )
 
         packaging_materials = get_beer_presentation_packaging_materials(

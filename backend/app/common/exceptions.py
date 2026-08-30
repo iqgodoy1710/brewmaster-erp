@@ -277,3 +277,9 @@ class InvalidKegRemnantTransferError(Exception):
 
 class RecipeIngredientNotFoundError(Exception):
     pass
+
+class RecipeHasProductionBatchesError(Exception):
+    pass
+
+class InvalidKegRepackagingError(Exception):
+    pass

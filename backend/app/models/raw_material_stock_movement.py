@@ -41,6 +41,11 @@ class RawMaterialStockMovement(BaseModel):
         ForeignKey("packaging_runs.id"),
         nullable=True,
     )
+    keg_repackaging_run_id = Column(
+        Integer,
+        ForeignKey("keg_repackaging_runs.id"),
+        nullable=True,
+    )
     supplier_id = Column(
         Integer,
         ForeignKey("suppliers.id"),
@@ -83,6 +88,10 @@ class RawMaterialStockMovement(BaseModel):
         back_populates="raw_material_stock_movements",
     )
     packaging_run = relationship(
-    "PackagingRun",
-    back_populates="raw_material_stock_movements",
-)
+        "PackagingRun",
+        back_populates="raw_material_stock_movements",
+    )
+    keg_repackaging_run = relationship(
+        "KegRepackagingRun",
+        back_populates="raw_material_stock_movements",
+    )

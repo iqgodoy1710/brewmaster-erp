@@ -1,15 +1,20 @@
 from app.common.exceptions import (
     BeerNotFoundError,
     InactiveBeerError,
+    RecipeHasProductionBatchesError,
+    RecipeNotFoundError,
     RecipeVersionAlreadyExistsError,
 )
 from app.crud.beer import get_beer_by_id
 from app.crud.recipe import (
     create_recipe,
     get_recipe_by_beer_id_and_version,
+    get_recipe_by_id,
     get_recipes,
+    recipe_has_production_batches,
+    update_recipe,
 )
-from app.schemas.recipe import RecipeCreate
+from app.schemas.recipe import RecipeCreate, RecipeUpdate
 from sqlalchemy.orm import Session
 
 
@@ -43,3 +48,26 @@ class RecipeService:
             )
 
         return create_recipe(db, recipe_data)
+
+    @staticmethod
+    def update(
+        db: Session,
+        recipe_id: int,
+        recipe_data: RecipeUpdate,
+    ):
+        recipe = get_recipe_by_id(db, recipe_id)
+
+        if not recipe:
+            raise RecipeNotFoundError("The recipe does not exist.")
+
+        if recipe_has_production_batches(db, recipe.id):
+            raise RecipeHasProductionBatchesError(
+                "A recipe with production batches cannot be modified. "
+                "Create a new version instead."
+            )
+
+        return update_recipe(
+            db,
+            recipe,
+            recipe_data,
+        ) 

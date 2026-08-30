@@ -42,8 +42,7 @@ def add_initial_stock(
 
 
 def create_completed_batch_with_presentation(
-    client,
-    packaging_format_type: str = "other",
+    client, packaging_format_type: str = "keg", capacity_liters: str = "0.500"
 ):
     category = client.post(
         "/categories/",
@@ -140,9 +139,8 @@ def create_completed_batch_with_presentation(
     packaging_format = client.post(
         "/packaging-formats/",
         json={
-            
             "name": "Test Bottle 500 ml",
-            "capacity_liters": "0.500",
+            "capacity_liters": capacity_liters,
             "format_type": packaging_format_type,
         },
     ).json()
@@ -150,7 +148,6 @@ def create_completed_batch_with_presentation(
     beer_presentation = client.post(
         "/beer-presentations/",
         json={
-           
             "name": "IPA Test Bottle 500 ml",
             "beer_id": beer["id"],
             "packaging_format_id": packaging_format["id"],
@@ -181,7 +178,6 @@ def test_create_packaging_run_consumes_bulk_beer_and_materials(client):
     response = client.post(
         "/packaging-runs/",
         json={
-            
             "production_batch_id": data["production_batch"]["id"],
             "beer_presentation_id": data["beer_presentation"]["id"],
             "packaged_quantity": 10,
@@ -265,13 +261,13 @@ def test_packaging_runs_receive_sequential_generated_codes(client):
     assert first_response.json()["code"] == "ENV-000001"
     assert second_response.json()["code"] == "ENV-000002"
 
+
 def test_cannot_package_more_bulk_beer_than_available(client):
     data = create_completed_batch_with_presentation(client)
 
     response = client.post(
         "/packaging-runs/",
         json={
-            
             "production_batch_id": data["production_batch"]["id"],
             "beer_presentation_id": data["beer_presentation"]["id"],
             "packaged_quantity": 201,
@@ -319,7 +315,6 @@ def test_cannot_package_when_packaging_material_stock_is_insufficient(client):
     response = client.post(
         "/packaging-runs/",
         json={
-            
             "production_batch_id": data["production_batch"]["id"],
             "beer_presentation_id": data["beer_presentation"]["id"],
             "packaged_quantity": 101,
@@ -379,7 +374,6 @@ def test_cannot_package_a_batch_that_is_not_completed(client):
     response = client.post(
         "/packaging-runs/",
         json={
-            
             "production_batch_id": planned_batch["id"],
             "beer_presentation_id": data["beer_presentation"]["id"],
             "packaged_quantity": 10,
@@ -410,7 +404,6 @@ def test_cannot_package_with_presentation_from_another_beer(client):
     other_format_response = client.post(
         "/packaging-formats/",
         json={
-            
             "name": "Test Can 500 ml",
             "capacity_liters": "0.500",
         },
@@ -422,7 +415,6 @@ def test_cannot_package_with_presentation_from_another_beer(client):
     other_presentation_response = client.post(
         "/beer-presentations/",
         json={
-            
             "name": "Stout Test Can 500 ml",
             "beer_id": other_beer["id"],
             "packaging_format_id": other_format["id"],
@@ -435,7 +427,6 @@ def test_cannot_package_with_presentation_from_another_beer(client):
     response = client.post(
         "/packaging-runs/",
         json={
-            
             "production_batch_id": data["production_batch"]["id"],
             "beer_presentation_id": other_presentation["id"],
             "packaged_quantity": 10,
@@ -459,7 +450,6 @@ def test_fill_keg_from_packaging_run_creates_traceability(client):
     packaging_run_response = client.post(
         "/packaging-runs/",
         json={
-            
             "production_batch_id": data["production_batch"]["id"],
             "beer_presentation_id": data["beer_presentation"]["id"],
             "packaged_quantity": 1,
@@ -522,7 +512,6 @@ def test_completing_keg_sale_delivers_the_assigned_keg(client):
     packaging_run_response = client.post(
         "/packaging-runs/",
         json={
-            
             "production_batch_id": data["production_batch"]["id"],
             "beer_presentation_id": data["beer_presentation"]["id"],
             "packaged_quantity": 1,
@@ -615,6 +604,7 @@ def test_completing_keg_sale_delivers_the_assigned_keg(client):
         for movement in movements
     )
 
+
 def create_delivered_kegs(
     client,
     quantity: int = 1,
@@ -627,7 +617,6 @@ def create_delivered_kegs(
     packaging_run_response = client.post(
         "/packaging-runs/",
         json={
-            
             "production_batch_id": data["production_batch"]["id"],
             "beer_presentation_id": data["beer_presentation"]["id"],
             "packaged_quantity": quantity,
@@ -724,11 +713,7 @@ def get_keg_by_id(client, keg_id: int):
     response = client.get("/kegs/")
     assert response.status_code == 200
 
-    return next(
-        keg
-        for keg in response.json()
-        if keg["id"] == keg_id
-    )
+    return next(keg for keg in response.json() if keg["id"] == keg_id)
 
 
 def test_returning_empty_keg_marks_it_as_dirty(client):
@@ -843,9 +828,7 @@ def test_transferring_keg_remnants_recovers_bulk_beer(client):
         assert updated_keg["production_batch_id"] is None
         assert updated_keg["customer_id"] is None
 
-        movements_response = client.get(
-            f"/kegs/{keg['id']}/movements"
-        )
+        movements_response = client.get(f"/kegs/{keg['id']}/movements")
         assert movements_response.status_code == 200
 
         assert any(
@@ -862,9 +845,8 @@ def test_transferring_keg_remnants_recovers_bulk_beer(client):
         if batch["id"] == result["data"]["production_batch"]["id"]
     )
 
-    assert Decimal(updated_batch["available_bulk_volume_liters"]) == Decimal(
-        "99.400"
-    )
+    assert Decimal(updated_batch["available_bulk_volume_liters"]) == Decimal("99.400")
+
 
 def test_cannot_transfer_remnants_from_different_production_batches(client):
     first_result = create_delivered_kegs(client)
@@ -903,11 +885,8 @@ def test_cannot_transfer_remnants_from_different_production_batches(client):
     second_run_response = client.post(
         "/packaging-runs/",
         json={
-           
             "production_batch_id": second_batch["id"],
-            "beer_presentation_id": (
-                first_result["data"]["beer_presentation"]["id"]
-            ),
+            "beer_presentation_id": (first_result["data"]["beer_presentation"]["id"]),
             "packaged_quantity": 1,
         },
     )
@@ -962,9 +941,7 @@ def test_cannot_transfer_remnants_from_different_production_batches(client):
         "/sale-items/",
         json={
             "sale_id": second_sale["id"],
-            "beer_presentation_id": (
-                first_result["data"]["beer_presentation"]["id"]
-            ),
+            "beer_presentation_id": (first_result["data"]["beer_presentation"]["id"]),
             "quantity": 1,
         },
     )
@@ -1011,9 +988,229 @@ def test_cannot_transfer_remnants_from_different_production_batches(client):
     assert first_updated_keg["status"] == "tapped"
     assert second_updated_keg["status"] == "tapped"
 
-    assert Decimal(first_updated_keg["current_volume_liters"]) == Decimal(
-        "0.200"
+    assert Decimal(first_updated_keg["current_volume_liters"]) == Decimal("0.200")
+    assert Decimal(second_updated_keg["current_volume_liters"]) == Decimal("0.200")
+
+
+def create_keg_repackaging_context(client):
+    data = create_completed_batch_with_presentation(
+        client,
+        packaging_format_type="keg",
+        capacity_liters="20.000",
     )
-    assert Decimal(second_updated_keg["current_volume_liters"]) == Decimal(
-        "0.200"
+
+    target_format_response = client.post(
+        "/packaging-formats/",
+        json={
+            "name": "Test Repackaging Bottle 500 ml",
+            "capacity_liters": "0.500",
+            "format_type": "bottle",
+        },
     )
+    assert target_format_response.status_code == 201
+
+    target_format = target_format_response.json()
+
+    target_presentation_response = client.post(
+        "/beer-presentations/",
+        json={
+            "name": "IPA Repackaging Bottle 500 ml",
+            "beer_id": data["beer_presentation"]["beer_id"],
+            "packaging_format_id": target_format["id"],
+        },
+    )
+    assert target_presentation_response.status_code == 201
+
+    target_presentation = target_presentation_response.json()
+
+    for packaging_material in data["packaging_materials"]:
+        response = client.post(
+            "/beer-presentation-packaging-materials/",
+            json={
+                "beer_presentation_id": target_presentation["id"],
+                "raw_material_id": packaging_material["id"],
+                "required_quantity": "1.000",
+            },
+        )
+        assert response.status_code == 201
+
+    packaging_run_response = client.post(
+        "/packaging-runs/",
+        json={
+            "production_batch_id": data["production_batch"]["id"],
+            "beer_presentation_id": data["beer_presentation"]["id"],
+            "packaged_quantity": 1,
+        },
+    )
+    assert packaging_run_response.status_code == 201
+
+    packaging_run = packaging_run_response.json()
+
+    keg_response = client.post(
+        "/kegs/",
+        json={
+            "code": "K20-REPACKAGING-001",
+            "packaging_format_id": (data["beer_presentation"]["packaging_format_id"]),
+            "form_factor": "flat",
+        },
+    )
+    assert keg_response.status_code == 201
+
+    keg = keg_response.json()
+
+    fill_response = client.post(
+        "/keg-movements/fill",
+        json={
+            "keg_id": keg["id"],
+            "packaging_run_id": packaging_run["id"],
+        },
+    )
+    assert fill_response.status_code == 201
+
+    return {
+        "data": data,
+        "keg": keg,
+        "target_presentation": target_presentation,
+    }
+
+
+def get_beer_presentation_by_id(
+    client,
+    beer_presentation_id: int,
+):
+    response = client.get("/beer-presentations/")
+    assert response.status_code == 200
+
+    return next(
+        presentation
+        for presentation in response.json()
+        if presentation["id"] == beer_presentation_id
+    )
+
+
+def test_repackaging_keg_into_bottles_updates_stock_and_keg(
+    client,
+):
+    context = create_keg_repackaging_context(client)
+
+    raw_materials_before = {
+        raw_material["id"]: Decimal(raw_material["current_stock"])
+        for raw_material in client.get("/raw-materials/").json()
+    }
+
+    response = client.post(
+        "/keg-repackaging-runs/",
+        json={
+            "keg_id": context["keg"]["id"],
+            "target_beer_presentation_id": (context["target_presentation"]["id"]),
+            "packaged_quantity": 36,
+            "remaining_volume_liters": "1.500",
+            "notes": "Bottling loss test.",
+        },
+    )
+
+    assert response.status_code == 201
+
+    repackaging_run = response.json()
+
+    assert repackaging_run["code"] == "ENV2-000001"
+    assert Decimal(repackaging_run["packaged_volume_liters"]) == Decimal("18.000")
+    assert Decimal(repackaging_run["remaining_volume_liters"]) == Decimal("1.500")
+    assert Decimal(repackaging_run["waste_volume_liters"]) == Decimal("0.500")
+
+    source_presentation = get_beer_presentation_by_id(
+        client,
+        context["data"]["beer_presentation"]["id"],
+    )
+    target_presentation = get_beer_presentation_by_id(
+        client,
+        context["target_presentation"]["id"],
+    )
+
+    assert source_presentation["current_stock"] == 0
+    assert target_presentation["current_stock"] == 36
+
+    updated_keg = get_keg_by_id(
+        client,
+        context["keg"]["id"],
+    )
+
+    assert updated_keg["status"] == "tapped"
+    assert Decimal(updated_keg["current_volume_liters"]) == Decimal("1.500")
+    assert (
+        updated_keg["beer_presentation_id"]
+        == context["data"]["beer_presentation"]["id"]
+    )
+
+    raw_materials_after = {
+        raw_material["id"]: Decimal(raw_material["current_stock"])
+        for raw_material in client.get("/raw-materials/").json()
+    }
+
+    for packaging_material in context["data"]["packaging_materials"]:
+        assert raw_materials_after[packaging_material["id"]] == raw_materials_before[
+            packaging_material["id"]
+        ] - Decimal("36.000")
+
+
+def test_repackaging_cannot_exceed_keg_volume_and_is_atomic(
+    client,
+):
+    context = create_keg_repackaging_context(client)
+
+    response = client.post(
+        "/keg-repackaging-runs/",
+        json={
+            "keg_id": context["keg"]["id"],
+            "target_beer_presentation_id": (context["target_presentation"]["id"]),
+            "packaged_quantity": 41,
+            "remaining_volume_liters": "0.000",
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "detail": (
+            "The produced bottles and remaining volume exceed the keg current volume."
+        )
+    }
+
+    source_presentation = get_beer_presentation_by_id(
+        client,
+        context["data"]["beer_presentation"]["id"],
+    )
+    target_presentation = get_beer_presentation_by_id(
+        client,
+        context["target_presentation"]["id"],
+    )
+    updated_keg = get_keg_by_id(
+        client,
+        context["keg"]["id"],
+    )
+
+    assert source_presentation["current_stock"] == 1
+    assert target_presentation["current_stock"] == 0
+    assert updated_keg["status"] == "filled"
+    assert Decimal(updated_keg["current_volume_liters"]) == Decimal("20.000")
+    assert client.get("/keg-repackaging-runs/").json() == []
+
+
+def test_primary_packaging_only_allows_keg_presentations(client):
+    data = create_completed_batch_with_presentation(
+        client,
+        packaging_format_type="bottle",
+    )
+
+    response = client.post(
+        "/packaging-runs/",
+        json={
+            "production_batch_id": data["production_batch"]["id"],
+            "beer_presentation_id": data["beer_presentation"]["id"],
+            "packaged_quantity": 1,
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "detail": ("Primary packaging runs can only use keg presentations.")
+    }

@@ -1,15 +1,11 @@
-from sqlalchemy.orm import Session
-
+from app.models.production_batch import ProductionBatch
 from app.models.recipe import Recipe
-from app.schemas.recipe import RecipeCreate
+from app.schemas.recipe import RecipeCreate, RecipeUpdate
+from sqlalchemy.orm import Session
 
 
 def get_recipes(db: Session) -> list[Recipe]:
-    return (
-        db.query(Recipe)
-        .filter(Recipe.active.is_(True))
-        .all()
-    )
+    return db.query(Recipe).filter(Recipe.active.is_(True)).all()
 
 
 def get_recipe_by_beer_id_and_version(
@@ -39,12 +35,37 @@ def create_recipe(
 
     return recipe
 
+
 def get_recipe_by_id(
     db: Session,
     recipe_id: int,
 ) -> Recipe | None:
+    return db.query(Recipe).filter(Recipe.id == recipe_id).first()
+
+
+def recipe_has_production_batches(
+    db: Session,
+    recipe_id: int,
+) -> bool:
     return (
-        db.query(Recipe)
-        .filter(Recipe.id == recipe_id)
+        db.query(ProductionBatch.id)
+        .filter(ProductionBatch.recipe_id == recipe_id)
         .first()
+        is not None
     )
+
+
+def update_recipe(
+    db: Session,
+    recipe: Recipe,
+    recipe_data: RecipeUpdate,
+) -> Recipe:
+    update_data = recipe_data.model_dump(exclude_unset=True)
+
+    for field, value in update_data.items():
+        setattr(recipe, field, value)
+
+    db.commit()
+    db.refresh(recipe)
+
+    return recipe

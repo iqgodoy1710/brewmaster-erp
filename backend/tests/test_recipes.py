@@ -87,3 +87,32 @@ def test_get_recipes_returns_active_recipes(client):
     data = response.json()
     assert len(data) == 2
     assert {recipe["version"] for recipe in data} == {1, 2}
+
+def test_update_recipe_without_production_batches(client):
+    beer = create_test_beer(client)
+
+    create_response = client.post(
+        "/recipes/",
+        json={
+            "beer_id": beer["id"],
+            "version": 1,
+            "target_volume_liters": "500.000",
+            "notes": "Original.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    recipe = create_response.json()
+
+    response = client.patch(
+        f"/recipes/{recipe['id']}",
+        json={
+            "target_volume_liters": "600.000",
+            "notes": "Volumen corregido.",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["target_volume_liters"] == "600.000"
+    assert response.json()["notes"] == "Volumen corregido."

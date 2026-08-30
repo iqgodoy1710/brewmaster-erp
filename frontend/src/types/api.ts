@@ -384,10 +384,7 @@ export type PackagingFormat = {
   updated_at: string;
 };
 
-export type KegFormFactor =
-  | "standard"
-  | "flat"
-  | "slim";
+export type KegFormFactor = "standard" | "flat" | "slim";
 
 export type KegStatus =
   | "clean_available"
@@ -421,7 +418,8 @@ export type KegMovementType =
   | "tapping"
   | "remnant_transfer"
   | "inventory_adjustment"
-  | "out_of_service";
+  | "out_of_service"
+  | "repackaging";
 
 export type KegMovement = {
   id: number;
@@ -450,4 +448,24 @@ export type KegRemnantTransferResponse = {
   recovered_volume_liters: string;
   resulting_available_bulk_volume_liters: string;
   source_movements: KegMovement[];
+};
+
+
+export type KegRepackagingRun = {
+  id: number;
+  code: string;
+  keg_id: number;
+  source_beer_presentation_id: number;
+  target_beer_presentation_id: number;
+  production_batch_id: number;
+  packaged_quantity: number;
+  packaged_volume_liters: string;
+  remaining_volume_liters: string;
+  waste_volume_liters: string;
+  performed_by_user_id: number | null;
+  occurred_at: string;
+  notes: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
 };

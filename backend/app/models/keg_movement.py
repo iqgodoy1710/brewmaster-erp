@@ -74,6 +74,11 @@ class KegMovement(BaseModel):
         ForeignKey("packaging_runs.id"),
         nullable=True,
     )
+    keg_repackaging_run_id = Column(
+        Integer,
+        ForeignKey("keg_repackaging_runs.id"),
+        nullable=True,
+    )
     sale_id = Column(
         Integer,
         ForeignKey("sales.id"),
@@ -107,6 +112,10 @@ class KegMovement(BaseModel):
     sale = relationship("Sale")
     customer = relationship("Customer")
     performed_by_user = relationship("User")
+    keg_repackaging_run = relationship(
+        "KegRepackagingRun",
+        back_populates="keg_movements",
+    )
 
     @property
     def performed_by_username(self) -> str | None:

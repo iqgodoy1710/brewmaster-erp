@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from app.models.beer_presentation_stock_movement import (
     BeerPresentationStockMovement,
 )
@@ -84,6 +86,7 @@ def create_sale_movement(
 
     return movement
 
+
 def create_sale_cancellation_movement(
     db: Session,
     beer_presentation_id: int,
@@ -95,12 +98,60 @@ def create_sale_cancellation_movement(
     movement = BeerPresentationStockMovement(
         beer_presentation_id=beer_presentation_id,
         sale_id=sale_id,
-        movement_type=(
-            BeerPresentationStockMovementType.INVENTORY_ADJUSTMENT_IN
-        ),
+        movement_type=(BeerPresentationStockMovementType.INVENTORY_ADJUSTMENT_IN),
         quantity=quantity,
         reference=reference,
         notes=notes,
+    )
+
+    db.add(movement)
+    db.flush()
+
+    return movement
+
+
+def create_repackaging_consumption_movement(
+    db: Session,
+    beer_presentation_id: int,
+    keg_repackaging_run_id: int,
+    quantity: int,
+    reference: str,
+    notes: str | None = None,
+    occurred_at: datetime | None = None,
+) -> BeerPresentationStockMovement:
+    movement = BeerPresentationStockMovement(
+        beer_presentation_id=beer_presentation_id,
+        keg_repackaging_run_id=keg_repackaging_run_id,
+        movement_type=(BeerPresentationStockMovementType.REPACKAGING_CONSUMPTION),
+        quantity=quantity,
+        reference=reference,
+        notes=notes,
+        occurred_at=occurred_at,
+    )
+
+    db.add(movement)
+    db.flush()
+
+    return movement
+
+
+def create_repackaging_receipt_movement(
+    db: Session,
+    beer_presentation_id: int,
+    keg_repackaging_run_id: int,
+    quantity: int,
+    reference: str,
+    notes: str | None = None,
+    occurred_at: datetime | None = None,
+) -> BeerPresentationStockMovement:
+    movement = BeerPresentationStockMovement(
+        beer_presentation_id=beer_presentation_id,
+        keg_repackaging_run_id=keg_repackaging_run_id,
+        movement_type=(BeerPresentationStockMovementType.REPACKAGING_RECEIPT),
+        quantity=quantity,
+        reference=reference,
+        notes=notes,
+        occurred_at=occurred_at,
     )
 
     db.add(movement)

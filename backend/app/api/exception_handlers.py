@@ -32,6 +32,7 @@ from app.common.exceptions import (
     InvalidKegFillingError,
     InvalidKegPackagingFormatError,
     InvalidKegRemnantTransferError,
+    InvalidKegRepackagingError,
     InvalidKegReturnError,
     InvalidKegWashingError,
     InvalidPackagingRunError,
@@ -50,6 +51,7 @@ from app.common.exceptions import (
     RawMaterialCodeAlreadyExistsError,
     RawMaterialNotFoundError,
     RecipeHasNoIngredientsError,
+    RecipeHasProductionBatchesError,
     RecipeIngredientAlreadyExistsError,
     RecipeIngredientNotFoundError,
     RecipeNotFoundError,
@@ -162,7 +164,9 @@ async def beer_already_exists_handler(
 
 async def recipe_creation_conflict_handler(
     request: Request,
-    error: InactiveBeerError | RecipeVersionAlreadyExistsError,
+    error: InactiveBeerError
+    | RecipeVersionAlreadyExistsError
+    | RecipeHasProductionBatchesError,
 ) -> JSONResponse:
     return JSONResponse(
         status_code=409,
@@ -343,6 +347,7 @@ async def keg_conflict_handler(
         KegCodeAlreadyExistsError
         | InvalidKegPackagingFormatError
         | InactiveKegError
+        | InvalidKegRepackagingError
         | InvalidKegFillingError
         | InvalidKegDeliveryError
         | InvalidKegReturnError

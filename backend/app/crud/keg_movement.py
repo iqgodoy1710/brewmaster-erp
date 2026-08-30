@@ -33,8 +33,7 @@ def count_filling_movements_for_packaging_run(
         db.query(func.count(KegMovement.id))
         .filter(
             KegMovement.packaging_run_id == packaging_run_id,
-            KegMovement.movement_type
-            == KegMovementType.FILLING,
+            KegMovement.movement_type == KegMovementType.FILLING,
             KegMovement.active.is_(True),
         )
         .scalar()
@@ -51,6 +50,7 @@ def create_keg_movement(
     beer_presentation_id: int | None = None,
     production_batch_id: int | None = None,
     packaging_run_id: int | None = None,
+    keg_repackaging_run_id: int | None = None,
     sale_id: int | None = None,
     customer_id: int | None = None,
     reference: str | None = None,
@@ -67,6 +67,7 @@ def create_keg_movement(
         beer_presentation_id=beer_presentation_id,
         production_batch_id=production_batch_id,
         packaging_run_id=packaging_run_id,
+        keg_repackaging_run_id=keg_repackaging_run_id,
         sale_id=sale_id,
         customer_id=customer_id,
         reference=reference,

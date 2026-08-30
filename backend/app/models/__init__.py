@@ -30,3 +30,4 @@ from app.models.supplier import Supplier
 from app.models.unit import Unit
 from app.models.user import User
 from app.models.keg_movement import KegMovement
+from app.models.keg_repackaging_run import KegRepackagingRun

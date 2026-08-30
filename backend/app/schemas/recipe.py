@@ -27,3 +27,15 @@ class RecipeResponse(RecipeBase):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class RecipeUpdate(BaseModel):
+    target_volume_liters: Decimal | None = Field(
+        default=None,
+        gt=0,
+        max_digits=10,
+        decimal_places=3,
+    )
+    notes: str | None = None
+
+    model_config = ConfigDict(extra="forbid")

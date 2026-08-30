@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 
 import "../App.css";
 import { apiDelete, apiGet, apiPatch, apiPost } from "../lib/api";
@@ -33,6 +33,7 @@ function RawMaterialsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const loadData = useCallback(async () => {
     try {
@@ -181,7 +182,28 @@ function RawMaterialsPage() {
     }
   }
   const unitSymbol = (unitId: number) =>
-  units.find((unit) => unit.id === unitId)?.symbol ?? "—";
+    units.find((unit) => unit.id === unitId)?.symbol ?? "—";
+
+  const categoryName = (categoryIdValue: number) =>
+    categories.find((category) => category.id === categoryIdValue)?.name ?? "—";
+
+  const filteredRawMaterials = useMemo(() => {
+    const normalizedSearch = search.trim().toLocaleLowerCase("es");
+
+    if (!normalizedSearch) {
+      return rawMaterials;
+    }
+
+    return rawMaterials.filter((rawMaterial) =>
+      [
+        rawMaterial.code,
+        rawMaterial.name,
+        categoryName(rawMaterial.category_id),
+      ].some((value) =>
+        value.toLocaleLowerCase("es").includes(normalizedSearch),
+      ),
+    );
+  }, [categories, rawMaterials, search]);
 
   return (
     <main className="dashboard">
@@ -300,10 +322,25 @@ function RawMaterialsPage() {
       <section className="panel">
         <h2>Insumos registrados</h2>
 
+        <div className="table-toolbar">
+          <label>
+            Buscar insumo
+            <input
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Código, nombre o categoría"
+              value={search}
+            />
+          </label>
+        </div>
+
         {isLoading ? (
           <p>Cargando insumos...</p>
         ) : rawMaterials.length === 0 ? (
           <p className="empty-state">Todavía no hay insumos registrados.</p>
+        ) : filteredRawMaterials.length === 0 ? (
+          <p className="empty-state">
+            No se encontraron insumos para la búsqueda indicada.
+          </p>
         ) : (
           <div className="table-wrapper">
             <table>
@@ -311,6 +348,7 @@ function RawMaterialsPage() {
                 <tr>
                   <th>Código</th>
                   <th>Insumo</th>
+                  <th>Categoría</th>
                   <th>Stock actual</th>
                   <th>Unidad</th>
                   <th>Stock mínimo</th>
@@ -319,10 +357,11 @@ function RawMaterialsPage() {
                 </tr>
               </thead>
               <tbody>
-                {rawMaterials.map((rawMaterial) => (
+                {filteredRawMaterials.map((rawMaterial) => (
                   <tr key={rawMaterial.id}>
                     <td>{rawMaterial.code}</td>
                     <td>{rawMaterial.name}</td>
+                    <td>{categoryName(rawMaterial.category_id)}</td>
                     <td>{formatNumber(rawMaterial.current_stock)}</td>
                     <td>{unitSymbol(rawMaterial.unit_id)}</td>
                     <td>{formatNumber(rawMaterial.minimum_stock)}</td>

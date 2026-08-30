@@ -48,6 +48,7 @@ import KegsPage from "./pages/KegsPage";
 import KegQrPage from "./pages/KegQrPage";
 import KegQrLabelPage from "./pages/KegQrLabelPage";
 import KegQrLabelsPage from "./pages/KegQrLabelsPage";
+import KegRepackagingPage from "./pages/KegRepackagingPage";
 
 function AppContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -122,7 +123,19 @@ function AppContent() {
         <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
         <Route
           path="*"
-          element={<Navigate replace state={{ from: location }} to="/login" />}
+          element={
+            <Navigate
+              replace
+              state={{
+                from: {
+                  pathname: location.pathname,
+                  search: location.search,
+                  hash: location.hash,
+                },
+              }}
+              to="/login"
+            />
+          }
         />
       </Routes>
     );
@@ -138,6 +151,9 @@ function AppContent() {
 
   const canOperate = !isAuthRequired || isAdministrator || isOperator;
 
+  const canViewKegs =
+    !isAuthRequired || isAdministrator || isOperator || isManagement;
+
   const canManageCatalogs = !isAuthRequired || isAdministrator || isOperator;
 
   const canViewFinishedProducts =
@@ -146,6 +162,20 @@ function AppContent() {
   function closeMenu() {
     setIsMenuOpen(false);
   }
+
+  const loginRedirectState = location.state as {
+    from?: {
+      pathname?: string;
+      search?: string;
+      hash?: string;
+    };
+  } | null;
+
+  const loginRedirectPath = loginRedirectState?.from
+    ? `${loginRedirectState.from.pathname ?? "/"}${
+        loginRedirectState.from.search ?? ""
+      }${loginRedirectState.from.hash ?? ""}`
+    : "/";
 
   return (
     <AuthProvider user={user}>
@@ -224,18 +254,6 @@ function AppContent() {
                     </NavLink>
                   )}
 
-                  {canViewFinishedProducts && (
-                    <NavLink
-                      className={({ isActive }) =>
-                        isActive ? "nav-link active" : "nav-link"
-                      }
-                      to="/producto-terminado"
-                      onClick={closeMenu}
-                    >
-                      Producto terminado
-                    </NavLink>
-                  )}
-
                   {canOperate && (
                     <NavLink
                       className={({ isActive }) =>
@@ -253,14 +271,26 @@ function AppContent() {
                       className={({ isActive }) =>
                         isActive ? "nav-link active" : "nav-link"
                       }
-                      to="/envasado"
+                      to="/embarrilado"
                       onClick={closeMenu}
                     >
-                      Envasado
+                      Embarrilado
                     </NavLink>
                   )}
 
-                  {canOperate && (
+                  {canViewKegs && (
+                    <NavLink
+                      className={({ isActive }) =>
+                        isActive ? "nav-link active" : "nav-link"
+                      }
+                      to="/embotellado"
+                      onClick={closeMenu}
+                    >
+                      Embotellado
+                    </NavLink>
+                  )}
+
+                  {canViewKegs && (
                     <NavLink
                       className={({ isActive }) =>
                         isActive ? "nav-link active" : "nav-link"
@@ -280,16 +310,6 @@ function AppContent() {
                 <summary>Comercial</summary>
 
                 <div className="nav-group-menu">
-                  <NavLink
-                    className={({ isActive }) =>
-                      isActive ? "nav-link active" : "nav-link"
-                    }
-                    to="/clientes"
-                    onClick={closeMenu}
-                  >
-                    Clientes
-                  </NavLink>
-
                   <NavLink
                     className={({ isActive }) =>
                       isActive ? "nav-link active" : "nav-link"
@@ -343,11 +363,37 @@ function AppContent() {
               </details>
             )}
 
-            {(canManageCatalogs || hasFinancialAccess) && (
+            {(canManageCatalogs ||
+              hasFinancialAccess ||
+              canViewFinishedProducts) && (
               <details className="nav-group">
                 <summary>Configuración</summary>
 
                 <div className="nav-group-menu">
+                  {hasFinancialAccess && (
+                    <NavLink
+                      className={({ isActive }) =>
+                        isActive ? "nav-link active" : "nav-link"
+                      }
+                      to="/clientes"
+                      onClick={closeMenu}
+                    >
+                      Clientes
+                    </NavLink>
+                  )}
+
+                  {canViewFinishedProducts && (
+                    <NavLink
+                      className={({ isActive }) =>
+                        isActive ? "nav-link active" : "nav-link"
+                      }
+                      to="/producto-terminado"
+                      onClick={closeMenu}
+                    >
+                      Producto terminado
+                    </NavLink>
+                  )}
+
                   {hasFinancialAccess && (
                     <NavLink
                       className={({ isActive }) =>
@@ -544,14 +590,21 @@ function AppContent() {
           />
 
           <Route
-            path="/envasado"
+            path="/embarrilado"
             element={
               canOperate ? <PackagingPage /> : <Navigate to="/" replace />
             }
           />
+
+          <Route
+            path="/embotellado"
+            element={
+              canViewKegs ? <KegRepackagingPage /> : <Navigate to="/" replace />
+            }
+          />
           <Route
             path="/barriles/qr/:code"
-            element={canOperate ? <KegQrPage /> : <Navigate to="/" replace />}
+            element={canViewKegs ? <KegQrPage /> : <Navigate to="/" replace />}
           />
 
           <Route
@@ -570,7 +623,7 @@ function AppContent() {
 
           <Route
             path="/barriles"
-            element={canOperate ? <KegsPage /> : <Navigate to="/" replace />}
+            element={canViewKegs ? <KegsPage /> : <Navigate to="/" replace />}
           />
 
           <Route
@@ -711,7 +764,10 @@ function AppContent() {
             }
           />
 
-          <Route path="/login" element={<Navigate to="/" replace />} />
+          <Route
+            path="/login"
+            element={<Navigate to={loginRedirectPath} replace />}
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

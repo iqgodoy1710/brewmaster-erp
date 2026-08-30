@@ -795,3 +795,14 @@ th:last-child {
     justify-content: start;
   }
 }
+
+.table-toolbar {
+  max-width: 26rem;
+  margin: 0 0 1rem;
+}
+
+.table-toolbar label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 700;
+}

@@ -7,6 +7,7 @@ import type {
   PackagingRun,
   ProductionBatch,
   Recipe,
+  PackagingFormat,
 } from "../types/api";
 import { hasRole, useCurrentUser } from "../lib/auth";
 
@@ -40,20 +41,30 @@ function PackagingPage() {
   const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [packagingFormats, setPackagingFormats] = useState<PackagingFormat[]>(
+    [],
+  );
 
   const loadPackagingData = useCallback(async () => {
     try {
-      const [runsData, batchesData, presentationsData, recipesData] =
-        await Promise.all([
-          apiGet<PackagingRun[]>("/packaging-runs/"),
-          apiGet<ProductionBatch[]>("/production-batches/"),
-          apiGet<BeerPresentation[]>("/beer-presentations/"),
-          apiGet<Recipe[]>("/recipes/"),
-        ]);
+      const [
+        runsData,
+        batchesData,
+        presentationsData,
+        recipesData,
+        formatsData,
+      ] = await Promise.all([
+        apiGet<PackagingRun[]>("/packaging-runs/"),
+        apiGet<ProductionBatch[]>("/production-batches/"),
+        apiGet<BeerPresentation[]>("/beer-presentations/"),
+        apiGet<Recipe[]>("/recipes/"),
+        apiGet<PackagingFormat[]>("/packaging-formats/"),
+      ]);
 
       setRuns(runsData);
       setBatches(batchesData);
       setPresentations(presentationsData);
+      setPackagingFormats(formatsData);
       setRecipes(recipesData);
       setHasLoaded(true);
     } catch (caughtError) {
@@ -99,10 +110,17 @@ function PackagingPage() {
       return [];
     }
 
-    return presentations.filter(
-      (presentation) => presentation.beer_id === recipe.beer_id,
-    );
-  }, [presentations, recipes, selectedBatch]);
+    return presentations.filter((presentation) => {
+      const format = packagingFormats.find(
+        (currentFormat) =>
+          currentFormat.id === presentation.packaging_format_id,
+      );
+
+      return (
+        presentation.beer_id === recipe.beer_id && format?.format_type === "keg"
+      );
+    });
+  }, [packagingFormats, presentations, recipes, selectedBatch]);
 
   const totalPackagedVolume = useMemo(
     () =>
@@ -167,8 +185,8 @@ function PackagingPage() {
     <main className="dashboard">
       <section className="page-heading">
         <p className="eyebrow">Operación</p>
-        <h1>Envasado</h1>
-        <p>Convertí cerveza a granel en producto terminado por presentación.</p>
+        <h1>Embarrilado</h1>
+        <p>Convertí cerveza a granel en barriles identificados.</p>
       </section>
 
       {isLoading && <p>Cargando datos de envasado...</p>}
@@ -185,7 +203,7 @@ function PackagingPage() {
         <>
           {canManageOperations ? (
             <section className="panel sales-form-panel">
-              <h2>Nueva corrida de envasado</h2>
+              <h2>Nuevo embarrilado</h2>
 
               <form className="sale-form" onSubmit={createPackagingRun}>
                 <p className="form-help">
@@ -218,7 +236,7 @@ function PackagingPage() {
 
                 <div className="form-grid">
                   <label>
-                    Presentación de la misma cerveza
+                    Presentación barril de la misma cerveza
                     <select
                       disabled={!selectedBatch}
                       onChange={(event) =>
@@ -254,6 +272,12 @@ function PackagingPage() {
                     />
                   </label>
                 </div>
+                {selectedBatch && compatiblePresentations.length === 0 && (
+                  <p className="form-help">
+                    No hay presentaciones de tipo barril configuradas para esta
+                    cerveza.
+                  </p>
+                )}
 
                 <label>
                   Notas
@@ -265,7 +289,9 @@ function PackagingPage() {
                 </label>
 
                 <button disabled={isSaving} type="submit">
-                  {isSaving ? "Registrando corrida..." : "Registrar envasado"}
+                  {isSaving
+                    ? "Registrando corrida..."
+                    : "Registrar embarrilado"}
                 </button>
               </form>
             </section>

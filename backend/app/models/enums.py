@@ -26,6 +26,8 @@ class BeerPresentationStockMovementType(StrEnum):
     EXPIRATION = "expiration"
     INVENTORY_ADJUSTMENT_IN = "inventory_adjustment_in"
     INVENTORY_ADJUSTMENT_OUT = "inventory_adjustment_out"
+    REPACKAGING_CONSUMPTION = "repackaging_consumption"
+    REPACKAGING_RECEIPT = "repackaging_receipt"
 
 
 class SaleStatus(StrEnum):
@@ -84,3 +86,4 @@ class KegMovementType(StrEnum):
     REMNANT_TRANSFER = "remnant_transfer"
     INVENTORY_ADJUSTMENT = "inventory_adjustment"
     OUT_OF_SERVICE = "out_of_service"
+    REPACKAGING = "repackaging"

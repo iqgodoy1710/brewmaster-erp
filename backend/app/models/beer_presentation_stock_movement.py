@@ -40,6 +40,11 @@ class BeerPresentationStockMovement(BaseModel):
         ForeignKey("sales.id"),
         nullable=True,
     )
+    keg_repackaging_run_id = Column(
+        Integer,
+        ForeignKey("keg_repackaging_runs.id"),
+        nullable=True,
+    )
     movement_type = Column(
         Enum(
             BeerPresentationStockMovementType,
@@ -67,5 +72,9 @@ class BeerPresentationStockMovement(BaseModel):
     )
     sale = relationship(
         "Sale",
+        back_populates="beer_presentation_stock_movements",
+    )
+    keg_repackaging_run = relationship(
+        "KegRepackagingRun",
         back_populates="beer_presentation_stock_movements",
     )

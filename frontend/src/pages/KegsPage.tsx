@@ -41,6 +41,7 @@ const movementTypeLabels: Record<KegMovementType, string> = {
   remnant_transfer: "Recuperación de remanente",
   inventory_adjustment: "Ajuste de inventario",
   out_of_service: "Fuera de servicio",
+  repackaging: "Envasado a botellas",
 };
 
 const formatVolume = (value: string) =>
@@ -60,6 +61,7 @@ function KegsPage() {
 
   const canOperateKegs =
     hasRole(currentUser, "admin") || hasRole(currentUser, "operator");
+  const canRegisterKegs = hasRole(currentUser, "admin");
 
   const [kegs, setKegs] = useState<Keg[]>([]);
   const [kegFormats, setKegFormats] = useState<PackagingFormat[]>([]);
@@ -485,82 +487,84 @@ function KegsPage() {
         <>
           {canOperateKegs && (
             <>
-              <section className="panel sales-form-panel">
-                <h2>Registrar barril</h2>
+              {canRegisterKegs && (
+                <section className="panel sales-form-panel">
+                  <h2>Registrar barril</h2>
 
-                <form className="sale-form" onSubmit={createKeg}>
-                  <div className="form-grid">
-                    <label>
-                      Identificador físico
-                      <input
-                        maxLength={50}
-                        onChange={(event) => setCode(event.target.value)}
-                        placeholder="K20-F-001"
-                        required
-                        value={code}
-                      />
-                    </label>
+                  <form className="sale-form" onSubmit={createKeg}>
+                    <div className="form-grid">
+                      <label>
+                        Identificador físico
+                        <input
+                          maxLength={50}
+                          onChange={(event) => setCode(event.target.value)}
+                          placeholder="K20-F-001"
+                          required
+                          value={code}
+                        />
+                      </label>
 
-                    <label>
-                      Formato de barril
-                      <select
-                        onChange={(event) =>
-                          setPackagingFormatId(event.target.value)
-                        }
-                        required
-                        value={packagingFormatId}
-                      >
-                        <option value="">Seleccioná un formato</option>
+                      <label>
+                        Formato de barril
+                        <select
+                          onChange={(event) =>
+                            setPackagingFormatId(event.target.value)
+                          }
+                          required
+                          value={packagingFormatId}
+                        >
+                          <option value="">Seleccioná un formato</option>
 
-                        {kegFormats.map((format) => (
-                          <option key={format.id} value={format.id}>
-                            {format.name} ·{" "}
-                            {formatVolume(format.capacity_liters)} L
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
+                          {kegFormats.map((format) => (
+                            <option key={format.id} value={format.id}>
+                              {format.name} ·{" "}
+                              {formatVolume(format.capacity_liters)} L
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
 
-                  <div className="form-grid">
-                    <label>
-                      Variante física
-                      <select
-                        onChange={(event) =>
-                          setFormFactor(event.target.value as KegFormFactor)
-                        }
-                        value={formFactor}
-                      >
-                        <option value="standard">Estándar</option>
-                        <option value="flat">Flat</option>
-                        <option value="slim">Slim</option>
-                      </select>
-                    </label>
+                    <div className="form-grid">
+                      <label>
+                        Variante física
+                        <select
+                          onChange={(event) =>
+                            setFormFactor(event.target.value as KegFormFactor)
+                          }
+                          value={formFactor}
+                        >
+                          <option value="standard">Estándar</option>
+                          <option value="flat">Flat</option>
+                          <option value="slim">Slim</option>
+                        </select>
+                      </label>
 
-                    <label>
-                      Notas
-                      <input
-                        onChange={(event) => setNotes(event.target.value)}
-                        placeholder="Observaciones opcionales."
-                        value={notes}
-                      />
-                    </label>
-                  </div>
+                      <label>
+                        Notas
+                        <input
+                          onChange={(event) => setNotes(event.target.value)}
+                          placeholder="Observaciones opcionales."
+                          value={notes}
+                        />
+                      </label>
+                    </div>
 
-                  <button
-                    disabled={isSaving || kegFormats.length === 0}
-                    type="submit"
-                  >
-                    {isSaving ? "Registrando barril..." : "Registrar barril"}
-                  </button>
+                    <button
+                      disabled={isSaving || kegFormats.length === 0}
+                      type="submit"
+                    >
+                      {isSaving ? "Registrando barril..." : "Registrar barril"}
+                    </button>
 
-                  {kegFormats.length === 0 && (
-                    <p className="form-help">
-                      Primero registrá un formato de tipo Barril.
-                    </p>
-                  )}
-                </form>
-              </section>
+                    {kegFormats.length === 0 && (
+                      <p className="form-help">
+                        Primero registrá un formato de tipo Barril.
+                      </p>
+                    )}
+                  </form>
+                </section>
+              )}
               <section className="panel sales-form-panel">
                 <h2>Llenar barril</h2>
 

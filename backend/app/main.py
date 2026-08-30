@@ -56,6 +56,9 @@ from app.api.v1.endpoints.customers import router as customer_router
 from app.api.v1.endpoints.keg_movements import (
     router as keg_movements_router,
 )
+from app.api.v1.endpoints.keg_repackaging_runs import (
+    router as keg_repackaging_runs_router,
+)
 from app.api.v1.endpoints.kegs import router as kegs_router
 from app.api.v1.endpoints.packaging_formats import router as packaging_format_router
 from app.api.v1.endpoints.packaging_runs import (
@@ -107,6 +110,7 @@ from app.common.exceptions import (
     InvalidKegFillingError,
     InvalidKegPackagingFormatError,
     InvalidKegRemnantTransferError,
+    InvalidKegRepackagingError,
     InvalidKegReturnError,
     InvalidKegWashingError,
     InvalidPackagingRunError,
@@ -125,6 +129,7 @@ from app.common.exceptions import (
     RawMaterialCodeAlreadyExistsError,
     RawMaterialNotFoundError,
     RecipeHasNoIngredientsError,
+    RecipeHasProductionBatchesError,
     RecipeIngredientAlreadyExistsError,
     RecipeIngredientNotFoundError,
     RecipeNotFoundError,
@@ -469,6 +474,16 @@ app.add_exception_handler(
     related_resource_not_found_handler,
 )
 
+app.add_exception_handler(
+    RecipeHasProductionBatchesError,
+    recipe_creation_conflict_handler,
+)
+
+app.add_exception_handler(
+    InvalidKegRepackagingError,
+    keg_conflict_handler,
+)
+
 @app.get("/health", tags=["Health"])
 def health():
     return {"status": "ok"}
@@ -525,3 +540,5 @@ app.include_router(customer_account_router)
 app.include_router(kegs_router)
 
 app.include_router(keg_movements_router)
+
+app.include_router(keg_repackaging_runs_router)

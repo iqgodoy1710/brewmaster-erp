@@ -1,8 +1,7 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
-
 from app.models.enums import BeerPresentationStockMovementType
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class BeerPresentationStockMovementCreate(BaseModel):
