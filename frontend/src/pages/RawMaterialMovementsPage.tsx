@@ -54,6 +54,7 @@ function RawMaterialMovementsPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [movements, setMovements] = useState<RawMaterialStockMovement[]>([]);
   const [rawMaterialId, setRawMaterialId] = useState("");
+  const [rawMaterialSearch, setRawMaterialSearch] = useState("");
   const [movementType, setMovementType] =
     useState<RawMaterialMovementType>("purchase_receipt");
   const [quantity, setQuantity] = useState("");
@@ -128,6 +129,19 @@ function RawMaterialMovementsPage() {
       ),
     [rawMaterialId, rawMaterials],
   );
+  const filteredRawMaterials = useMemo(() => {
+    const normalizedSearch = rawMaterialSearch.trim().toLowerCase();
+
+    if (!normalizedSearch) {
+      return rawMaterials;
+    }
+
+    return rawMaterials.filter((rawMaterial) =>
+      `${rawMaterial.code} ${rawMaterial.name}`
+        .toLowerCase()
+        .includes(normalizedSearch),
+    );
+  }, [rawMaterialSearch, rawMaterials]);
 
   const requiresSupplier = movementType === "purchase_receipt";
 
@@ -232,6 +246,17 @@ function RawMaterialMovementsPage() {
             <form className="sale-form" onSubmit={createMovement}>
               <div className="form-grid">
                 <label>
+                  Buscar insumo
+                  <input
+                    onChange={(event) =>
+                      setRawMaterialSearch(event.target.value)
+                    }
+                    placeholder="Código o nombre"
+                    type="search"
+                    value={rawMaterialSearch}
+                  />
+                </label>
+                <label>
                   Insumo
                   <select
                     onChange={(event) => setRawMaterialId(event.target.value)}
@@ -239,7 +264,7 @@ function RawMaterialMovementsPage() {
                     value={rawMaterialId}
                   >
                     <option value="">Seleccioná un insumo</option>
-                    {rawMaterials.map((rawMaterial) => (
+                    {filteredRawMaterials.map((rawMaterial) => (
                       <option key={rawMaterial.id} value={rawMaterial.id}>
                         {rawMaterial.code} · {rawMaterial.name}
                       </option>

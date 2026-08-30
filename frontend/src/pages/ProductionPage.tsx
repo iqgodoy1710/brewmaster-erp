@@ -211,6 +211,17 @@ function ProductionPage() {
       `${formatNumber(recipe.target_volume_liters)} L`
     );
   };
+  const batchStyle = (batch: ProductionBatch) => {
+    const recipe = recipes.find(
+      (currentRecipe) => currentRecipe.id === batch.recipe_id,
+    );
+
+    const beer = beers.find(
+      (currentBeer) => currentBeer.id === recipe?.beer_id,
+    );
+
+    return beer?.style ?? "—";
+  };
 
   return (
     <main className="dashboard">
@@ -329,6 +340,7 @@ function ProductionPage() {
                   <thead>
                     <tr>
                       <th>Lote</th>
+                      <th>Estilo</th>
                       <th>Estado</th>
                       <th>Volumen planificado</th>
                       <th>Volumen producido</th>
@@ -341,6 +353,7 @@ function ProductionPage() {
                     {batches.map((batch) => (
                       <tr key={batch.id}>
                         <td>{batch.code}</td>
+                        <td>{batchStyle(batch)}</td>
                         <td>{statusLabels[batch.status]}</td>
                         <td>{formatNumber(batch.planned_volume_liters)} L</td>
                         <td>

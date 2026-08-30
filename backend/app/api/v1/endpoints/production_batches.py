@@ -66,7 +66,7 @@ def create_production_batch(
 
 
 @router.post(
-    "/{code}/complete",
+    "/{code:path}/complete",
     response_model=ProductionBatchResponse,
 )
 def complete_production_batch(
