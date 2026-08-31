@@ -151,6 +151,8 @@ class InactiveBeerPresentationError(Exception):
 class BeerPresentationPackagingMaterialAlreadyExistsError(Exception):
     pass
 
+class KegPresentationCannotHavePackagingMaterialsError(Exception):
+    pass
 
 # Exceptions related to PACKAGING RUNS
 class PackagingRunCodeAlreadyExistsError(Exception):

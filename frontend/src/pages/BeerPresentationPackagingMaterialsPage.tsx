@@ -6,6 +6,7 @@ import type {
   BeerPresentation,
   BeerPresentationPackagingMaterial,
   RawMaterialReference,
+  PackagingFormat,
 } from "../types/api";
 import { hasRole, useCurrentUser } from "../lib/auth";
 
@@ -21,6 +22,9 @@ function BeerPresentationPackagingMaterialsPage() {
   const canManageCatalog =
     hasRole(currentUser, "admin") || hasRole(currentUser, "operator");
   const [presentations, setPresentations] = useState<BeerPresentation[]>([]);
+  const [packagingFormats, setPackagingFormats] = useState<PackagingFormat[]>(
+    [],
+  );
   const [rawMaterials, setRawMaterials] = useState<RawMaterialReference[]>([]);
   const [materials, setMaterials] = useState<
     BeerPresentationPackagingMaterial[]
@@ -41,6 +45,17 @@ function BeerPresentationPackagingMaterialsPage() {
     [beerPresentationId, presentations],
   );
 
+  const materialPresentations = useMemo(() => {
+    const formatById = new Map(
+      packagingFormats.map((format) => [format.id, format]),
+    );
+
+    return presentations.filter(
+      (presentation) =>
+        formatById.get(presentation.packaging_format_id)?.format_type !== "keg",
+    );
+  }, [packagingFormats, presentations]);
+
   const rawMaterialById = useMemo(
     () =>
       new Map(rawMaterials.map((rawMaterial) => [rawMaterial.id, rawMaterial])),
@@ -52,12 +67,15 @@ function BeerPresentationPackagingMaterialsPage() {
       setIsLoading(true);
       setError(null);
 
-      const [presentationsData, rawMaterialsData] = await Promise.all([
-        apiGet<BeerPresentation[]>("/beer-presentations/"),
-        apiGet<RawMaterialReference[]>("/raw-materials/references"),
-      ]);
+      const [presentationsData, rawMaterialsData, formatsData] =
+        await Promise.all([
+          apiGet<BeerPresentation[]>("/beer-presentations/"),
+          apiGet<RawMaterialReference[]>("/raw-materials/references"),
+          apiGet<PackagingFormat[]>("/packaging-formats/"),
+        ]);
 
       setPresentations(presentationsData);
+      setPackagingFormats(formatsData);
       setRawMaterials(rawMaterialsData);
     } catch (caughtError) {
       setError(
@@ -149,7 +167,10 @@ function BeerPresentationPackagingMaterialsPage() {
       <section className="page-heading">
         <p className="eyebrow">Envasado</p>
         <h1>Materiales de envasado</h1>
-        <p>Configurá los insumos necesarios para producir cada presentación.</p>
+        <p>
+          Configurá los insumos consumibles necesarios para producir botellas,
+          latas u otras presentaciones no retornables.
+        </p>
       </section>
 
       {isLoading && <p>Cargando datos...</p>}
@@ -179,7 +200,7 @@ function BeerPresentationPackagingMaterialsPage() {
                       }
                     >
                       <option value="">Seleccioná una presentación</option>
-                      {presentations.map((presentation) => (
+                      {materialPresentations.map((presentation) => (
                         <option key={presentation.id} value={presentation.id}>
                           {presentation.code} · {presentation.name}
                         </option>

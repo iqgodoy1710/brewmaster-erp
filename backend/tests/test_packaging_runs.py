@@ -154,25 +154,30 @@ def create_completed_batch_with_presentation(
         },
     ).json()
 
-    for packaging_material in (bottle, cap, label):
-        response = client.post(
-            "/beer-presentation-packaging-materials/",
-            json={
-                "beer_presentation_id": beer_presentation["id"],
-                "raw_material_id": packaging_material["id"],
-                "required_quantity": "1.000",
-            },
-        )
-        assert response.status_code == 201
+    packaging_materials = (bottle, cap, label)
+
+    if packaging_format_type != "keg":
+        for packaging_material in packaging_materials:
+            response = client.post(
+                "/beer-presentation-packaging-materials/",
+                json={
+                    "beer_presentation_id": beer_presentation["id"],
+                    "raw_material_id": packaging_material["id"],
+                    "required_quantity": "1.000",
+                },
+            )
+            assert response.status_code == 201
 
     return {
         "production_batch": production_batch,
         "beer_presentation": beer_presentation,
-        "packaging_materials": (bottle, cap, label),
+        "packaging_materials": packaging_materials,
     }
 
 
-def test_create_packaging_run_consumes_bulk_beer_and_materials(client):
+def test_create_packaging_run_consumes_bulk_beer_without_consuming_materials(
+    client,
+):
     data = create_completed_batch_with_presentation(client)
 
     response = client.post(
@@ -215,18 +220,11 @@ def test_create_packaging_run_consumes_bulk_beer_and_materials(client):
     }
 
     for packaging_material in data["packaging_materials"]:
-        assert stock_by_id[packaging_material["id"]] == Decimal("90.000")
+        assert stock_by_id[packaging_material["id"]] == Decimal("100.000")
 
-        movements = client.get(
-            f"/raw-material-stock-movements/{packaging_material['id']}"
-        ).json()
-
-        assert movements[0]["packaging_run_id"] == packaging_run["id"]
-        assert movements[0]["reference"] == packaging_run["code"]
-
-        finished_product_movements = client.get(
-            f"/beer-presentations/{data['beer_presentation']['id']}/stock-movements"
-        ).json()
+    finished_product_movements = client.get(
+        f"/beer-presentations/{data['beer_presentation']['id']}/stock-movements"
+    ).json()
 
     assert len(finished_product_movements) == 1
     assert finished_product_movements[0]["movement_type"] == "packaging_receipt"
@@ -309,7 +307,7 @@ def test_cannot_package_more_bulk_beer_than_available(client):
     assert client.get("/packaging-runs/").json() == []
 
 
-def test_cannot_package_when_packaging_material_stock_is_insufficient(client):
+def test_packaging_keg_does_not_consume_packaging_materials(client):
     data = create_completed_batch_with_presentation(client)
 
     response = client.post(
@@ -321,10 +319,7 @@ def test_cannot_package_when_packaging_material_stock_is_insufficient(client):
         },
     )
 
-    assert response.status_code == 409
-    assert response.json() == {
-        "detail": "There is not enough stock for a packaging material."
-    }
+    assert response.status_code == 201
 
     production_batches = client.get("/production-batches/").json()
     production_batch = next(
@@ -333,7 +328,7 @@ def test_cannot_package_when_packaging_material_stock_is_insufficient(client):
         if batch["id"] == data["production_batch"]["id"]
     )
     assert Decimal(production_batch["available_bulk_volume_liters"]) == Decimal(
-        "100.000"
+        "49.500"
     )
 
     beer_presentations = client.get("/beer-presentations/").json()
@@ -342,7 +337,7 @@ def test_cannot_package_when_packaging_material_stock_is_insufficient(client):
         for presentation in beer_presentations
         if presentation["id"] == data["beer_presentation"]["id"]
     )
-    assert beer_presentation["current_stock"] == 0
+    assert beer_presentation["current_stock"] == 101
 
     raw_materials = client.get("/raw-materials/").json()
     stock_by_id = {
@@ -353,7 +348,7 @@ def test_cannot_package_when_packaging_material_stock_is_insufficient(client):
     for packaging_material in data["packaging_materials"]:
         assert stock_by_id[packaging_material["id"]] == Decimal("100.000")
 
-    assert client.get("/packaging-runs/").json() == []
+    assert len(client.get("/packaging-runs/").json()) == 1
 
 
 def test_cannot_package_a_batch_that_is_not_completed(client):
@@ -1226,9 +1221,7 @@ def test_fill_keg_directly_from_bulk_creates_run_and_traceability(client):
         "/kegs/",
         json={
             "code": "K20-DIRECT-001",
-            "packaging_format_id": (
-                data["beer_presentation"]["packaging_format_id"]
-            ),
+            "packaging_format_id": (data["beer_presentation"]["packaging_format_id"]),
             "form_factor": "flat",
         },
     )
@@ -1252,12 +1245,8 @@ def test_fill_keg_directly_from_bulk_creates_run_and_traceability(client):
     assert movement["keg_id"] == keg["id"]
     assert movement["movement_type"] == "filling"
     assert movement["new_status"] == "filled"
-    assert movement["production_batch_id"] == (
-        data["production_batch"]["id"]
-    )
-    assert movement["beer_presentation_id"] == (
-        data["beer_presentation"]["id"]
-    )
+    assert movement["production_batch_id"] == (data["production_batch"]["id"])
+    assert movement["beer_presentation_id"] == (data["beer_presentation"]["id"])
     assert movement["packaging_run_id"] is not None
 
     packaging_runs = client.get("/packaging-runs/").json()
@@ -1268,19 +1257,15 @@ def test_fill_keg_directly_from_bulk_creates_run_and_traceability(client):
 
     production_batch = client.get("/production-batches/").json()[0]
 
-    assert Decimal(
-        production_batch["available_bulk_volume_liters"]
-    ) == Decimal("99.500")
+    assert Decimal(production_batch["available_bulk_volume_liters"]) == Decimal(
+        "99.500"
+    )
 
     beer_presentation = client.get("/beer-presentations/").json()[0]
 
     assert beer_presentation["current_stock"] == 1
 
-    updated_keg = client.get(
-        f"/kegs/by-code/{keg['code']}"
-    ).json()
+    updated_keg = client.get(f"/kegs/by-code/{keg['code']}").json()
 
     assert updated_keg["status"] == "filled"
-    assert updated_keg["production_batch_id"] == (
-        data["production_batch"]["id"]
-    )
+    assert updated_keg["production_batch_id"] == (data["production_batch"]["id"])

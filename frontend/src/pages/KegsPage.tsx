@@ -13,7 +13,7 @@ import type {
   KegRemnantTransferResponse,
   KegStatus,
   PackagingFormat,
-  PackagingRun,
+  Beer,
   ProductionBatch,
   Recipe,
 } from "../types/api";
@@ -73,7 +73,7 @@ function KegsPage() {
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
   const [presentations, setPresentations] = useState<BeerPresentation[]>([]);
-  const [packagingRuns, setPackagingRuns] = useState<PackagingRun[]>([]);
+  const [beers, setBeers] = useState<Beer[]>([]);
   const [productionBatches, setProductionBatches] = useState<ProductionBatch[]>(
     [],
   );
@@ -84,10 +84,7 @@ function KegsPage() {
   const [directPresentationId, setDirectPresentationId] = useState("");
   const [directFillNotes, setDirectFillNotes] = useState("");
   const [isDirectFilling, setIsDirectFilling] = useState(false);
-  const [fillKegId, setFillKegId] = useState("");
-  const [fillPackagingRunId, setFillPackagingRunId] = useState("");
-  const [fillNotes, setFillNotes] = useState("");
-  const [isFilling, setIsFilling] = useState(false);
+
   const [code, setCode] = useState("");
   const [packagingFormatId, setPackagingFormatId] = useState("");
   const [formFactor, setFormFactor] = useState<KegFormFactor>("standard");
@@ -119,14 +116,14 @@ function KegsPage() {
         kegsData,
         formatsData,
         presentationsData,
-        runsData,
+        beersData,
         batchesData,
         recipesData,
       ] = await Promise.all([
         apiGet<Keg[]>("/kegs/"),
         apiGet<PackagingFormat[]>("/packaging-formats/"),
         apiGet<BeerPresentation[]>("/beer-presentations/"),
-        apiGet<PackagingRun[]>("/packaging-runs/"),
+        apiGet<Beer[]>("/beers/"),
         apiGet<ProductionBatch[]>("/production-batches/"),
         apiGet<Recipe[]>("/recipes/"),
       ]);
@@ -136,7 +133,7 @@ function KegsPage() {
         formatsData.filter((format) => format.format_type === "keg"),
       );
       setPresentations(presentationsData);
-      setPackagingRuns(runsData);
+      setBeers(beersData);
       setProductionBatches(batchesData);
       setRecipes(recipesData);
     } catch (caughtError) {
@@ -208,29 +205,6 @@ function KegsPage() {
     [kegs],
   );
 
-  const selectedFillKeg = useMemo(
-    () => cleanKegs.find((keg) => keg.id === Number(fillKegId)) ?? null,
-    [cleanKegs, fillKegId],
-  );
-
-  const compatiblePackagingRuns = useMemo(() => {
-    if (!selectedFillKeg) {
-      return [];
-    }
-
-    return packagingRuns.filter((run) => {
-      const presentation = presentations.find(
-        (item) => item.id === run.beer_presentation_id,
-      );
-
-      return (
-        run.active &&
-        presentation?.packaging_format_id ===
-          selectedFillKeg.packaging_format_id
-      );
-    });
-  }, [packagingRuns, presentations, selectedFillKeg]);
-
   const eligibleDirectFillBatches = useMemo(
     () =>
       productionBatches.filter(
@@ -300,6 +274,26 @@ function KegsPage() {
     return `${format.name} · ${formatVolume(format.capacity_liters)} L`;
   }
 
+  function getProductionBatchLabel(batch: ProductionBatch) {
+    const recipe = recipes.find(
+      (currentRecipe) => currentRecipe.id === batch.recipe_id,
+    );
+    const beer = beers.find(
+      (currentBeer) => currentBeer.id === recipe?.beer_id,
+    );
+
+    const beerLabel = beer
+      ? `${beer.name}${beer.style ? ` · ${beer.style}` : ""}`
+      : "Cerveza no disponible";
+
+    const availabilityLabel =
+      batch.status === "in_progress"
+        ? "En producción"
+        : `Granel: ${formatVolume(batch.available_bulk_volume_liters)} L`;
+
+    return `${batch.code} · ${beerLabel} · ${availabilityLabel}`;
+  }
+
   function getKegCapacity(keg: Keg): number {
     const format = kegFormats.find(
       (item) => item.id === keg.packaging_format_id,
@@ -351,43 +345,6 @@ function KegsPage() {
       );
     } finally {
       setIsSaving(false);
-    }
-  }
-  async function fillKeg(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!fillKegId || !fillPackagingRunId) {
-      setError("Seleccioná un barril limpio y una corrida de envasado.");
-      return;
-    }
-
-    setError(null);
-    setSuccess(null);
-    setIsFilling(true);
-
-    try {
-      const movement = await apiPost<KegMovement>("/keg-movements/fill", {
-        keg_id: Number(fillKegId),
-        packaging_run_id: Number(fillPackagingRunId),
-        notes: fillNotes.trim() || null,
-      });
-
-      setFillKegId("");
-      setFillPackagingRunId("");
-      setFillNotes("");
-      setSelectedKegId(String(movement.keg_id));
-      setSuccess("El barril fue llenado y quedó disponible para entregar.");
-
-      await loadData();
-      await loadKegMovements(String(movement.keg_id));
-    } catch (caughtError) {
-      setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "No se pudo llenar el barril.",
-      );
-    } finally {
-      setIsFilling(false);
     }
   }
 
@@ -683,98 +640,6 @@ function KegsPage() {
                   </form>
                 </section>
               )}
-              <section className="panel sales-form-panel">
-                <h2>Llenar barril</h2>
-
-                <p className="form-help">
-                  Seleccioná un barril limpio y una corrida compatible de
-                  envasado.
-                </p>
-
-                <form className="sale-form" onSubmit={fillKeg}>
-                  <div className="form-grid">
-                    <label>
-                      Barril limpio
-                      <select
-                        onChange={(event) => {
-                          setFillKegId(event.target.value);
-                          setFillPackagingRunId("");
-                        }}
-                        required
-                        value={fillKegId}
-                      >
-                        <option value="">Seleccioná un barril</option>
-
-                        {cleanKegs.map((keg) => (
-                          <option key={keg.id} value={keg.id}>
-                            {keg.code} ·{" "}
-                            {getFormatLabel(keg.packaging_format_id)}
-                            {keg.form_factor !== "standard" &&
-                              ` · ${formFactorLabels[keg.form_factor]}`}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label>
-                      Corrida de envasado compatible
-                      <select
-                        disabled={!selectedFillKeg}
-                        onChange={(event) =>
-                          setFillPackagingRunId(event.target.value)
-                        }
-                        required
-                        value={fillPackagingRunId}
-                      >
-                        <option value="">
-                          {selectedFillKeg
-                            ? "Seleccioná una corrida"
-                            : "Seleccioná primero un barril"}
-                        </option>
-
-                        {compatiblePackagingRuns.map((run) => (
-                          <option key={run.id} value={run.id}>
-                            {run.code} · {run.packaged_quantity} unidades
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-
-                  <label>
-                    Notas
-                    <input
-                      onChange={(event) => setFillNotes(event.target.value)}
-                      placeholder="Observaciones opcionales del llenado."
-                      value={fillNotes}
-                    />
-                  </label>
-
-                  <button
-                    disabled={
-                      isFilling ||
-                      cleanKegs.length === 0 ||
-                      !selectedFillKeg ||
-                      compatiblePackagingRuns.length === 0
-                    }
-                    type="submit"
-                  >
-                    {isFilling ? "Llenando barril..." : "Registrar llenado"}
-                  </button>
-
-                  {cleanKegs.length === 0 && (
-                    <p className="form-help">
-                      No hay barriles limpios disponibles para llenar.
-                    </p>
-                  )}
-
-                  {selectedFillKeg && compatiblePackagingRuns.length === 0 && (
-                    <p className="form-help">
-                      No hay corridas compatibles disponibles para este formato.
-                    </p>
-                  )}
-                </form>
-              </section>
 
               <section className="panel sales-form-panel">
                 <h2>Llenar desde lote a granel</h2>
@@ -819,12 +684,7 @@ function KegsPage() {
                         <option value="">Seleccioná un lote</option>
                         {eligibleDirectFillBatches.map((batch) => (
                           <option key={batch.id} value={batch.id}>
-                            {batch.code} ·{" "}
-                            {batch.status === "in_progress"
-                              ? "En producción"
-                              : `Granel: ${formatVolume(
-                                  batch.available_bulk_volume_liters,
-                                )} L`}
+                            {getProductionBatchLabel(batch)}
                           </option>
                         ))}
                       </select>

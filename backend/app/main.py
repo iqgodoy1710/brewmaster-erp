@@ -120,6 +120,7 @@ from app.common.exceptions import (
     InvalidUserUpdateError,
     KegCodeAlreadyExistsError,
     KegNotFoundError,
+    KegPresentationCannotHavePackagingMaterialsError,
     PackagingFormatCodeAlreadyExistsError,
     PackagingFormatNameAlreadyExistsError,
     PackagingFormatNotFoundError,
@@ -482,6 +483,11 @@ app.add_exception_handler(
 app.add_exception_handler(
     InvalidKegRepackagingError,
     keg_conflict_handler,
+)
+
+app.add_exception_handler(
+    KegPresentationCannotHavePackagingMaterialsError,
+    beer_presentation_packaging_material_conflict_handler,
 )
 
 @app.get("/health", tags=["Health"])

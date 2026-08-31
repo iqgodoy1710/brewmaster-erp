@@ -92,14 +92,17 @@ class PackagingRunService:
                 "Primary packaging runs can only use keg presentations."
             )
 
-        packaging_materials = get_beer_presentation_packaging_materials(
-            db,
-            beer_presentation.id,
-        )
-        if not packaging_materials:
-            raise BeerPresentationHasNoPackagingMaterialsError(
-                "The beer presentation has no packaging materials."
+        packaging_materials = []
+
+        if beer_presentation.packaging_format.format_type != PackagingFormatType.KEG:
+            packaging_materials = get_beer_presentation_packaging_materials(
+                db,
+                beer_presentation.id,
             )
+            if not packaging_materials:
+                raise BeerPresentationHasNoPackagingMaterialsError(
+                    "The beer presentation has no packaging materials."
+                )
 
         packaged_volume_liters = PackagingRunService._calculate_packaged_volume(
             beer_presentation.packaging_format.capacity_liters,

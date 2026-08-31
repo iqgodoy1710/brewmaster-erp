@@ -1,10 +1,9 @@
-from sqlalchemy.orm import Session
-
 from app.common.exceptions import (
     BeerPresentationNotFoundError,
     BeerPresentationPackagingMaterialAlreadyExistsError,
     InactiveBeerPresentationError,
     InactiveRawMaterialError,
+    KegPresentationCannotHavePackagingMaterialsError,
     RawMaterialNotFoundError,
 )
 from app.crud.beer_presentation import get_beer_presentation_by_id
@@ -14,9 +13,11 @@ from app.crud.beer_presentation_packaging_material import (
     get_beer_presentation_packaging_materials,
 )
 from app.crud.raw_material import get_raw_material_by_id
+from app.models.enums import PackagingFormatType
 from app.schemas.beer_presentation_packaging_material import (
     BeerPresentationPackagingMaterialCreate,
 )
+from sqlalchemy.orm import Session
 
 
 class BeerPresentationPackagingMaterialService:
@@ -56,6 +57,15 @@ class BeerPresentationPackagingMaterialService:
         if not beer_presentation.active:
             raise InactiveBeerPresentationError(
                 "Cannot add packaging materials to an inactive beer presentation."
+            )
+
+        if (
+            beer_presentation.packaging_format.format_type
+            == PackagingFormatType.KEG
+        ):
+            raise KegPresentationCannotHavePackagingMaterialsError(
+                "Keg presentations do not use packaging materials because "
+                "physical kegs are reusable."
             )
 
         raw_material = get_raw_material_by_id(

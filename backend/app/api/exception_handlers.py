@@ -42,6 +42,7 @@ from app.common.exceptions import (
     InvalidUserUpdateError,
     KegCodeAlreadyExistsError,
     KegNotFoundError,
+    KegPresentationCannotHavePackagingMaterialsError,
     PackagingFormatCodeAlreadyExistsError,
     PackagingFormatNameAlreadyExistsError,
     PackagingFormatNotFoundError,
@@ -240,6 +241,7 @@ async def beer_presentation_packaging_material_conflict_handler(
     error: (
         InactiveBeerPresentationError
         | BeerPresentationPackagingMaterialAlreadyExistsError
+        | KegPresentationCannotHavePackagingMaterialsError
     ),
 ) -> JSONResponse:
     return JSONResponse(
@@ -369,3 +371,4 @@ async def keg_not_found_handler(
         status_code=404,
         content={"detail": str(error)},
     )
+

@@ -26,7 +26,7 @@ import RawMaterialsPage from "./pages/RawMaterialsPage";
 import FinishedProductsPage from "./pages/FinishedProductsPage";
 import SalesPage from "./pages/SalesPage";
 import ProductionPage from "./pages/ProductionPage";
-import PackagingPage from "./pages/PackagingPage";
+
 import RawMaterialMovementsPage from "./pages/RawMaterialMovementsPage";
 import CustomersPage from "./pages/CustomersPage";
 import BeersPage from "./pages/BeersPage";
@@ -263,18 +263,6 @@ function AppContent() {
                       onClick={closeMenu}
                     >
                       Producción
-                    </NavLink>
-                  )}
-
-                  {canOperate && (
-                    <NavLink
-                      className={({ isActive }) =>
-                        isActive ? "nav-link active" : "nav-link"
-                      }
-                      to="/embarrilado"
-                      onClick={closeMenu}
-                    >
-                      Embarrilado
                     </NavLink>
                   )}
 
@@ -586,13 +574,6 @@ function AppContent() {
             path="/produccion"
             element={
               canOperate ? <ProductionPage /> : <Navigate to="/" replace />
-            }
-          />
-
-          <Route
-            path="/embarrilado"
-            element={
-              canOperate ? <PackagingPage /> : <Navigate to="/" replace />
             }
           />
 
