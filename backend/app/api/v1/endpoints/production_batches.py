@@ -66,6 +66,44 @@ def create_production_batch(
 
 
 @router.post(
+    "/{code:path}/start",
+    response_model=ProductionBatchResponse,
+    dependencies=[
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+                UserRole.OPERATOR,
+            )
+        )
+    ],
+)
+def start_production_batch(
+    code: str,
+    db: Session = Depends(get_db),
+):
+    return ProductionBatchService.start(db, code)
+
+
+@router.post(
+    "/{code:path}/cancel",
+    response_model=ProductionBatchResponse,
+    dependencies=[
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+                UserRole.OPERATOR,
+            )
+        )
+    ],
+)
+def cancel_production_batch(
+    code: str,
+    db: Session = Depends(get_db),
+):
+    return ProductionBatchService.cancel(db, code)
+
+
+@router.post(
     "/{code:path}/complete",
     response_model=ProductionBatchResponse,
 )

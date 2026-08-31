@@ -24,7 +24,7 @@ const formatDate = (value: string) =>
 
 const statusLabels: Record<ProductionBatch["status"], string> = {
   planned: "Planificado",
-  in_progress: "En proceso",
+  in_progress: "En producción",
   completed: "Completado",
   cancelled: "Cancelado",
 };
@@ -51,6 +51,9 @@ function ProductionPage() {
   const [completingBatchId, setCompletingBatchId] = useState<number | null>(
     null,
   );
+  const [transitioningBatchId, setTransitioningBatchId] = useState<
+    number | null
+  >(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -180,6 +183,58 @@ function ProductionPage() {
       );
     } finally {
       setCompletingBatchId(null);
+    }
+  }
+
+  async function startProductionBatch(batch: ProductionBatch) {
+    setError(null);
+    setSuccess(null);
+    setTransitioningBatchId(batch.id);
+
+    try {
+      const startedBatch = await apiPost<ProductionBatch>(
+        `/production-batches/${encodeURIComponent(batch.code)}/start`,
+      );
+
+      setSuccess(`El lote ${startedBatch.code} está en producción.`);
+      await loadProductionData();
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "No se pudo iniciar la producción.",
+      );
+    } finally {
+      setTransitioningBatchId(null);
+    }
+  }
+
+  async function cancelProductionBatch(batch: ProductionBatch) {
+    if (
+      !window.confirm(`¿Querés cancelar el lote planificado ${batch.code}?`)
+    ) {
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setTransitioningBatchId(batch.id);
+
+    try {
+      const cancelledBatch = await apiPost<ProductionBatch>(
+        `/production-batches/${encodeURIComponent(batch.code)}/cancel`,
+      );
+
+      setSuccess(`El lote ${cancelledBatch.code} fue cancelado.`);
+      await loadProductionData();
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "No se pudo cancelar el lote.",
+      );
+    } finally {
+      setTransitioningBatchId(null);
     }
   }
 
@@ -371,6 +426,31 @@ function ProductionPage() {
                         </td>
                         <td>
                           {batch.status === "planned" && canManageOperations ? (
+                            <div className="batch-actions">
+                              <button
+                                disabled={transitioningBatchId === batch.id}
+                                onClick={() => void startProductionBatch(batch)}
+                                type="button"
+                              >
+                                {transitioningBatchId === batch.id
+                                  ? "Iniciando..."
+                                  : "Iniciar producción"}
+                              </button>
+
+                              
+
+                              <button
+                                disabled={transitioningBatchId === batch.id}
+                                onClick={() =>
+                                  void cancelProductionBatch(batch)
+                                }
+                                type="button"
+                              >
+                                Cancelar lote
+                              </button>
+                            </div>
+                          ) : batch.status === "in_progress" &&
+                            canManageOperations ? (
                             <form
                               className="batch-completion-form"
                               onSubmit={(event) =>
@@ -398,8 +478,8 @@ function ProductionPage() {
                                 type="submit"
                               >
                                 {completingBatchId === batch.id
-                                  ? "Completando..."
-                                  : "Completar"}
+                                  ? "Cerrando..."
+                                  : "Cerrar producción"}
                               </button>
                             </form>
                           ) : (

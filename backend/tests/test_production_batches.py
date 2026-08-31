@@ -491,7 +491,7 @@ def test_completed_production_batch_cannot_be_completed_again(client):
     assert first_completion_response.status_code == 200
     assert response.status_code == 409
     assert response.json() == {
-        "detail": "Only planned production batches can be completed."
+        "detail": "Only planned or in-progress production batches can be completed."
     }
 
 

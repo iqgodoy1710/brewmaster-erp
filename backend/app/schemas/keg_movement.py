@@ -16,6 +16,14 @@ class KegFillCreate(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+class KegFillFromBulkCreate(BaseModel):
+    keg_id: int = Field(..., gt=0)
+    production_batch_id: int = Field(..., gt=0)
+    beer_presentation_id: int = Field(..., gt=0)
+    notes: str | None = None
+    occurred_at: datetime | None = None
+
+    model_config = ConfigDict(extra="forbid")
 
 class KegMovementResponse(BaseModel):
     id: int

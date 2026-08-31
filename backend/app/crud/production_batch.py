@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from app.models.enums import ProductionBatchStatus
+from app.models.packaging_run import PackagingRun
 from app.models.production_batch import ProductionBatch
 from app.models.raw_material import RawMaterial
 from app.models.recipe import Recipe
@@ -94,6 +95,27 @@ def complete_production_batch(
 
     return production_batch
 
+def start_production_batch(
+    db: Session,
+    production_batch: ProductionBatch,
+) -> ProductionBatch:
+    production_batch.status = ProductionBatchStatus.IN_PROGRESS
+
+    db.flush()
+
+    return production_batch
+
+
+def cancel_production_batch(
+    db: Session,
+    production_batch: ProductionBatch,
+) -> ProductionBatch:
+    production_batch.status = ProductionBatchStatus.CANCELLED
+
+    db.flush()
+
+    return production_batch
+
 def get_production_batch_by_id(
     db: Session,
     production_batch_id: int,
@@ -117,3 +139,22 @@ def update_available_bulk_volume(
     db.flush()
 
     return production_batch
+
+def get_packaged_volume_for_production_batch(
+    db: Session,
+    production_batch_id: int,
+) -> Decimal:
+    return (
+        db.query(
+            func.coalesce(
+                func.sum(PackagingRun.packaged_volume_liters),
+                0,
+            )
+        )
+        .filter(
+            PackagingRun.production_batch_id
+            == production_batch_id,
+            PackagingRun.active.is_(True),
+        )
+        .scalar()
+    )

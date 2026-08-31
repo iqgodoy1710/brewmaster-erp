@@ -27,6 +27,7 @@ from app.crud.packaging_run import (
     get_packaging_runs,
 )
 from app.crud.production_batch import (
+    get_packaged_volume_for_production_batch,
     get_production_batch_by_id,
     update_available_bulk_volume,
 )
@@ -55,21 +56,19 @@ class PackagingRunService:
     def create(
         db: Session,
         packaging_run_data: PackagingRunCreate,
+        commit: bool = True,
     ):
 
         production_batch = get_production_batch_by_id(
             db,
             packaging_run_data.production_batch_id,
         )
-        if not production_batch:
-            raise ProductionBatchNotFoundError("The production batch does not exist.")
-
-        if (
-            not production_batch.active
-            or production_batch.status != ProductionBatchStatus.COMPLETED
-        ):
+        if not production_batch.active or production_batch.status not in {
+            ProductionBatchStatus.COMPLETED,
+            ProductionBatchStatus.IN_PROGRESS,
+        }:
             raise InvalidProductionBatchStatusError(
-                "Only completed production batches can be packaged."
+                "Only completed or in-progress production batches can be packaged."
             )
 
         beer_presentation = get_beer_presentation_by_id(
@@ -107,10 +106,36 @@ class PackagingRunService:
             packaging_run_data.packaged_quantity,
         )
 
-        if production_batch.available_bulk_volume_liters < packaged_volume_liters:
-            raise InsufficientBulkBeerError(
-                "There is not enough bulk beer available for this packaging run."
+        new_available_bulk_volume: Decimal | None = None
+
+        if production_batch.status == ProductionBatchStatus.COMPLETED:
+            if production_batch.available_bulk_volume_liters < packaged_volume_liters:
+                raise InsufficientBulkBeerError(
+                    "There is not enough bulk beer available for this packaging run."
+                )
+
+            new_available_bulk_volume = (
+                production_batch.available_bulk_volume_liters - packaged_volume_liters
             )
+        else:
+            already_packaged_volume = get_packaged_volume_for_production_batch(
+                db,
+                production_batch.id,
+            )
+            provisional_packaging_limit = (
+                production_batch.planned_volume_liters * Decimal("1.10")
+            ).quantize(
+                Decimal("0.001"),
+                rounding=ROUND_HALF_UP,
+            )
+
+            if (
+                already_packaged_volume + packaged_volume_liters
+                > provisional_packaging_limit
+            ):
+                raise InsufficientBulkBeerError(
+                    "The provisional packaging limit for this production batch was exceeded."
+                )
 
         material_consumptions = []
 
@@ -139,9 +164,6 @@ class PackagingRunService:
 
             material_consumptions.append((raw_material, required_quantity))
 
-        new_available_bulk_volume = (
-            production_batch.available_bulk_volume_liters - packaged_volume_liters
-        )
         new_presentation_stock = (
             beer_presentation.current_stock + packaging_run_data.packaged_quantity
         )
@@ -168,11 +190,12 @@ class PackagingRunService:
                 ),
             )
 
-            update_available_bulk_volume(
-                db,
-                production_batch,
-                new_available_bulk_volume,
-            )
+            if new_available_bulk_volume is not None:
+                update_available_bulk_volume(
+                    db,
+                    production_batch,
+                    new_available_bulk_volume,
+                )
             update_beer_presentation_stock(
                 db,
                 beer_presentation,
@@ -197,12 +220,16 @@ class PackagingRunService:
                     raw_material.current_stock - required_quantity,
                 )
 
-            db.commit()
+            if commit:
+                db.commit()
+            else:
+                db.flush()
         except Exception:
             db.rollback()
             raise
 
-        db.refresh(packaging_run)
+        if commit:
+            db.refresh(packaging_run)
 
         return packaging_run
 

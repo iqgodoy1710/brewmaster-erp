@@ -12,11 +12,15 @@ from app.common.exceptions import (
     RecipeNotFoundError,
 )
 from app.crud.production_batch import (
+    cancel_production_batch,
     complete_production_batch,
     create_production_batch,
+    get_packaged_volume_for_production_batch,
     get_planned_production_batch_requirements,
     get_production_batch_by_code,
     get_production_batches,
+    start_production_batch,
+    update_available_bulk_volume,
 )
 from app.crud.raw_material import (
     get_raw_material_by_id,
@@ -78,32 +82,103 @@ class ProductionBatchService:
         return create_production_batch(db, production_batch_data)
 
     @staticmethod
-    def complete(
+    def start(
         db: Session,
         code: str,
-        completion_data: ProductionBatchComplete,
     ):
         production_batch = get_production_batch_by_code(db, code)
         if not production_batch:
-            raise ProductionBatchNotFoundError("The production batch does not exist.")
+            raise ProductionBatchNotFoundError(
+                "The production batch does not exist."
+            )
 
         if not production_batch.active:
             raise InvalidProductionBatchStatusError(
-                "Cannot complete an inactive production batch."
+                "Cannot start an inactive production batch."
             )
 
         if production_batch.status != ProductionBatchStatus.PLANNED:
             raise InvalidProductionBatchStatusError(
-                "Only planned production batches can be completed."
+                "Only planned production batches can be started."
             )
 
+        consumptions = ProductionBatchService._get_consumptions(
+            db,
+            production_batch,
+        )
+
+        try:
+            for raw_material, quantity in consumptions:
+                create_production_consumption_movement(
+                    db,
+                    raw_material_id=raw_material.id,
+                    production_batch_id=production_batch.id,
+                    quantity=quantity,
+                    reference=production_batch.code,
+                    notes=(
+                        "Automatically generated when starting a production batch."
+                    ),
+                )
+                update_raw_material_stock(
+                    db,
+                    raw_material,
+                    raw_material.current_stock - quantity,
+                )
+
+            start_production_batch(db, production_batch)
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+
+        db.refresh(production_batch)
+
+        return production_batch
+
+    @staticmethod
+    def cancel(
+        db: Session,
+        code: str,
+    ):
+        production_batch = get_production_batch_by_code(db, code)
+        if not production_batch:
+            raise ProductionBatchNotFoundError(
+                "The production batch does not exist."
+            )
+
+        if not production_batch.active:
+            raise InvalidProductionBatchStatusError(
+                "Cannot cancel an inactive production batch."
+            )
+
+        if production_batch.status != ProductionBatchStatus.PLANNED:
+            raise InvalidProductionBatchStatusError(
+                "Only planned production batches can be cancelled."
+            )
+
+        try:
+            cancel_production_batch(db, production_batch)
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+
+        db.refresh(production_batch)
+
+        return production_batch
+
+    @staticmethod
+    def _get_consumptions(
+        db: Session,
+        production_batch,
+    ):
         recipe_ingredients = get_recipe_ingredients(
             db,
             production_batch.recipe_id,
         )
         if not recipe_ingredients:
             raise RecipeHasNoIngredientsError(
-                "Cannot complete a production batch for a recipe without ingredients."
+                "Cannot process a production batch for a recipe without ingredients."
             )
 
         consumptions = []
@@ -114,17 +189,21 @@ class ProductionBatchService:
                 recipe_ingredient.raw_material_id,
             )
             if not raw_material:
-                raise RawMaterialNotFoundError("The raw material does not exist.")
+                raise RawMaterialNotFoundError(
+                    "The raw material does not exist."
+                )
 
             if not raw_material.active:
                 raise InactiveRawMaterialError(
                     "Cannot consume an inactive raw material."
                 )
 
-            quantity = ProductionBatchService._calculate_recipe_ingredient_consumption(
-                recipe_ingredient.required_quantity,
-                production_batch.planned_volume_liters,
-                production_batch.recipe.target_volume_liters,
+            quantity = (
+                ProductionBatchService._calculate_recipe_ingredient_consumption(
+                    recipe_ingredient.required_quantity,
+                    production_batch.planned_volume_liters,
+                    production_batch.recipe.target_volume_liters,
+                )
             )
 
             if raw_material.current_stock < quantity:
@@ -133,6 +212,58 @@ class ProductionBatchService:
                 )
 
             consumptions.append((raw_material, quantity))
+
+        return consumptions
+
+    @staticmethod
+    def complete(
+        db: Session,
+        code: str,
+        completion_data: ProductionBatchComplete,
+    ):
+        production_batch = get_production_batch_by_code(db, code)
+        if not production_batch:
+            raise ProductionBatchNotFoundError(
+                "The production batch does not exist."
+            )
+
+        if not production_batch.active:
+            raise InvalidProductionBatchStatusError(
+                "Cannot complete an inactive production batch."
+            )
+
+        if production_batch.status not in {
+            ProductionBatchStatus.PLANNED,
+            ProductionBatchStatus.IN_PROGRESS,
+        }:
+            raise InvalidProductionBatchStatusError(
+                "Only planned or in-progress production batches can be completed."
+            )
+
+        packaged_volume_liters = (
+            get_packaged_volume_for_production_batch(
+                db,
+                production_batch.id,
+            )
+        )
+
+        if completion_data.produced_volume_liters < packaged_volume_liters:
+            raise InvalidProductionBatchStatusError(
+                "The produced volume cannot be lower than the packaged volume."
+            )
+
+        consumptions = []
+
+        if production_batch.status == ProductionBatchStatus.PLANNED:
+            consumptions = ProductionBatchService._get_consumptions(
+                db,
+                production_batch,
+            )
+
+        available_bulk_volume_liters = (
+            completion_data.produced_volume_liters
+            - packaged_volume_liters
+        )
 
         try:
             for raw_material, quantity in consumptions:
@@ -157,6 +288,13 @@ class ProductionBatchService:
                 production_batch,
                 completion_data.produced_volume_liters,
             )
+
+            update_available_bulk_volume(
+                db,
+                production_batch,
+                available_bulk_volume_liters,
+            )
+
             db.commit()
         except Exception:
             db.rollback()

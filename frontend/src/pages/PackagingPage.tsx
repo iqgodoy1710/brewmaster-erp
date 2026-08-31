@@ -86,8 +86,9 @@ function PackagingPage() {
     () =>
       batches.filter(
         (batch) =>
-          batch.status === "completed" &&
-          Number(batch.available_bulk_volume_liters) > 0,
+          batch.status === "in_progress" ||
+          (batch.status === "completed" &&
+            Number(batch.available_bulk_volume_liters) > 0),
       ),
     [batches],
   );
@@ -137,7 +138,7 @@ function PackagingPage() {
     const quantity = Number(packagedQuantity);
 
     if (!batchId) {
-      setError("Seleccioná un lote completado.");
+      setError("Seleccioná un lote en producción o completado.");
       return;
     }
 
@@ -213,7 +214,7 @@ function PackagingPage() {
 
                 <div className="form-grid">
                   <label>
-                    Lote completado
+                    Lote de producción
                     <select
                       onChange={(event) => {
                         setBatchId(event.target.value);
@@ -226,8 +227,15 @@ function PackagingPage() {
 
                       {eligibleBatches.map((batch) => (
                         <option key={batch.id} value={batch.id}>
-                          {batch.code} · Granel:{" "}
-                          {formatNumber(batch.available_bulk_volume_liters)} L
+                          {batch.status === "in_progress"
+                            ? `${batch.code} · En producción · Máximo provisional: ${formatNumber(
+                                String(
+                                  Number(batch.planned_volume_liters) * 1.1,
+                                ),
+                              )} L`
+                            : `${batch.code} · Granel: ${formatNumber(
+                                batch.available_bulk_volume_liters,
+                              )} L`}
                         </option>
                       ))}
                     </select>

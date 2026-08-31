@@ -26,11 +26,14 @@ from app.crud.production_batch import (
 from app.models.enums import KegMovementType, KegStatus, ProductionBatchStatus
 from app.schemas.keg_movement import (
     KegFillCreate,
+    KegFillFromBulkCreate,
     KegRemnantTransferCreate,
     KegRemnantTransferResponse,
     KegReturnCreate,
     KegWashCreate,
 )
+from app.schemas.packaging_run import PackagingRunCreate
+from app.services.packaging_run_service import PackagingRunService
 from sqlalchemy.orm import Session
 
 
@@ -139,6 +142,37 @@ class KegMovementService:
         db.refresh(movement)
 
         return movement
+
+    @staticmethod
+    def fill_from_bulk(
+        db: Session,
+        filling_data: KegFillFromBulkCreate,
+        performed_by_user_id: int | None = None,
+    ):
+        packaging_run = PackagingRunService.create(
+            db,
+            PackagingRunCreate(
+                production_batch_id=filling_data.production_batch_id,
+                beer_presentation_id=filling_data.beer_presentation_id,
+                packaged_quantity=1,
+                notes=(
+                    filling_data.notes
+                    or "Automatically generated for direct keg filling."
+                ),
+            ),
+            commit=False,
+        )
+
+        return KegMovementService.fill(
+            db,
+            KegFillCreate(
+                keg_id=filling_data.keg_id,
+                packaging_run_id=packaging_run.id,
+                notes=filling_data.notes,
+                occurred_at=filling_data.occurred_at,
+            ),
+            performed_by_user_id=performed_by_user_id,
+        )
 
     @staticmethod
     def return_keg(

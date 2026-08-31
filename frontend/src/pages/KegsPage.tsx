@@ -14,6 +14,8 @@ import type {
   KegStatus,
   PackagingFormat,
   PackagingRun,
+  ProductionBatch,
+  Recipe,
 } from "../types/api";
 import { Link } from "react-router-dom";
 
@@ -72,7 +74,16 @@ function KegsPage() {
 
   const [presentations, setPresentations] = useState<BeerPresentation[]>([]);
   const [packagingRuns, setPackagingRuns] = useState<PackagingRun[]>([]);
+  const [productionBatches, setProductionBatches] = useState<ProductionBatch[]>(
+    [],
+  );
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
 
+  const [directFillKegId, setDirectFillKegId] = useState("");
+  const [directProductionBatchId, setDirectProductionBatchId] = useState("");
+  const [directPresentationId, setDirectPresentationId] = useState("");
+  const [directFillNotes, setDirectFillNotes] = useState("");
+  const [isDirectFilling, setIsDirectFilling] = useState(false);
   const [fillKegId, setFillKegId] = useState("");
   const [fillPackagingRunId, setFillPackagingRunId] = useState("");
   const [fillNotes, setFillNotes] = useState("");
@@ -104,13 +115,21 @@ function KegsPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [kegsData, formatsData, presentationsData, runsData] =
-        await Promise.all([
-          apiGet<Keg[]>("/kegs/"),
-          apiGet<PackagingFormat[]>("/packaging-formats/"),
-          apiGet<BeerPresentation[]>("/beer-presentations/"),
-          apiGet<PackagingRun[]>("/packaging-runs/"),
-        ]);
+      const [
+        kegsData,
+        formatsData,
+        presentationsData,
+        runsData,
+        batchesData,
+        recipesData,
+      ] = await Promise.all([
+        apiGet<Keg[]>("/kegs/"),
+        apiGet<PackagingFormat[]>("/packaging-formats/"),
+        apiGet<BeerPresentation[]>("/beer-presentations/"),
+        apiGet<PackagingRun[]>("/packaging-runs/"),
+        apiGet<ProductionBatch[]>("/production-batches/"),
+        apiGet<Recipe[]>("/recipes/"),
+      ]);
 
       setKegs(kegsData);
       setKegFormats(
@@ -118,6 +137,8 @@ function KegsPage() {
       );
       setPresentations(presentationsData);
       setPackagingRuns(runsData);
+      setProductionBatches(batchesData);
+      setRecipes(recipesData);
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -209,6 +230,58 @@ function KegsPage() {
       );
     });
   }, [packagingRuns, presentations, selectedFillKeg]);
+
+  const eligibleDirectFillBatches = useMemo(
+    () =>
+      productionBatches.filter(
+        (batch) =>
+          batch.status === "in_progress" ||
+          (batch.status === "completed" &&
+            Number(batch.available_bulk_volume_liters) > 0),
+      ),
+    [productionBatches],
+  );
+
+  const selectedDirectFillKeg = useMemo(
+    () => cleanKegs.find((keg) => keg.id === Number(directFillKegId)) ?? null,
+    [cleanKegs, directFillKegId],
+  );
+
+  const selectedDirectProductionBatch = useMemo(
+    () =>
+      productionBatches.find(
+        (batch) => batch.id === Number(directProductionBatchId),
+      ) ?? null,
+    [directProductionBatchId, productionBatches],
+  );
+
+  const directCompatiblePresentations = useMemo(() => {
+    if (!selectedDirectFillKeg || !selectedDirectProductionBatch) {
+      return [];
+    }
+
+    const recipe = recipes.find(
+      (currentRecipe) =>
+        currentRecipe.id === selectedDirectProductionBatch.recipe_id,
+    );
+
+    if (!recipe) {
+      return [];
+    }
+
+    return presentations.filter(
+      (presentation) =>
+        presentation.active &&
+        presentation.beer_id === recipe.beer_id &&
+        presentation.packaging_format_id ===
+          selectedDirectFillKeg.packaging_format_id,
+    );
+  }, [
+    presentations,
+    recipes,
+    selectedDirectFillKeg,
+    selectedDirectProductionBatch,
+  ]);
 
   const selectedReturnKeg = useMemo(
     () => customerKegs.find((keg) => keg.id === Number(returnKegId)) ?? null,
@@ -315,6 +388,51 @@ function KegsPage() {
       );
     } finally {
       setIsFilling(false);
+    }
+  }
+
+  async function fillKegFromBulk(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!directFillKegId || !directProductionBatchId || !directPresentationId) {
+      setError("Seleccioná un barril limpio, un lote y una presentación.");
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setIsDirectFilling(true);
+
+    try {
+      const movement = await apiPost<KegMovement>(
+        "/keg-movements/fill-from-bulk",
+        {
+          keg_id: Number(directFillKegId),
+          production_batch_id: Number(directProductionBatchId),
+          beer_presentation_id: Number(directPresentationId),
+          notes: directFillNotes.trim() || null,
+        },
+      );
+
+      setDirectFillKegId("");
+      setDirectProductionBatchId("");
+      setDirectPresentationId("");
+      setDirectFillNotes("");
+      setSelectedKegId(String(movement.keg_id));
+      setSuccess(
+        "El barril fue llenado directamente desde el lote de producción.",
+      );
+
+      await loadData();
+      await loadKegMovements(String(movement.keg_id));
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "No se pudo llenar el barril desde granel.",
+      );
+    } finally {
+      setIsDirectFilling(false);
     }
   }
 
@@ -657,6 +775,112 @@ function KegsPage() {
                   )}
                 </form>
               </section>
+
+              <section className="panel sales-form-panel">
+                <h2>Llenar desde lote a granel</h2>
+
+                <p className="form-help">
+                  Genera automáticamente una corrida de una unidad y la asigna
+                  al barril físico seleccionado.
+                </p>
+
+                <form className="sale-form" onSubmit={fillKegFromBulk}>
+                  <div className="form-grid">
+                    <label>
+                      Barril limpio
+                      <select
+                        onChange={(event) => {
+                          setDirectFillKegId(event.target.value);
+                          setDirectPresentationId("");
+                        }}
+                        required
+                        value={directFillKegId}
+                      >
+                        <option value="">Seleccioná un barril</option>
+                        {cleanKegs.map((keg) => (
+                          <option key={keg.id} value={keg.id}>
+                            {keg.code} ·{" "}
+                            {getFormatLabel(keg.packaging_format_id)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label>
+                      Lote de producción
+                      <select
+                        onChange={(event) => {
+                          setDirectProductionBatchId(event.target.value);
+                          setDirectPresentationId("");
+                        }}
+                        required
+                        value={directProductionBatchId}
+                      >
+                        <option value="">Seleccioná un lote</option>
+                        {eligibleDirectFillBatches.map((batch) => (
+                          <option key={batch.id} value={batch.id}>
+                            {batch.code} ·{" "}
+                            {batch.status === "in_progress"
+                              ? "En producción"
+                              : `Granel: ${formatVolume(
+                                  batch.available_bulk_volume_liters,
+                                )} L`}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  <label>
+                    Presentación de barril
+                    <select
+                      disabled={
+                        !selectedDirectFillKeg || !selectedDirectProductionBatch
+                      }
+                      onChange={(event) =>
+                        setDirectPresentationId(event.target.value)
+                      }
+                      required
+                      value={directPresentationId}
+                    >
+                      <option value="">
+                        Seleccioná una presentación compatible
+                      </option>
+                      {directCompatiblePresentations.map((presentation) => (
+                        <option key={presentation.id} value={presentation.id}>
+                          {presentation.code} · {presentation.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    Notas
+                    <input
+                      onChange={(event) =>
+                        setDirectFillNotes(event.target.value)
+                      }
+                      placeholder="Observaciones opcionales del llenado."
+                      value={directFillNotes}
+                    />
+                  </label>
+
+                  <button
+                    disabled={
+                      isDirectFilling ||
+                      !selectedDirectFillKeg ||
+                      !selectedDirectProductionBatch ||
+                      directCompatiblePresentations.length === 0
+                    }
+                    type="submit"
+                  >
+                    {isDirectFilling
+                      ? "Llenando barril..."
+                      : "Llenar desde granel"}
+                  </button>
+                </form>
+              </section>
+
               <section className="panel sales-form-panel">
                 <h2>Registrar devolución</h2>
 

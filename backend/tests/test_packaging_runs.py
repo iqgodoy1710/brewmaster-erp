@@ -382,7 +382,7 @@ def test_cannot_package_a_batch_that_is_not_completed(client):
 
     assert response.status_code == 409
     assert response.json() == {
-        "detail": "Only completed production batches can be packaged."
+        "detail": "Only completed or in-progress production batches can be packaged."
     }
 
     assert client.get("/packaging-runs/").json() == []
@@ -1214,3 +1214,73 @@ def test_primary_packaging_only_allows_keg_presentations(client):
     assert response.json() == {
         "detail": ("Primary packaging runs can only use keg presentations.")
     }
+
+
+def test_fill_keg_directly_from_bulk_creates_run_and_traceability(client):
+    data = create_completed_batch_with_presentation(
+        client,
+        packaging_format_type="keg",
+    )
+
+    keg_response = client.post(
+        "/kegs/",
+        json={
+            "code": "K20-DIRECT-001",
+            "packaging_format_id": (
+                data["beer_presentation"]["packaging_format_id"]
+            ),
+            "form_factor": "flat",
+        },
+    )
+    assert keg_response.status_code == 201
+
+    keg = keg_response.json()
+
+    response = client.post(
+        "/keg-movements/fill-from-bulk",
+        json={
+            "keg_id": keg["id"],
+            "production_batch_id": data["production_batch"]["id"],
+            "beer_presentation_id": data["beer_presentation"]["id"],
+        },
+    )
+
+    assert response.status_code == 201
+
+    movement = response.json()
+
+    assert movement["keg_id"] == keg["id"]
+    assert movement["movement_type"] == "filling"
+    assert movement["new_status"] == "filled"
+    assert movement["production_batch_id"] == (
+        data["production_batch"]["id"]
+    )
+    assert movement["beer_presentation_id"] == (
+        data["beer_presentation"]["id"]
+    )
+    assert movement["packaging_run_id"] is not None
+
+    packaging_runs = client.get("/packaging-runs/").json()
+
+    assert len(packaging_runs) == 1
+    assert packaging_runs[0]["id"] == movement["packaging_run_id"]
+    assert packaging_runs[0]["packaged_quantity"] == 1
+
+    production_batch = client.get("/production-batches/").json()[0]
+
+    assert Decimal(
+        production_batch["available_bulk_volume_liters"]
+    ) == Decimal("99.500")
+
+    beer_presentation = client.get("/beer-presentations/").json()[0]
+
+    assert beer_presentation["current_stock"] == 1
+
+    updated_keg = client.get(
+        f"/kegs/by-code/{keg['code']}"
+    ).json()
+
+    assert updated_keg["status"] == "filled"
+    assert updated_keg["production_batch_id"] == (
+        data["production_batch"]["id"]
+    )

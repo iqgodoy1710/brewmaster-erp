@@ -4,6 +4,7 @@ from app.models.enums import UserRole
 from app.models.user import User
 from app.schemas.keg_movement import (
     KegFillCreate,
+    KegFillFromBulkCreate,
     KegMovementResponse,
     KegRemnantTransferCreate,
     KegRemnantTransferResponse,
@@ -34,9 +35,26 @@ def fill_keg(
     return KegMovementService.fill(
         db,
         filling_data,
-        performed_by_user_id=(
-            current_user.id if current_user else None
-        ),
+        performed_by_user_id=(current_user.id if current_user else None),
+    )
+
+
+@router.post(
+    "/keg-movements/fill-from-bulk",
+    response_model=KegMovementResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def fill_keg_from_bulk(
+    filling_data: KegFillFromBulkCreate,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(
+        require_roles(UserRole.ADMIN, UserRole.OPERATOR)
+    ),
+):
+    return KegMovementService.fill_from_bulk(
+        db,
+        filling_data,
+        performed_by_user_id=(current_user.id if current_user else None),
     )
 
 
@@ -55,9 +73,7 @@ def return_keg(
     return KegMovementService.return_keg(
         db,
         return_data,
-        performed_by_user_id=(
-            current_user.id if current_user else None
-        ),
+        performed_by_user_id=(current_user.id if current_user else None),
     )
 
 
@@ -76,9 +92,7 @@ def wash_keg(
     return KegMovementService.wash(
         db,
         washing_data,
-        performed_by_user_id=(
-            current_user.id if current_user else None
-        ),
+        performed_by_user_id=(current_user.id if current_user else None),
     )
 
 
@@ -97,7 +111,5 @@ def transfer_keg_remnants(
     return KegMovementService.transfer_remnants(
         db,
         transfer_data,
-        performed_by_user_id=(
-            current_user.id if current_user else None
-        ),
+        performed_by_user_id=(current_user.id if current_user else None),
     )
