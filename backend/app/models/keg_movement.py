@@ -84,6 +84,11 @@ class KegMovement(BaseModel):
         ForeignKey("sales.id"),
         nullable=True,
     )
+    delivery_order_id = Column(
+        Integer,
+        ForeignKey("delivery_orders.id"),
+        nullable=True,
+    )
     customer_id = Column(
         Integer,
         ForeignKey("customers.id"),
@@ -116,6 +121,7 @@ class KegMovement(BaseModel):
         "KegRepackagingRun",
         back_populates="keg_movements",
     )
+    delivery_order = relationship("DeliveryOrder")
 
     @property
     def performed_by_username(self) -> str | None:

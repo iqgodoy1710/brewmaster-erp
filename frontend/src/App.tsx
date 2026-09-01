@@ -49,6 +49,7 @@ import KegQrPage from "./pages/KegQrPage";
 import KegQrLabelPage from "./pages/KegQrLabelPage";
 import KegQrLabelsPage from "./pages/KegQrLabelsPage";
 import KegRepackagingPage from "./pages/KegRepackagingPage";
+import DeliveryOrdersPage from "./pages/DeliveryOrdersPage";
 
 function AppContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -293,11 +294,20 @@ function AppContent() {
               </details>
             )}
 
-            {hasFinancialAccess && (
+            {(hasFinancialAccess || canOperate) && (
               <details className="nav-group">
                 <summary>Comercial</summary>
 
                 <div className="nav-group-menu">
+                  <NavLink
+                    className={({ isActive }) =>
+                      isActive ? "nav-link active" : "nav-link"
+                    }
+                    to="/pedidos"
+                    onClick={closeMenu}
+                  >
+                    Pedidos
+                  </NavLink>
                   <NavLink
                     className={({ isActive }) =>
                       isActive ? "nav-link active" : "nav-link"
@@ -544,7 +554,16 @@ function AppContent() {
               )
             }
           />
-
+          <Route
+            path="/pedidos"
+            element={
+              hasFinancialAccess || canOperate ? (
+                <DeliveryOrdersPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
           <Route
             path="/ventas"
             element={

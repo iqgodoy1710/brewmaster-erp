@@ -304,7 +304,11 @@ class SaleService:
         sale = get_sale_by_code(db, code)
         if not sale:
             raise SaleNotFoundError("The sale does not exist.")
-
+        if sale.delivery_order_id is not None:
+            raise InvalidSaleStatusError(
+                "Sales generated from delivery orders cannot be cancelled "
+                "from the sales module."
+            )
         if not sale.active or sale.status not in {
             SaleStatus.DRAFT,
             SaleStatus.COMPLETED,

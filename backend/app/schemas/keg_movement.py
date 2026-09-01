@@ -36,6 +36,7 @@ class KegMovementResponse(BaseModel):
     production_batch_id: int | None
     packaging_run_id: int | None
     sale_id: int | None
+    delivery_order_id: int | None
     customer_id: int | None
     performed_by_user_id: int | None
     performed_by_username: str | None

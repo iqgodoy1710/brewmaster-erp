@@ -23,6 +23,12 @@ class Sale(BaseModel):
         ForeignKey("customers.id"),
         nullable=False,
     )
+    delivery_order_id = Column(
+        Integer,
+        ForeignKey("delivery_orders.id"),
+        nullable=True,
+        unique=True,
+    )
     status = Column(
         Enum(
             SaleStatus,
@@ -55,5 +61,9 @@ class Sale(BaseModel):
 
     customer_account_movements = relationship(
         "CustomerAccountMovement",
+        back_populates="sale",
+    )
+    delivery_order = relationship(
+        "DeliveryOrder",
         back_populates="sale",
     )

@@ -6,6 +6,9 @@ import type {
   BeerPresentationLowStock,
   CompletedSaleReportItem,
   RawMaterialLowStock,
+  KegFinishedProductStock,
+  PackagedFinishedProductStock,
+  DeliveryOrder,
 } from "../types/api";
 import { hasRole, useCurrentUser } from "../lib/auth";
 
@@ -38,18 +41,34 @@ function DashboardPage() {
   const [beerPresentationAlerts, setBeerPresentationAlerts] = useState<
     BeerPresentationLowStock[]
   >([]);
+  const [kegStock, setKegStock] = useState<KegFinishedProductStock[]>([]);
+  const [packagedStock, setPackagedStock] = useState<
+    PackagedFinishedProductStock[]
+  >([]);
   const [completedSales, setCompletedSales] = useState<
     CompletedSaleReportItem[]
   >([]);
+  const [deliveryOrders, setDeliveryOrders] = useState<DeliveryOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadDashboard() {
       try {
-        const [rawMaterialData, beerPresentationData] = await Promise.all([
+        const [
+          rawMaterialData,
+          beerPresentationData,
+          kegStockData,
+          packagedStockData,
+          deliveryOrdersData,
+        ] = await Promise.all([
           apiGet<RawMaterialLowStock[]>("/raw-materials/low-stock"),
           apiGet<BeerPresentationLowStock[]>("/beer-presentations/low-stock"),
+          apiGet<KegFinishedProductStock[]>("/finished-product-stock/kegs"),
+          apiGet<PackagedFinishedProductStock[]>(
+            "/finished-product-stock/packaged",
+          ),
+          apiGet<DeliveryOrder[]>("/delivery-orders/"),
         ]);
 
         const completedSalesData = canViewSales
@@ -59,6 +78,9 @@ function DashboardPage() {
         setRawMaterialAlerts(rawMaterialData);
         setBeerPresentationAlerts(beerPresentationData);
         setCompletedSales(completedSalesData);
+        setKegStock(kegStockData);
+        setPackagedStock(packagedStockData);
+        setDeliveryOrders(deliveryOrdersData);
       } catch (caughtError) {
         setError(
           caughtError instanceof Error
@@ -72,6 +94,21 @@ function DashboardPage() {
 
     loadDashboard();
   }, [canViewSales]);
+
+  const pendingDeliveryOrders = deliveryOrders.filter(
+    (order) =>
+      order.status === "draft" ||
+      order.status === "picking" ||
+      order.status === "delivered_pending_pricing",
+  );
+
+  const deliveryOrderStatusLabels = {
+    draft: "Borrador",
+    picking: "En preparación",
+    delivered_pending_pricing: "Pendiente de precios",
+    closed: "Cerrado",
+    cancelled: "Cancelado",
+  };
 
   return (
     <main className="dashboard">
@@ -100,6 +137,11 @@ function DashboardPage() {
             <article className="summary-card">
               <p>Productos terminados en alerta</p>
               <strong>{beerPresentationAlerts.length}</strong>
+            </article>
+
+            <article className="summary-card">
+              <p>Pedidos pendientes</p>
+              <strong>{pendingDeliveryOrders.length}</strong>
             </article>
 
             {canViewSales && (
@@ -137,6 +179,35 @@ function DashboardPage() {
               )}
             </article>
 
+            <section className="panel">
+              <h2>Pedidos pendientes de gestión</h2>
+
+              {pendingDeliveryOrders.length === 0 ? (
+                <p className="empty-state">
+                  No hay pedidos pendientes de preparación, entrega o precios.
+                </p>
+              ) : (
+                <ul className="alert-list">
+                  {pendingDeliveryOrders.map((order) => (
+                    <li key={order.id}>
+                      <div>
+                        <strong>{order.code}</strong>
+                        <span>
+                          {order.delivery_note_code
+                            ? `Remito ${order.delivery_note_code}`
+                            : "Sin remito emitido"}
+                        </span>
+                      </div>
+
+                      <span className="shortage">
+                        {deliveryOrderStatusLabels[order.status]}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
             <article className="panel">
               <h2>Alertas de producto terminado</h2>
 
@@ -158,6 +229,91 @@ function DashboardPage() {
                     </li>
                   ))}
                 </ul>
+              )}
+            </article>
+          </section>
+          <section className="dashboard-grid">
+            <article className="panel">
+              <h2>Stock de producto terminado · Barriles</h2>
+
+              {kegStock.length === 0 ? (
+                <p className="empty-state">
+                  No hay barriles llenos disponibles en fábrica.
+                </p>
+              ) : (
+                <div className="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Cerveza</th>
+                        <th>Estilo</th>
+                        <th>Formato</th>
+                        <th>Variante</th>
+                        <th>Barriles</th>
+                        <th>Litros</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {kegStock.map((item) => (
+                        <tr
+                          key={`${item.beer_id}-${item.packaging_format_id}-${item.form_factor}`}
+                        >
+                          <td>{item.beer_name}</td>
+                          <td>{item.beer_style ?? "—"}</td>
+                          <td>{item.packaging_format_name}</td>
+                          <td>
+                            {
+                              {
+                                standard: "Estándar",
+                                flat: "Flat",
+                                slim: "Slim",
+                              }[item.form_factor]
+                            }
+                          </td>
+                          <td>{item.keg_count}</td>
+                          <td>{formatQuantity(item.total_volume_liters)} L</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </article>
+
+            <article className="panel">
+              <h2>Stock de producto terminado · Botellas y latas</h2>
+
+              {packagedStock.length === 0 ? (
+                <p className="empty-state">
+                  No hay botellas ni latas disponibles.
+                </p>
+              ) : (
+                <div className="table-wrapper">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Cerveza</th>
+                        <th>Estilo</th>
+                        <th>Presentación</th>
+                        <th>Formato</th>
+                        <th>Unidades</th>
+                        <th>Litros</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {packagedStock.map((item) => (
+                        <tr key={item.beer_presentation_id}>
+                          <td>{item.beer_name}</td>
+                          <td>{item.beer_style ?? "—"}</td>
+                          <td>{item.beer_presentation_name}</td>
+                          <td>{item.packaging_format_name}</td>
+                          <td>{item.current_stock}</td>
+                          <td>{formatQuantity(item.total_volume_liters)} L</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </article>
           </section>

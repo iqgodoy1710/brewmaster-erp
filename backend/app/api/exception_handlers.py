@@ -14,6 +14,11 @@ from app.common.exceptions import (
     CustomerCodeAlreadyExistsError,
     CustomerNotFoundError,
     CustomerTaxIdAlreadyExistsError,
+    DeliveryOrderHasNoItemsError,
+    DeliveryOrderItemAlreadyExistsError,
+    DeliveryOrderItemNotFoundError,
+    DeliveryOrderKegAlreadyExistsError,
+    DeliveryOrderNotFoundError,
     InactiveBeerError,
     InactiveBeerPresentationError,
     InactiveCustomerError,
@@ -28,6 +33,10 @@ from app.common.exceptions import (
     InvalidBeerPresentationCostEstimateError,
     InvalidBeerPresentationStockMovementError,
     InvalidCredentialsError,
+    InvalidDeliveryOrderCloseError,
+    InvalidDeliveryOrderItemError,
+    InvalidDeliveryOrderKegError,
+    InvalidDeliveryOrderStatusError,
     InvalidKegDeliveryError,
     InvalidKegFillingError,
     InvalidKegPackagingFormatError,
@@ -98,7 +107,9 @@ async def related_resource_not_found_handler(
     | CustomerNotFoundError
     | SaleNotFoundError
     | UserNotFoundError
-    | RecipeIngredientNotFoundError,
+    | RecipeIngredientNotFoundError
+    | DeliveryOrderNotFoundError
+    | DeliveryOrderItemNotFoundError,
 ) -> JSONResponse:
     return JSONResponse(
         status_code=404,
@@ -372,3 +383,19 @@ async def keg_not_found_handler(
         content={"detail": str(error)},
     )
 
+async def delivery_order_conflict_handler(
+    request: Request,
+    error: (
+        DeliveryOrderItemAlreadyExistsError
+        | DeliveryOrderKegAlreadyExistsError
+        | DeliveryOrderHasNoItemsError
+        | InvalidDeliveryOrderStatusError
+        | InvalidDeliveryOrderItemError
+        | InvalidDeliveryOrderKegError
+        | InvalidDeliveryOrderCloseError
+    ),
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=409,
+        content={"detail": str(error)},
+    )

@@ -28,6 +28,7 @@ class BeerPresentationStockMovementType(StrEnum):
     INVENTORY_ADJUSTMENT_OUT = "inventory_adjustment_out"
     REPACKAGING_CONSUMPTION = "repackaging_consumption"
     REPACKAGING_RECEIPT = "repackaging_receipt"
+    DELIVERY = "delivery"
 
 
 class SaleStatus(StrEnum):
@@ -87,3 +88,10 @@ class KegMovementType(StrEnum):
     INVENTORY_ADJUSTMENT = "inventory_adjustment"
     OUT_OF_SERVICE = "out_of_service"
     REPACKAGING = "repackaging"
+
+class DeliveryOrderStatus(StrEnum):
+    DRAFT = "draft"
+    PICKING = "picking"
+    DELIVERED_PENDING_PRICING = "delivered_pending_pricing"
+    CLOSED = "closed"
+    CANCELLED = "cancelled"

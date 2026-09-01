@@ -1,8 +1,12 @@
 from decimal import Decimal
 
+from app.models.beer import Beer
+from app.models.beer_presentation import BeerPresentation
 from app.models.enums import KegStatus
 from app.models.keg import Keg
+from app.models.packaging_format import PackagingFormat
 from app.schemas.keg import KegCreate
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 
@@ -61,3 +65,49 @@ def update_keg_state(
     db.flush()
 
     return keg
+
+def get_filled_keg_stock_summary(
+    db: Session,
+):
+    return (
+        db.query(
+            Beer.id.label("beer_id"),
+            Beer.name.label("beer_name"),
+            Beer.style.label("beer_style"),
+            PackagingFormat.id.label("packaging_format_id"),
+            PackagingFormat.name.label("packaging_format_name"),
+            Keg.form_factor.label("form_factor"),
+            func.count(Keg.id).label("keg_count"),
+            func.coalesce(
+                func.sum(Keg.current_volume_liters),
+                0,
+            ).label("total_volume_liters"),
+        )
+        .join(
+            BeerPresentation,
+            Keg.beer_presentation_id == BeerPresentation.id,
+        )
+        .join(Beer, BeerPresentation.beer_id == Beer.id)
+        .join(
+            PackagingFormat,
+            Keg.packaging_format_id == PackagingFormat.id,
+        )
+        .filter(
+            Keg.active.is_(True),
+            Keg.status == KegStatus.FILLED,
+        )
+        .group_by(
+            Beer.id,
+            Beer.name,
+            Beer.style,
+            PackagingFormat.id,
+            PackagingFormat.name,
+            Keg.form_factor,
+        )
+        .order_by(
+            Beer.name,
+            PackagingFormat.name,
+            Keg.form_factor,
+        )
+        .all()
+    )

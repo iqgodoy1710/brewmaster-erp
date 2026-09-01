@@ -40,6 +40,11 @@ class BeerPresentationStockMovement(BaseModel):
         ForeignKey("sales.id"),
         nullable=True,
     )
+    delivery_order_id = Column(
+        Integer,
+        ForeignKey("delivery_orders.id"),
+        nullable=True,
+    )
     keg_repackaging_run_id = Column(
         Integer,
         ForeignKey("keg_repackaging_runs.id"),
@@ -78,3 +83,4 @@ class BeerPresentationStockMovement(BaseModel):
         "KegRepackagingRun",
         back_populates="beer_presentation_stock_movements",
     )
+    delivery_order = relationship("DeliveryOrder")

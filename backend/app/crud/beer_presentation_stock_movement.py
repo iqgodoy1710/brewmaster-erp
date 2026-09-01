@@ -158,3 +158,25 @@ def create_repackaging_receipt_movement(
     db.flush()
 
     return movement
+
+def create_delivery_movement(
+    db: Session,
+    beer_presentation_id: int,
+    delivery_order_id: int,
+    quantity: int,
+    reference: str,
+    notes: str | None = None,
+) -> BeerPresentationStockMovement:
+    movement = BeerPresentationStockMovement(
+        beer_presentation_id=beer_presentation_id,
+        delivery_order_id=delivery_order_id,
+        movement_type=BeerPresentationStockMovementType.DELIVERY,
+        quantity=quantity,
+        reference=reference,
+        notes=notes,
+    )
+
+    db.add(movement)
+    db.flush()
+
+    return movement

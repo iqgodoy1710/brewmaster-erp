@@ -8,48 +8,43 @@ from sqlalchemy.sql import func
 
 
 def get_sales(db: Session) -> list[Sale]:
-    return (
-        db.query(Sale)
-        .filter(Sale.active.is_(True))
-        .all()
-    )
+    return db.query(Sale).filter(Sale.active.is_(True)).all()
 
 
 def get_sale_by_code(
     db: Session,
     code: str,
 ) -> Sale | None:
-    return (
-        db.query(Sale)
-        .filter(Sale.code == code)
-        .first()
-    )
+    return db.query(Sale).filter(Sale.code == code).first()
 
 
 def get_sale_by_id(
     db: Session,
     sale_id: int,
 ) -> Sale | None:
-    return (
-        db.query(Sale)
-        .filter(Sale.id == sale_id)
-        .first()
-    )
+    return db.query(Sale).filter(Sale.id == sale_id).first()
 
 
 def create_sale(
     db: Session,
     sale_data: SaleCreate,
     code: str,
+    delivery_order_id: int | None = None,
+    commit: bool = True,
 ) -> Sale:
     sale = Sale(
         code=code,
+        delivery_order_id=delivery_order_id,
         **sale_data.model_dump(),
     )
 
     db.add(sale)
-    db.commit()
-    db.refresh(sale)
+
+    if commit:
+        db.commit()
+        db.refresh(sale)
+    else:
+        db.flush()
 
     return sale
 
@@ -65,6 +60,7 @@ def complete_sale(
 
     return sale
 
+
 def cancel_sale(
     db: Session,
     sale: Sale,
@@ -78,6 +74,7 @@ def cancel_sale(
 
     return sale
 
+
 def get_sale_detail_by_code(
     db: Session,
     code: str,
@@ -86,13 +83,12 @@ def get_sale_detail_by_code(
         db.query(Sale)
         .options(
             joinedload(Sale.customer),
-            joinedload(Sale.items).joinedload(
-                SaleItem.beer_presentation
-            ),
+            joinedload(Sale.items).joinedload(SaleItem.beer_presentation),
         )
         .filter(Sale.code == code)
         .first()
     )
+
 
 def get_completed_sales_report(
     db: Session,
@@ -105,9 +101,7 @@ def get_completed_sales_report(
             Customer.name.label("customer_name"),
             Sale.completed_at,
             func.sum(SaleItem.quantity).label("total_units"),
-            func.sum(
-                SaleItem.quantity * SaleItem.unit_price
-            ).label("total_amount"),
+            func.sum(SaleItem.quantity * SaleItem.unit_price).label("total_amount"),
         )
         .join(
             Customer,

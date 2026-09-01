@@ -11,6 +11,7 @@ from app.api.exception_handlers import (
     category_name_already_exists_handler,
     cost_estimate_conflict_handler,
     customer_already_exists_handler,
+    delivery_order_conflict_handler,
     insufficient_permissions_handler,
     insufficient_stock_handler,
     invalid_credentials_handler,
@@ -53,6 +54,12 @@ from app.api.v1.endpoints.customer_accounts import (
     router as customer_account_router,
 )
 from app.api.v1.endpoints.customers import router as customer_router
+from app.api.v1.endpoints.delivery_orders import (
+    router as delivery_order_router,
+)
+from app.api.v1.endpoints.finished_product_stock import (
+    router as finished_product_stock_router,
+)
 from app.api.v1.endpoints.keg_movements import (
     router as keg_movements_router,
 )
@@ -92,6 +99,11 @@ from app.common.exceptions import (
     CustomerCodeAlreadyExistsError,
     CustomerNotFoundError,
     CustomerTaxIdAlreadyExistsError,
+    DeliveryOrderHasNoItemsError,
+    DeliveryOrderItemAlreadyExistsError,
+    DeliveryOrderItemNotFoundError,
+    DeliveryOrderKegAlreadyExistsError,
+    DeliveryOrderNotFoundError,
     InactiveBeerError,
     InactiveBeerPresentationError,
     InactiveCustomerError,
@@ -106,6 +118,10 @@ from app.common.exceptions import (
     InvalidBeerPresentationCostEstimateError,
     InvalidBeerPresentationStockMovementError,
     InvalidCredentialsError,
+    InvalidDeliveryOrderCloseError,
+    InvalidDeliveryOrderItemError,
+    InvalidDeliveryOrderKegError,
+    InvalidDeliveryOrderStatusError,
     InvalidKegDeliveryError,
     InvalidKegFillingError,
     InvalidKegPackagingFormatError,
@@ -490,9 +506,41 @@ app.add_exception_handler(
     beer_presentation_packaging_material_conflict_handler,
 )
 
+app.add_exception_handler(
+    DeliveryOrderNotFoundError, related_resource_not_found_handler
+)
+
+app.add_exception_handler(
+    DeliveryOrderItemNotFoundError, related_resource_not_found_handler
+)
+
+app.add_exception_handler(
+    DeliveryOrderNotFoundError,
+    related_resource_not_found_handler,
+)
+app.add_exception_handler(
+    DeliveryOrderItemNotFoundError,
+    related_resource_not_found_handler,
+)
+
+for exception_type in (
+    DeliveryOrderItemAlreadyExistsError,
+    DeliveryOrderKegAlreadyExistsError,
+    DeliveryOrderHasNoItemsError,
+    InvalidDeliveryOrderStatusError,
+    InvalidDeliveryOrderItemError,
+    InvalidDeliveryOrderKegError,
+    InvalidDeliveryOrderCloseError,
+):
+    app.add_exception_handler(
+        exception_type,
+        delivery_order_conflict_handler,
+    )
+
 @app.get("/health", tags=["Health"])
 def health():
     return {"status": "ok"}
+
 
 @app.get("/")
 def home():
@@ -548,3 +596,7 @@ app.include_router(kegs_router)
 app.include_router(keg_movements_router)
 
 app.include_router(keg_repackaging_runs_router)
+
+app.include_router(finished_product_stock_router)
+
+app.include_router(delivery_order_router)

@@ -9,11 +9,9 @@ type ApiRequestOptions = {
   retryOnTemporaryFailure?: boolean;
 };
 
-export const isDemoMode =
-  import.meta.env.VITE_DEMO_MODE === "true";
+export const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
 
-export const isAuthRequired =
-  import.meta.env.VITE_AUTH_REQUIRED === "true";
+export const isAuthRequired = import.meta.env.VITE_AUTH_REQUIRED === "true";
 
 export function getAccessToken(): string | null {
   return localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
@@ -73,14 +71,16 @@ async function apiRequest<T>(
         ...options,
         headers: {
           "Content-Type": "application/json",
-          ...(accessToken
-            ? { Authorization: `Bearer ${accessToken}` }
-            : {}),
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
           ...options.headers,
         },
       });
 
       if (response.ok) {
+        if (response.status === 204) {
+          return undefined as T;
+        }
+
         return response.json() as Promise<T>;
       }
 
@@ -104,11 +104,7 @@ async function apiRequest<T>(
 
       const isNetworkError = caughtError instanceof TypeError;
 
-      if (
-        shouldRetry &&
-        isNetworkError &&
-        attempt < delays.length - 1
-      ) {
+      if (shouldRetry && isNetworkError && attempt < delays.length - 1) {
         lastTemporaryError = error;
         continue;
       }
@@ -125,17 +121,10 @@ async function apiRequest<T>(
 }
 
 export function apiGet<T>(path: string): Promise<T> {
-  return apiRequest<T>(
-    path,
-    {},
-    { retryOnTemporaryFailure: true },
-  );
+  return apiRequest<T>(path, {}, { retryOnTemporaryFailure: true });
 }
 
-export function apiPatch<T>(
-  path: string,
-  body: unknown,
-): Promise<T> {
+export function apiPatch<T>(path: string, body: unknown): Promise<T> {
   return apiRequest<T>(path, {
     method: "PATCH",
     body: JSON.stringify(body),

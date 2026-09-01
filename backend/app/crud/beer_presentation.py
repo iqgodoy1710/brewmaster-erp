@@ -1,5 +1,9 @@
+from app.models.beer import Beer
 from app.models.beer_presentation import BeerPresentation
+from app.models.enums import PackagingFormatType
+from app.models.packaging_format import PackagingFormat
 from app.schemas.beer_presentation import BeerPresentationCreate
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 
@@ -102,5 +106,45 @@ def get_beer_presentations_at_or_below_minimum_stock(
             BeerPresentation.current_stock <= BeerPresentation.minimum_stock,
         )
         .order_by(BeerPresentation.name)
+        .all()
+    )
+
+
+def get_packaged_finished_product_stock_summary(
+    db: Session,
+):
+    return (
+        db.query(
+            BeerPresentation.id.label("beer_presentation_id"),
+            BeerPresentation.code.label("beer_presentation_code"),
+            BeerPresentation.name.label("beer_presentation_name"),
+            Beer.name.label("beer_name"),
+            Beer.style.label("beer_style"),
+            PackagingFormat.name.label("packaging_format_name"),
+            BeerPresentation.current_stock.label("current_stock"),
+            (BeerPresentation.current_stock * PackagingFormat.capacity_liters).label(
+                "total_volume_liters"
+            ),
+        )
+        .join(Beer, BeerPresentation.beer_id == Beer.id)
+        .join(
+            PackagingFormat,
+            BeerPresentation.packaging_format_id == PackagingFormat.id,
+        )
+        .filter(
+            BeerPresentation.active.is_(True),
+            BeerPresentation.current_stock > 0,
+            PackagingFormat.format_type.in_(
+                [
+                    PackagingFormatType.BOTTLE,
+                    PackagingFormatType.CAN,
+                ]
+            ),
+        )
+        .order_by(
+            Beer.name,
+            PackagingFormat.name,
+            BeerPresentation.name,
+        )
         .all()
     )

@@ -38,6 +38,7 @@ def create_sale_item(
     db: Session,
     sale_item_data: SaleItemCreate,
     unit_price: Decimal,
+    commit: bool = True,
 ) -> SaleItem:
     sale_item = SaleItem(
         **sale_item_data.model_dump(),
@@ -45,7 +46,11 @@ def create_sale_item(
     )
 
     db.add(sale_item)
-    db.commit()
-    db.refresh(sale_item)
+
+    if commit:
+        db.commit()
+        db.refresh(sale_item)
+    else:
+        db.flush()
 
     return sale_item

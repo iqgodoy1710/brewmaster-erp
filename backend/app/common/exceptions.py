@@ -285,3 +285,41 @@ class RecipeHasProductionBatchesError(Exception):
 
 class InvalidKegRepackagingError(Exception):
     pass
+
+# Exceptions related to DELIVERY ORDERS
+
+
+class DeliveryOrderNotFoundError(Exception):
+    pass
+
+
+class DeliveryOrderItemNotFoundError(Exception):
+    pass
+
+
+class DeliveryOrderItemAlreadyExistsError(Exception):
+    pass
+
+
+class DeliveryOrderKegAlreadyExistsError(Exception):
+    pass
+
+
+class DeliveryOrderHasNoItemsError(Exception):
+    pass
+
+
+class InvalidDeliveryOrderStatusError(Exception):
+    pass
+
+
+class InvalidDeliveryOrderItemError(Exception):
+    pass
+
+
+class InvalidDeliveryOrderKegError(Exception):
+    pass
+
+
+class InvalidDeliveryOrderCloseError(Exception):
+    pass

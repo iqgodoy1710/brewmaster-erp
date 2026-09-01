@@ -469,3 +469,75 @@ export type KegRepackagingRun = {
   created_at: string;
   updated_at: string;
 };
+
+export type KegFinishedProductStock = {
+  beer_id: number;
+  beer_name: string;
+  beer_style: string | null;
+  packaging_format_id: number;
+  packaging_format_name: string;
+  form_factor: KegFormFactor;
+  keg_count: number;
+  total_volume_liters: string;
+};
+
+export type PackagedFinishedProductStock = {
+  beer_presentation_id: number;
+  beer_presentation_code: string;
+  beer_presentation_name: string;
+  beer_name: string;
+  beer_style: string | null;
+  packaging_format_name: string;
+  current_stock: number;
+  total_volume_liters: string;
+};
+
+export type DeliveryOrderStatus =
+  | "draft"
+  | "picking"
+  | "delivered_pending_pricing"
+  | "closed"
+  | "cancelled";
+
+export type DeliveryOrder = {
+  id: number;
+  code: string;
+  delivery_note_code: string | null;
+  customer_id: number;
+  status: DeliveryOrderStatus;
+  notes: string | null;
+  delivered_at: string | null;
+  delivered_by_user_id: number | null;
+  closed_at: string | null;
+  closed_by_user_id: number | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DeliveryOrderItem = {
+  id: number;
+  delivery_order_id: number;
+  beer_presentation_id: number;
+  requested_quantity: number;
+  picked_quantity: number;
+  delivered_quantity: number;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DeliveryOrderKeg = {
+  id: number;
+  delivery_order_id: number;
+  keg_id: number;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DeliveryOrderDetail = DeliveryOrder & {
+  items: DeliveryOrderItem[];
+  kegs: DeliveryOrderKeg[];
+};
+
