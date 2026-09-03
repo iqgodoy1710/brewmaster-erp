@@ -12,6 +12,11 @@ class PackagingRunBase(BaseModel):
 
 
 class PackagingRunCreate(PackagingRunBase):
+    packaged_volume_liters: Decimal | None = Field(
+        default=None,
+        gt=0,
+    )
+
     model_config = ConfigDict(extra="forbid")
 
 

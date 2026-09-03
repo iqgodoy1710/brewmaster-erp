@@ -6,7 +6,6 @@ import type { Customer } from "../types/api";
 
 function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [taxId, setTaxId] = useState("");
   const [email, setEmail] = useState("");
@@ -39,15 +38,8 @@ function CustomersPage() {
     loadCustomers();
   }, [loadCustomers]);
 
-  async function createCustomer(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
+  async function createCustomer(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
-    if (!code.trim()) {
-      setError("Ingresá un código para el cliente.");
-      return;
-    }
 
     if (!name.trim()) {
       setError("Ingresá el nombre del cliente.");
@@ -60,7 +52,6 @@ function CustomersPage() {
 
     try {
       const customer = await apiPost<Customer>("/customers/", {
-        code: code.trim(),
         name: name.trim(),
         tax_id: taxId.trim() || null,
         email: email.trim() || null,
@@ -69,7 +60,6 @@ function CustomersPage() {
         notes: notes.trim() || null,
       });
 
-      setCode("");
       setName("");
       setTaxId("");
       setEmail("");
@@ -114,29 +104,20 @@ function CustomersPage() {
             <h2>Nuevo cliente</h2>
 
             <form className="sale-form" onSubmit={createCustomer}>
-              <div className="form-grid">
-                <label>
-                  Código
-                  <input
-                    maxLength={20}
-                    onChange={(event) => setCode(event.target.value)}
-                    placeholder="CLI-002"
-                    required
-                    value={code}
-                  />
-                </label>
+              <p className="form-help">
+                El código del cliente se asignará automáticamente al guardarlo.
+              </p>
 
-                <label>
-                  Nombre
-                  <input
-                    maxLength={150}
-                    onChange={(event) => setName(event.target.value)}
-                    placeholder="Nombre o razón social"
-                    required
-                    value={name}
-                  />
-                </label>
-              </div>
+              <label>
+                Nombre
+                <input
+                  maxLength={150}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="Nombre o razón social"
+                  required
+                  value={name}
+                />
+              </label>
 
               <div className="form-grid">
                 <label>

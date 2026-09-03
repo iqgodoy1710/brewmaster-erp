@@ -1458,3 +1458,59 @@ def test_delivering_order_with_keg_updates_stock_and_keg_traceability(
     assert keg_movements[0]["movement_type"] == "delivery"
     assert keg_movements[0]["delivery_order_id"] == order["id"]
     assert keg_movements[0]["reference"] == delivered_order["delivery_note_code"]
+
+def test_fill_last_keg_from_bulk_with_partial_volume(
+    client,
+):
+    data = create_completed_batch_with_presentation(
+        client,
+        packaging_format_type="keg",
+        capacity_liters="20.000",
+    )
+
+    keg_response = client.post(
+        "/kegs/",
+        json={
+            "code": "K20-PARTIAL-001",
+            "packaging_format_id": (
+                data["beer_presentation"]["packaging_format_id"]
+            ),
+            "form_factor": "flat",
+        },
+    )
+    assert keg_response.status_code == 201
+
+    keg = keg_response.json()
+
+    response = client.post(
+        "/keg-movements/fill-from-bulk",
+        json={
+            "keg_id": keg["id"],
+            "production_batch_id": data["production_batch"]["id"],
+            "beer_presentation_id": data["beer_presentation"]["id"],
+            "filled_volume_liters": "8.500",
+        },
+    )
+
+    assert response.status_code == 201
+
+    movement = response.json()
+    assert Decimal(movement["resulting_volume_liters"]) == Decimal("8.500")
+
+    packaging_runs = client.get("/packaging-runs/").json()
+    assert len(packaging_runs) == 1
+    assert Decimal(packaging_runs[0]["packaged_volume_liters"]) == Decimal(
+        "8.500"
+    )
+
+    production_batch = client.get("/production-batches/").json()[0]
+    assert Decimal(
+        production_batch["available_bulk_volume_liters"]
+    ) == Decimal("91.500")
+
+    updated_keg = client.get(
+        f"/kegs/by-code/{keg['code']}",
+    ).json()
+    assert Decimal(updated_keg["current_volume_liters"]) == Decimal(
+        "8.500"
+    )

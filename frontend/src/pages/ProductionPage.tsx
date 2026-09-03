@@ -7,6 +7,7 @@ import type {
   ProductionBatch,
   RawMaterialPlanningProjection,
   Recipe,
+  PackagingRun,
 } from "../types/api";
 import { hasRole, useCurrentUser } from "../lib/auth";
 
@@ -35,6 +36,7 @@ function ProductionPage() {
   const canManageOperations = hasRole(currentUser, "admin", "operator");
 
   const [batches, setBatches] = useState<ProductionBatch[]>([]);
+  const [packagingRuns, setPackagingRuns] = useState<PackagingRun[]>([]);
   const [projections, setProjections] = useState<
     RawMaterialPlanningProjection[]
   >([]);
@@ -61,20 +63,27 @@ function ProductionPage() {
 
   const loadProductionData = useCallback(async () => {
     try {
-      const [batchesData, projectionsData, recipesData, beersData] =
-        await Promise.all([
-          apiGet<ProductionBatch[]>("/production-batches/"),
-          apiGet<RawMaterialPlanningProjection[]>(
-            "/production-batches/planning/raw-material-requirements",
-          ),
-          apiGet<Recipe[]>("/recipes/"),
-          apiGet<Beer[]>("/beers/"),
-        ]);
+      const [
+        batchesData,
+        projectionsData,
+        recipesData,
+        beersData,
+        packagingRunsData,
+      ] = await Promise.all([
+        apiGet<ProductionBatch[]>("/production-batches/"),
+        apiGet<RawMaterialPlanningProjection[]>(
+          "/production-batches/planning/raw-material-requirements",
+        ),
+        apiGet<Recipe[]>("/recipes/"),
+        apiGet<Beer[]>("/beers/"),
+        apiGet<PackagingRun[]>("/packaging-runs/"),
+      ]);
 
       setBatches(batchesData);
       setProjections(projectionsData);
       setRecipes(recipesData);
       setBeers(beersData);
+      setPackagingRuns(packagingRunsData);
       setHasLoaded(true);
     } catch (caughtError) {
       setError(
@@ -150,7 +159,7 @@ function ProductionPage() {
     event.preventDefault();
 
     const producedVolume = Number(
-      completionVolumes[batch.id] ?? batch.planned_volume_liters,
+      completionVolumes[batch.id] ?? String(getPackagedVolume(batch.id)),
     );
 
     if (!Number.isFinite(producedVolume) || producedVolume <= 0) {
@@ -277,6 +286,21 @@ function ProductionPage() {
 
     return beer?.style ?? "—";
   };
+  const packagedVolumeByBatchId = useMemo(() => {
+    return packagingRuns.reduce<Record<number, number>>(
+      (totals, packagingRun) => ({
+        ...totals,
+        [packagingRun.production_batch_id]:
+          (totals[packagingRun.production_batch_id] ?? 0) +
+          Number(packagingRun.packaged_volume_liters),
+      }),
+      {},
+    );
+  }, [packagingRuns]);
+
+  function getPackagedVolume(batchId: number): number {
+    return packagedVolumeByBatchId[batchId] ?? 0;
+  }
 
   return (
     <main className="dashboard">
@@ -399,6 +423,7 @@ function ProductionPage() {
                       <th>Estado</th>
                       <th>Volumen planificado</th>
                       <th>Volumen producido</th>
+                      <th>Embarrilado acumulado</th>
                       <th>Granel disponible</th>
                       <th>Completado</th>
                       <th>Acciones</th>
@@ -415,6 +440,9 @@ function ProductionPage() {
                           {batch.produced_volume_liters
                             ? `${formatNumber(batch.produced_volume_liters)} L`
                             : "—"}
+                        </td>
+                        <td>
+                          {formatNumber(String(getPackagedVolume(batch.id)))} L
                         </td>
                         <td>
                           {formatNumber(batch.available_bulk_volume_liters)} L
@@ -436,8 +464,6 @@ function ProductionPage() {
                                   ? "Iniciando..."
                                   : "Iniciar producción"}
                               </button>
-
-                              
 
                               <button
                                 disabled={transitioningBatchId === batch.id}
@@ -470,7 +496,7 @@ function ProductionPage() {
                                 type="number"
                                 value={
                                   completionVolumes[batch.id] ??
-                                  batch.planned_volume_liters
+                                  String(getPackagedVolume(batch.id))
                                 }
                               />
                               <button

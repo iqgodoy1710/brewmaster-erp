@@ -11,6 +11,10 @@ from pydantic import BaseModel, ConfigDict, Field
 class KegFillCreate(BaseModel):
     keg_id: int = Field(..., gt=0)
     packaging_run_id: int = Field(..., gt=0)
+    filled_volume_liters: Decimal | None = Field(
+        default=None,
+        gt=0,
+    )
     notes: str | None = None
     occurred_at: datetime | None = None
 
@@ -20,6 +24,10 @@ class KegFillFromBulkCreate(BaseModel):
     keg_id: int = Field(..., gt=0)
     production_batch_id: int = Field(..., gt=0)
     beer_presentation_id: int = Field(..., gt=0)
+    filled_volume_liters: Decimal | None = Field(
+        default=None,
+        gt=0,
+    ) 
     notes: str | None = None
     occurred_at: datetime | None = None
 

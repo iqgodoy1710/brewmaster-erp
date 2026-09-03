@@ -102,7 +102,16 @@ class KegMovementService:
                 "All units from this packaging run are already assigned to kegs."
             )
 
-        resulting_volume_liters = keg.packaging_format.capacity_liters
+        resulting_volume_liters = (
+            filling_data.filled_volume_liters
+            if filling_data.filled_volume_liters is not None
+            else keg.packaging_format.capacity_liters
+        )
+
+        if resulting_volume_liters > keg.packaging_format.capacity_liters:
+            raise InvalidKegFillingError(
+                "The filled volume cannot exceed the keg capacity."
+            )
 
         try:
             movement = create_keg_movement(
@@ -155,6 +164,7 @@ class KegMovementService:
                 production_batch_id=filling_data.production_batch_id,
                 beer_presentation_id=filling_data.beer_presentation_id,
                 packaged_quantity=1,
+                packaged_volume_liters=filling_data.filled_volume_liters,
                 notes=(
                     filling_data.notes
                     or "Automatically generated for direct keg filling."
@@ -168,6 +178,7 @@ class KegMovementService:
             KegFillCreate(
                 keg_id=filling_data.keg_id,
                 packaging_run_id=packaging_run.id,
+                filled_volume_liters=filling_data.filled_volume_liters,
                 notes=filling_data.notes,
                 occurred_at=filling_data.occurred_at,
             ),

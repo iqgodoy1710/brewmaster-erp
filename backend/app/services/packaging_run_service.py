@@ -104,10 +104,24 @@ class PackagingRunService:
                     "The beer presentation has no packaging materials."
                 )
 
-        packaged_volume_liters = PackagingRunService._calculate_packaged_volume(
+        maximum_packaged_volume_liters = PackagingRunService._calculate_packaged_volume(
             beer_presentation.packaging_format.capacity_liters,
             packaging_run_data.packaged_quantity,
         )
+
+        packaged_volume_liters = (
+            packaging_run_data.packaged_volume_liters
+            if packaging_run_data.packaged_volume_liters is not None
+            else maximum_packaged_volume_liters
+        )
+
+        if (
+            packaging_run_data.packaged_volume_liters is not None
+            and packaged_volume_liters > maximum_packaged_volume_liters
+        ):
+            raise InvalidPackagingRunError(
+                "The packaged volume cannot exceed the keg capacity."
+            )
 
         new_available_bulk_volume: Decimal | None = None
 

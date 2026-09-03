@@ -83,6 +83,8 @@ function KegsPage() {
   const [directProductionBatchId, setDirectProductionBatchId] = useState("");
   const [directPresentationId, setDirectPresentationId] = useState("");
   const [directFillNotes, setDirectFillNotes] = useState("");
+  const [isPartialDirectFill, setIsPartialDirectFill] = useState(false);
+  const [directFilledVolume, setDirectFilledVolume] = useState("");
   const [isDirectFilling, setIsDirectFilling] = useState(false);
 
   const [code, setCode] = useState("");
@@ -355,6 +357,20 @@ function KegsPage() {
       setError("Seleccioná un barril limpio, un lote y una presentación.");
       return;
     }
+    const partialVolume = Number(directFilledVolume);
+
+    if (
+      isPartialDirectFill &&
+      (!Number.isFinite(partialVolume) ||
+        partialVolume <= 0 ||
+        !selectedDirectFillKeg ||
+        partialVolume > getKegCapacity(selectedDirectFillKeg))
+    ) {
+      setError(
+        "Ingresá un volumen válido que no supere la capacidad del barril.",
+      );
+      return;
+    }
 
     setError(null);
     setSuccess(null);
@@ -367,11 +383,16 @@ function KegsPage() {
           keg_id: Number(directFillKegId),
           production_batch_id: Number(directProductionBatchId),
           beer_presentation_id: Number(directPresentationId),
+          ...(isPartialDirectFill
+            ? { filled_volume_liters: directFilledVolume }
+            : {}),
           notes: directFillNotes.trim() || null,
         },
       );
 
       setDirectFillKegId("");
+      setIsPartialDirectFill(false);
+      setDirectFilledVolume("");
       setDirectProductionBatchId("");
       setDirectPresentationId("");
       setDirectFillNotes("");
@@ -713,7 +734,49 @@ function KegsPage() {
                       ))}
                     </select>
                   </label>
+                  <label className="checkbox-option">
+                    <input
+                      checked={isPartialDirectFill}
+                      onChange={(event) => {
+                        setIsPartialDirectFill(event.target.checked);
 
+                        if (!event.target.checked) {
+                          setDirectFilledVolume("");
+                        }
+                      }}
+                      type="checkbox"
+                    />
+
+                    <span>Último barril / carga parcial</span>
+                  </label>
+
+                  {isPartialDirectFill && (
+                    <label>
+                      Volumen real a cargar (L)
+                      <input
+                        max={
+                          selectedDirectFillKeg
+                            ? String(getKegCapacity(selectedDirectFillKeg))
+                            : undefined
+                        }
+                        min="0.001"
+                        onChange={(event) =>
+                          setDirectFilledVolume(event.target.value)
+                        }
+                        placeholder={
+                          selectedDirectFillKeg
+                            ? `Máximo ${formatVolume(
+                                String(getKegCapacity(selectedDirectFillKeg)),
+                              )} L`
+                            : "Seleccioná un barril"
+                        }
+                        required
+                        step="0.001"
+                        type="number"
+                        value={directFilledVolume}
+                      />
+                    </label>
+                  )}
                   <label>
                     Notas
                     <input
@@ -727,6 +790,7 @@ function KegsPage() {
 
                   <button
                     disabled={
+                      !directPresentationId ||
                       isDirectFilling ||
                       !selectedDirectFillKeg ||
                       !selectedDirectProductionBatch ||

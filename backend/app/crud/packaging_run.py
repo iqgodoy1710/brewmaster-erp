@@ -26,7 +26,9 @@ def create_packaging_run(
 ) -> PackagingRun:
     packaging_run = PackagingRun(
         code=code,
-        **packaging_run_data.model_dump(),
+        **packaging_run_data.model_dump(
+    exclude={"packaged_volume_liters"},
+),
         packaged_volume_liters=packaged_volume_liters,
     )
 
