@@ -12,6 +12,7 @@ import type {
   KegStatus,
   PackagingFormat,
   PackagingRun,
+  DeliveryOrder,
 } from "../types/api";
 
 const statusLabels: Record<KegStatus, string> = {
@@ -40,7 +41,8 @@ function KegQrPage() {
   const [formats, setFormats] = useState<PackagingFormat[]>([]);
   const [packagingRuns, setPackagingRuns] = useState<PackagingRun[]>([]);
   const [presentations, setPresentations] = useState<BeerPresentation[]>([]);
-
+  const [deliveryOrders, setDeliveryOrders] = useState<DeliveryOrder[]>([]);
+  const [deliveryOrderCode, setDeliveryOrderCode] = useState("");
   const [returnVolume, setReturnVolume] = useState("0");
   const [returnNotes, setReturnNotes] = useState("");
   const [washNotes, setWashNotes] = useState("");
@@ -62,18 +64,25 @@ function KegQrPage() {
     setError(null);
 
     try {
-      const [kegData, formatsData, runsData, presentationsData] =
-        await Promise.all([
-          apiGet<Keg>(`/kegs/by-code/${encodeURIComponent(code)}`),
-          apiGet<PackagingFormat[]>("/packaging-formats/"),
-          apiGet<PackagingRun[]>("/packaging-runs/"),
-          apiGet<BeerPresentation[]>("/beer-presentations/"),
-        ]);
+      const [
+        kegData,
+        formatsData,
+        runsData,
+        presentationsData,
+        deliveryOrdersData,
+      ] = await Promise.all([
+        apiGet<Keg>(`/kegs/by-code/${encodeURIComponent(code)}`),
+        apiGet<PackagingFormat[]>("/packaging-formats/"),
+        apiGet<PackagingRun[]>("/packaging-runs/"),
+        apiGet<BeerPresentation[]>("/beer-presentations/"),
+        apiGet<DeliveryOrder[]>("/delivery-orders/"),
+      ]);
 
       setKeg(kegData);
       setFormats(formatsData);
       setPackagingRuns(runsData);
       setPresentations(presentationsData);
+      setDeliveryOrders(deliveryOrdersData);
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -91,9 +100,7 @@ function KegQrPage() {
 
   const packagingFormat = useMemo(
     () =>
-      formats.find(
-        (format) => format.id === keg?.packaging_format_id,
-      ) ?? null,
+      formats.find((format) => format.id === keg?.packaging_format_id) ?? null,
     [formats, keg],
   );
 
@@ -113,6 +120,14 @@ function KegQrPage() {
       );
     });
   }, [keg, packagingRuns, presentations]);
+
+  const pickingDeliveryOrders = useMemo(
+    () =>
+      deliveryOrders.filter(
+        (deliveryOrder) => deliveryOrder.status === "picking",
+      ),
+    [deliveryOrders],
+  );
 
   async function receiveKeg(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -228,6 +243,43 @@ function KegQrPage() {
     }
   }
 
+  async function assignKegToDeliveryOrder(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!keg || !deliveryOrderCode) {
+      setError("Seleccioná un pedido en preparación.");
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setIsSubmitting(true);
+
+    try {
+      await apiPost(
+        `/delivery-orders/${encodeURIComponent(deliveryOrderCode)}/kegs`,
+        {
+          keg_id: keg.id,
+        },
+      );
+
+      setDeliveryOrderCode("");
+      setSuccess(
+        "El barril fue asignado al pedido. Se entregará al confirmar la entrega del pedido.",
+      );
+
+      await loadData();
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "No se pudo asignar el barril al pedido.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   if (isLoading) {
     return (
       <main className="dashboard">
@@ -291,6 +343,51 @@ function KegQrPage() {
               </p>
             </section>
           )}
+          {canOperate && keg.status === "filled" && (
+            <section className="panel sales-form-panel">
+              <h2>Agregar barril a un pedido</h2>
+
+              <p className="form-help">
+                El pedido debe estar en preparación y tener una unidad preparada
+                de la misma presentación que este barril.
+              </p>
+
+              <form className="sale-form" onSubmit={assignKegToDeliveryOrder}>
+                <label>
+                  Pedido en preparación
+                  <select
+                    onChange={(event) =>
+                      setDeliveryOrderCode(event.target.value)
+                    }
+                    required
+                    value={deliveryOrderCode}
+                  >
+                    <option value="">Seleccioná un pedido</option>
+
+                    {pickingDeliveryOrders.map((deliveryOrder) => (
+                      <option key={deliveryOrder.id} value={deliveryOrder.code}>
+                        {deliveryOrder.code}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <button
+                  disabled={isSubmitting || pickingDeliveryOrders.length === 0}
+                  type="submit"
+                >
+                  {isSubmitting ? "Asignando..." : "Asignar al pedido"}
+                </button>
+
+                {pickingDeliveryOrders.length === 0 && (
+                  <p className="form-help">
+                    No hay pedidos en preparación. Creá uno, agregá la
+                    presentación, iniciá el picking y luego escaneá el barril.
+                  </p>
+                )}
+              </form>
+            </section>
+          )}
 
           {canOperate && keg.status === "at_customer" && (
             <section className="panel sales-form-panel">
@@ -305,9 +402,7 @@ function KegQrPage() {
                   <input
                     min="0"
                     max={packagingFormat?.capacity_liters}
-                    onChange={(event) =>
-                      setReturnVolume(event.target.value)
-                    }
+                    onChange={(event) => setReturnVolume(event.target.value)}
                     required
                     step="0.001"
                     type="number"
@@ -318,18 +413,14 @@ function KegQrPage() {
                 <label>
                   Notas
                   <input
-                    onChange={(event) =>
-                      setReturnNotes(event.target.value)
-                    }
+                    onChange={(event) => setReturnNotes(event.target.value)}
                     placeholder="Observaciones opcionales."
                     value={returnNotes}
                   />
                 </label>
 
                 <button disabled={isSubmitting} type="submit">
-                  {isSubmitting
-                    ? "Registrando..."
-                    : "Registrar recepción"}
+                  {isSubmitting ? "Registrando..." : "Registrar recepción"}
                 </button>
               </form>
             </section>
@@ -343,9 +434,7 @@ function KegQrPage() {
                 <label>
                   Notas
                   <input
-                    onChange={(event) =>
-                      setWashNotes(event.target.value)
-                    }
+                    onChange={(event) => setWashNotes(event.target.value)}
                     placeholder="Observaciones opcionales."
                     value={washNotes}
                   />
@@ -366,19 +455,16 @@ function KegQrPage() {
                 <label>
                   Corrida de envasado compatible
                   <select
-                    onChange={(event) =>
-                      setPackagingRunId(event.target.value)
-                    }
+                    onChange={(event) => setPackagingRunId(event.target.value)}
                     required
                     value={packagingRunId}
                   >
-                    <option value="">
-                      Seleccioná una corrida de envasado
-                    </option>
+                    <option value="">Seleccioná una corrida de envasado</option>
 
                     {compatiblePackagingRuns.map((run) => (
                       <option key={run.id} value={run.id}>
-                        {run.code} · {formatVolume(run.packaged_volume_liters)} L
+                        {run.code} · {formatVolume(run.packaged_volume_liters)}{" "}
+                        L
                       </option>
                     ))}
                   </select>
@@ -387,9 +473,7 @@ function KegQrPage() {
                 <label>
                   Notas
                   <input
-                    onChange={(event) =>
-                      setFillNotes(event.target.value)
-                    }
+                    onChange={(event) => setFillNotes(event.target.value)}
                     placeholder="Observaciones opcionales."
                     value={fillNotes}
                   />

@@ -29,6 +29,8 @@ class BeerPresentationStockMovementType(StrEnum):
     REPACKAGING_CONSUMPTION = "repackaging_consumption"
     REPACKAGING_RECEIPT = "repackaging_receipt"
     DELIVERY = "delivery"
+    KEG_TRANSFER_CONSUMPTION = "keg_transfer_consumption"
+    KEG_TRANSFER_RECEIPT = "keg_transfer_receipt"
 
 
 class SaleStatus(StrEnum):
@@ -88,6 +90,7 @@ class KegMovementType(StrEnum):
     INVENTORY_ADJUSTMENT = "inventory_adjustment"
     OUT_OF_SERVICE = "out_of_service"
     REPACKAGING = "repackaging"
+    TRANSFER = "transfer"
 
 class DeliveryOrderStatus(StrEnum):
     DRAFT = "draft"

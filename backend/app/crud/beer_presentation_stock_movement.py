@@ -180,3 +180,52 @@ def create_delivery_movement(
     db.flush()
 
     return movement
+
+def create_keg_transfer_consumption_movement(
+    db: Session,
+    beer_presentation_id: int,
+    quantity: int,
+    reference: str,
+    notes: str | None = None,
+    occurred_at: datetime | None = None,
+) -> BeerPresentationStockMovement:
+    movement = BeerPresentationStockMovement(
+        beer_presentation_id=beer_presentation_id,
+        movement_type=(
+            BeerPresentationStockMovementType.KEG_TRANSFER_CONSUMPTION
+        ),
+        quantity=quantity,
+        reference=reference,
+        notes=notes,
+        occurred_at=occurred_at,
+    )
+
+    db.add(movement)
+    db.flush()
+
+    return movement
+
+
+def create_keg_transfer_receipt_movement(
+    db: Session,
+    beer_presentation_id: int,
+    quantity: int,
+    reference: str,
+    notes: str | None = None,
+    occurred_at: datetime | None = None,
+) -> BeerPresentationStockMovement:
+    movement = BeerPresentationStockMovement(
+        beer_presentation_id=beer_presentation_id,
+        movement_type=(
+            BeerPresentationStockMovementType.KEG_TRANSFER_RECEIPT
+        ),
+        quantity=quantity,
+        reference=reference,
+        notes=notes,
+        occurred_at=occurred_at,
+    )
+
+    db.add(movement)
+    db.flush()
+
+    return movement

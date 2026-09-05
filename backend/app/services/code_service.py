@@ -13,9 +13,10 @@ _CODE_PREFIXES = {
     "packaging_format": "FOR",
     "beer_presentation": "PRE",
     "customer_payment": "PAG",
-    "keg_repackaging_run" : "ENV2",
+    "keg_repackaging_run": "ENV2",
     "delivery_order": "PED",
     "delivery_note": "REM",
+    "keg_transfer": "TRB",
 }
 
 

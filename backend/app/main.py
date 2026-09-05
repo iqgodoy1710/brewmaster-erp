@@ -128,6 +128,7 @@ from app.common.exceptions import (
     InvalidKegRemnantTransferError,
     InvalidKegRepackagingError,
     InvalidKegReturnError,
+    InvalidKegTransferError,
     InvalidKegWashingError,
     InvalidPackagingRunError,
     InvalidProductionBatchStatusError,
@@ -536,6 +537,12 @@ for exception_type in (
         exception_type,
         delivery_order_conflict_handler,
     )
+
+app.add_exception_handler(
+    InvalidKegTransferError,
+    keg_conflict_handler,
+)
+
 
 @app.get("/health", tags=["Health"])
 def health():

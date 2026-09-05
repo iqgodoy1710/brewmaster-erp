@@ -323,3 +323,6 @@ class InvalidDeliveryOrderKegError(Exception):
 
 class InvalidDeliveryOrderCloseError(Exception):
     pass
+
+class InvalidKegTransferError(Exception):
+    pass

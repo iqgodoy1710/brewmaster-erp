@@ -43,6 +43,7 @@ from app.common.exceptions import (
     InvalidKegRemnantTransferError,
     InvalidKegRepackagingError,
     InvalidKegReturnError,
+    InvalidKegTransferError,
     InvalidKegWashingError,
     InvalidPackagingRunError,
     InvalidProductionBatchStatusError,
@@ -363,6 +364,7 @@ async def keg_conflict_handler(
         | InvalidKegRepackagingError
         | InvalidKegFillingError
         | InvalidKegDeliveryError
+        | InvalidKegTransferError
         | InvalidKegReturnError
         | InvalidKegWashingError
         | InvalidKegRemnantTransferError

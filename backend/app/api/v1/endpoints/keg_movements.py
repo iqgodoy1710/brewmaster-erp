@@ -9,6 +9,8 @@ from app.schemas.keg_movement import (
     KegRemnantTransferCreate,
     KegRemnantTransferResponse,
     KegReturnCreate,
+    KegTransferCreate,
+    KegTransferResponse,
     KegWashCreate,
 )
 from app.services.keg_movement_service import KegMovementService
@@ -54,6 +56,25 @@ def fill_keg_from_bulk(
     return KegMovementService.fill_from_bulk(
         db,
         filling_data,
+        performed_by_user_id=(current_user.id if current_user else None),
+    )
+
+
+@router.post(
+    "/keg-movements/transfer",
+    response_model=KegTransferResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def transfer_keg(
+    transfer_data: KegTransferCreate,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(
+        require_roles(UserRole.ADMIN, UserRole.OPERATOR)
+    ),
+):
+    return KegMovementService.transfer(
+        db,
+        transfer_data,
         performed_by_user_id=(current_user.id if current_user else None),
     )
 

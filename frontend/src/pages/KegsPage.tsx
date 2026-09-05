@@ -16,6 +16,8 @@ import type {
   Beer,
   ProductionBatch,
   Recipe,
+  Customer,
+  KegTransferResponse,
 } from "../types/api";
 import { Link } from "react-router-dom";
 
@@ -44,6 +46,7 @@ const movementTypeLabels: Record<KegMovementType, string> = {
   inventory_adjustment: "Ajuste de inventario",
   out_of_service: "Fuera de servicio",
   repackaging: "Envasado a botellas",
+  transfer: "Trasvase entre barriles",
 };
 
 const formatVolume = (value: string) =>
@@ -66,6 +69,7 @@ function KegsPage() {
   const canRegisterKegs = hasRole(currentUser, "admin");
 
   const [kegs, setKegs] = useState<Keg[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [kegFormats, setKegFormats] = useState<PackagingFormat[]>([]);
 
   const [selectedKegId, setSelectedKegId] = useState("");
@@ -107,6 +111,14 @@ function KegsPage() {
   );
   const [remnantNotes, setRemnantNotes] = useState("");
   const [isTransferringRemnants, setIsTransferringRemnants] = useState(false);
+  const [transferSourceKegId, setTransferSourceKegId] = useState("");
+  const [transferTargetKegId, setTransferTargetKegId] = useState("");
+  const [transferTargetPresentationId, setTransferTargetPresentationId] =
+    useState("");
+  const [transferVolume, setTransferVolume] = useState("");
+  const [transferNotes, setTransferNotes] = useState("");
+  const [isTransferringBetweenKegs, setIsTransferringBetweenKegs] =
+    useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -121,6 +133,7 @@ function KegsPage() {
         beersData,
         batchesData,
         recipesData,
+        customersData,
       ] = await Promise.all([
         apiGet<Keg[]>("/kegs/"),
         apiGet<PackagingFormat[]>("/packaging-formats/"),
@@ -128,6 +141,7 @@ function KegsPage() {
         apiGet<Beer[]>("/beers/"),
         apiGet<ProductionBatch[]>("/production-batches/"),
         apiGet<Recipe[]>("/recipes/"),
+        apiGet<Customer[]>("/customers/"),
       ]);
 
       setKegs(kegsData);
@@ -138,6 +152,7 @@ function KegsPage() {
       setBeers(beersData);
       setProductionBatches(batchesData);
       setRecipes(recipesData);
+      setCustomers(customersData);
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -206,6 +221,68 @@ function KegsPage() {
     () => kegs.filter((keg) => keg.active && keg.status === "clean_available"),
     [kegs],
   );
+
+  const transferSourceKegs = useMemo(
+    () =>
+      kegs.filter(
+        (keg) =>
+          keg.active &&
+          (keg.status === "filled" || keg.status === "tapped") &&
+          keg.customer_id === null &&
+          keg.beer_presentation_id !== null &&
+          keg.production_batch_id !== null &&
+          Number(keg.current_volume_liters) > 0,
+      ),
+    [kegs],
+  );
+
+  const selectedTransferSourceKeg = useMemo(
+    () =>
+      transferSourceKegs.find(
+        (keg) => keg.id === Number(transferSourceKegId),
+      ) ?? null,
+    [transferSourceKegId, transferSourceKegs],
+  );
+
+  const transferTargetKegs = useMemo(
+    () => cleanKegs.filter((keg) => keg.id !== Number(transferSourceKegId)),
+    [cleanKegs, transferSourceKegId],
+  );
+
+  const selectedTransferTargetKeg = useMemo(
+    () =>
+      transferTargetKegs.find(
+        (keg) => keg.id === Number(transferTargetKegId),
+      ) ?? null,
+    [transferTargetKegId, transferTargetKegs],
+  );
+
+  const transferTargetPresentations = useMemo(() => {
+    if (
+      !selectedTransferSourceKeg ||
+      !selectedTransferTargetKeg ||
+      selectedTransferSourceKeg.beer_presentation_id === null
+    ) {
+      return [];
+    }
+
+    const sourcePresentation = presentations.find(
+      (presentation) =>
+        presentation.id === selectedTransferSourceKeg.beer_presentation_id,
+    );
+
+    if (!sourcePresentation) {
+      return [];
+    }
+
+    return presentations.filter(
+      (presentation) =>
+        presentation.active &&
+        presentation.beer_id === sourcePresentation.beer_id &&
+        presentation.packaging_format_id ===
+          selectedTransferTargetKeg.packaging_format_id,
+    );
+  }, [presentations, selectedTransferSourceKeg, selectedTransferTargetKeg]);
 
   const eligibleDirectFillBatches = useMemo(
     () =>
@@ -302,6 +379,16 @@ function KegsPage() {
     );
 
     return format ? Number(format.capacity_liters) : 0;
+  }
+  function getCustomerName(customerId: number | null): string {
+    if (customerId === null) {
+      return "—";
+    }
+
+    return (
+      customers.find((customer) => customer.id === customerId)?.name ??
+      "Cliente no encontrado"
+    );
   }
 
   async function refreshData() {
@@ -506,6 +593,92 @@ function KegsPage() {
       );
     } finally {
       setIsWashing(false);
+    }
+  }
+
+  async function transferBetweenKegs(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (
+      !selectedTransferSourceKeg ||
+      !selectedTransferTargetKeg ||
+      !transferTargetPresentationId
+    ) {
+      setError("Seleccioná el barril de origen, el destino y la presentación.");
+      return;
+    }
+
+    const parsedVolume = Number(transferVolume);
+    const sourceVolume = Number(
+      selectedTransferSourceKeg.current_volume_liters,
+    );
+    const targetCapacity = getKegCapacity(selectedTransferTargetKeg);
+
+    if (!Number.isFinite(parsedVolume) || parsedVolume <= 0) {
+      setError("El volumen a trasvasar debe ser mayor a cero.");
+      return;
+    }
+
+    if (parsedVolume > sourceVolume) {
+      setError(
+        `El barril de origen solamente contiene ${formatVolume(
+          selectedTransferSourceKeg.current_volume_liters,
+        )} L.`,
+      );
+      return;
+    }
+
+    if (parsedVolume > targetCapacity) {
+      setError(
+        `El volumen no puede superar la capacidad de ${formatVolume(
+          String(targetCapacity),
+        )} L del barril de destino.`,
+      );
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setIsTransferringBetweenKegs(true);
+
+    try {
+      const result = await apiPost<KegTransferResponse>(
+        "/keg-movements/transfer",
+        {
+          source_keg_id: selectedTransferSourceKeg.id,
+          target_keg_id: selectedTransferTargetKeg.id,
+          target_beer_presentation_id: Number(transferTargetPresentationId),
+          transferred_volume_liters: transferVolume,
+          notes: transferNotes.trim() || null,
+        },
+      );
+
+      const sourceKegCode = selectedTransferSourceKeg.code;
+      const targetKegCode = selectedTransferTargetKeg.code;
+
+      setTransferSourceKegId("");
+      setTransferTargetKegId("");
+      setTransferTargetPresentationId("");
+      setTransferVolume("");
+      setTransferNotes("");
+      setSelectedKegId(String(result.target_movement.keg_id));
+
+      setSuccess(
+        `Trasvase ${result.reference} registrado: ${formatVolume(
+          transferVolume,
+        )} L de ${sourceKegCode} a ${targetKegCode}.`,
+      );
+
+      await loadData();
+      await loadKegMovements(String(result.target_movement.keg_id));
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "No se pudo realizar el trasvase entre barriles.",
+      );
+    } finally {
+      setIsTransferringBetweenKegs(false);
     }
   }
 
@@ -917,7 +1090,181 @@ function KegsPage() {
                   )}
                 </form>
               </section>
+              <section className="panel sales-form-panel">
+                <h2>Trasvasar entre barriles</h2>
 
+                <p className="form-help">
+                  Transferí cerveza desde un barril lleno o pinchado hacia otro
+                  barril limpio. El origen conservará automáticamente el volumen
+                  remanente.
+                </p>
+
+                <form className="sale-form" onSubmit={transferBetweenKegs}>
+                  <div className="form-grid">
+                    <label>
+                      Barril de origen
+                      <select
+                        onChange={(event) => {
+                          setTransferSourceKegId(event.target.value);
+                          setTransferTargetKegId("");
+                          setTransferTargetPresentationId("");
+                          setTransferVolume("");
+                        }}
+                        required
+                        value={transferSourceKegId}
+                      >
+                        <option value="">
+                          Seleccioná un barril con cerveza
+                        </option>
+
+                        {transferSourceKegs.map((keg) => (
+                          <option key={keg.id} value={keg.id}>
+                            {keg.code} ·{" "}
+                            {formatVolume(keg.current_volume_liters)} L ·{" "}
+                            {getFormatLabel(keg.packaging_format_id)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label>
+                      Barril de destino
+                      <select
+                        disabled={!selectedTransferSourceKeg}
+                        onChange={(event) => {
+                          setTransferTargetKegId(event.target.value);
+                          setTransferTargetPresentationId("");
+                          setTransferVolume("");
+                        }}
+                        required
+                        value={transferTargetKegId}
+                      >
+                        <option value="">Seleccioná un barril limpio</option>
+
+                        {transferTargetKegs.map((keg) => (
+                          <option key={keg.id} value={keg.id}>
+                            {keg.code} ·{" "}
+                            {getFormatLabel(keg.packaging_format_id)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  <div className="form-grid">
+                    <label>
+                      Presentación de destino
+                      <select
+                        disabled={!selectedTransferTargetKeg}
+                        onChange={(event) =>
+                          setTransferTargetPresentationId(event.target.value)
+                        }
+                        required
+                        value={transferTargetPresentationId}
+                      >
+                        <option value="">
+                          Seleccioná una presentación compatible
+                        </option>
+
+                        {transferTargetPresentations.map((presentation) => (
+                          <option key={presentation.id} value={presentation.id}>
+                            {presentation.code} · {presentation.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label>
+                      Volumen a trasvasar (L)
+                      <input
+                        disabled={
+                          !selectedTransferSourceKeg ||
+                          !selectedTransferTargetKeg
+                        }
+                        max={
+                          selectedTransferSourceKeg && selectedTransferTargetKeg
+                            ? String(
+                                Math.min(
+                                  Number(
+                                    selectedTransferSourceKeg.current_volume_liters,
+                                  ),
+                                  getKegCapacity(selectedTransferTargetKeg),
+                                ),
+                              )
+                            : undefined
+                        }
+                        min="0.001"
+                        onChange={(event) =>
+                          setTransferVolume(event.target.value)
+                        }
+                        placeholder={
+                          selectedTransferSourceKeg && selectedTransferTargetKeg
+                            ? `Máximo ${formatVolume(
+                                String(
+                                  Math.min(
+                                    Number(
+                                      selectedTransferSourceKeg.current_volume_liters,
+                                    ),
+                                    getKegCapacity(selectedTransferTargetKeg),
+                                  ),
+                                ),
+                              )} L`
+                            : "Seleccioná origen y destino"
+                        }
+                        required
+                        step="0.001"
+                        type="number"
+                        value={transferVolume}
+                      />
+                    </label>
+                  </div>
+
+                  <label>
+                    Notas
+                    <input
+                      onChange={(event) => setTransferNotes(event.target.value)}
+                      placeholder="Observaciones opcionales del trasvase."
+                      value={transferNotes}
+                    />
+                  </label>
+
+                  <button
+                    disabled={
+                      isTransferringBetweenKegs ||
+                      !selectedTransferSourceKeg ||
+                      !selectedTransferTargetKeg ||
+                      !transferTargetPresentationId ||
+                      !transferVolume
+                    }
+                    type="submit"
+                  >
+                    {isTransferringBetweenKegs
+                      ? "Registrando trasvase..."
+                      : "Trasvasar cerveza"}
+                  </button>
+
+                  {transferSourceKegs.length === 0 && (
+                    <p className="form-help">
+                      No hay barriles llenos o pinchados disponibles en fábrica.
+                    </p>
+                  )}
+
+                  {selectedTransferSourceKeg &&
+                    transferTargetKegs.length === 0 && (
+                      <p className="form-help">
+                        No hay barriles limpios disponibles.
+                      </p>
+                    )}
+
+                  {selectedTransferTargetKeg &&
+                    transferTargetPresentations.length === 0 && (
+                      <p className="form-help">
+                        No existe una presentación compatible para la cerveza y
+                        el formato del barril de destino.
+                      </p>
+                    )}
+                </form>
+              </section>
               <section className="panel sales-form-panel">
                 <h2>Recuperar remanentes</h2>
 
@@ -1004,6 +1351,7 @@ function KegsPage() {
                       <th>Formato</th>
                       <th>Variante</th>
                       <th>Estado</th>
+                      <th>Cliente</th>
                       <th>Volumen actual</th>
                       <th>Etiqueta</th>
                     </tr>
@@ -1016,6 +1364,7 @@ function KegsPage() {
                         <td>{getFormatLabel(keg.packaging_format_id)}</td>
                         <td>{formFactorLabels[keg.form_factor]}</td>
                         <td>{statusLabels[keg.status]}</td>
+                        <td>{getCustomerName(keg.customer_id)}</td>
                         <td>{formatVolume(keg.current_volume_liters)} L</td>
                         <td>
                           <Link

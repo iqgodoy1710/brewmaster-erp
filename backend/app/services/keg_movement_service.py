@@ -5,11 +5,19 @@ from app.common.exceptions import (
     InvalidKegFillingError,
     InvalidKegRemnantTransferError,
     InvalidKegReturnError,
+    InvalidKegTransferError,
     InvalidKegWashingError,
     KegNotFoundError,
     PackagingRunNotFoundError,
 )
-from app.crud.beer_presentation import get_beer_presentation_by_id
+from app.crud.beer_presentation import (
+    get_beer_presentation_by_id,
+    update_beer_presentation_stock,
+)
+from app.crud.beer_presentation_stock_movement import (
+    create_keg_transfer_consumption_movement,
+    create_keg_transfer_receipt_movement,
+)
 from app.crud.keg import (
     get_keg_by_id,
     update_keg_state,
@@ -23,16 +31,24 @@ from app.crud.packaging_run import get_packaging_run_by_id
 from app.crud.production_batch import (
     get_production_batch_by_id,
 )
-from app.models.enums import KegMovementType, KegStatus, ProductionBatchStatus
+from app.models.enums import (
+    KegMovementType,
+    KegStatus,
+    PackagingFormatType,
+    ProductionBatchStatus,
+)
 from app.schemas.keg_movement import (
     KegFillCreate,
     KegFillFromBulkCreate,
     KegRemnantTransferCreate,
     KegRemnantTransferResponse,
     KegReturnCreate,
+    KegTransferCreate,
+    KegTransferResponse,
     KegWashCreate,
 )
 from app.schemas.packaging_run import PackagingRunCreate
+from app.services.code_service import generate_code
 from app.services.packaging_run_service import PackagingRunService
 from sqlalchemy.orm import Session
 
@@ -186,6 +202,238 @@ class KegMovementService:
         )
 
     @staticmethod
+    def transfer(
+        db: Session,
+        transfer_data: KegTransferCreate,
+        performed_by_user_id: int | None = None,
+    ) -> KegTransferResponse:
+        if transfer_data.source_keg_id == transfer_data.target_keg_id:
+            raise InvalidKegTransferError(
+                "The source and target kegs must be different."
+            )
+
+        source_keg = get_keg_by_id(
+            db,
+            transfer_data.source_keg_id,
+        )
+        target_keg = get_keg_by_id(
+            db,
+            transfer_data.target_keg_id,
+        )
+
+        if not source_keg or not target_keg:
+            raise KegNotFoundError("The keg does not exist.")
+
+        if not source_keg.active or not target_keg.active:
+            raise InactiveKegError("Cannot transfer beer using an inactive keg.")
+
+        if source_keg.status not in {
+            KegStatus.FILLED,
+            KegStatus.TAPPED,
+        }:
+            raise InvalidKegTransferError(
+                "Only filled or tapped kegs can provide beer."
+            )
+
+        if target_keg.status != KegStatus.CLEAN_AVAILABLE:
+            raise InvalidKegTransferError("The target keg must be clean and available.")
+
+        if source_keg.customer_id is not None:
+            raise InvalidKegTransferError("The source keg must be at the brewery.")
+
+        if (
+            source_keg.beer_presentation_id is None
+            or source_keg.production_batch_id is None
+        ):
+            raise InvalidKegTransferError(
+                "The source keg must have beer and production batch traceability."
+            )
+
+        if source_keg.current_volume_liters <= 0:
+            raise InvalidKegTransferError("The source keg does not contain beer.")
+
+        source_presentation = get_beer_presentation_by_id(
+            db,
+            source_keg.beer_presentation_id,
+        )
+        target_presentation = get_beer_presentation_by_id(
+            db,
+            transfer_data.target_beer_presentation_id,
+        )
+
+        if not source_presentation or not target_presentation:
+            raise InvalidKegTransferError("The beer presentation does not exist.")
+
+        if not source_presentation.active or not target_presentation.active:
+            raise InvalidKegTransferError("The beer presentation must be active.")
+
+        if target_presentation.packaging_format.format_type != PackagingFormatType.KEG:
+            raise InvalidKegTransferError(
+                "The target presentation must be a keg presentation."
+            )
+
+        if source_presentation.beer_id != target_presentation.beer_id:
+            raise InvalidKegTransferError(
+                "Both keg presentations must contain the same beer."
+            )
+
+        if target_keg.packaging_format_id != target_presentation.packaging_format_id:
+            raise InvalidKegTransferError(
+                "The target keg format does not match the selected presentation."
+            )
+
+        transferred_volume_liters = transfer_data.transferred_volume_liters.quantize(
+            Decimal("0.001")
+        )
+
+        if transferred_volume_liters > source_keg.current_volume_liters:
+            raise InvalidKegTransferError(
+                "The transferred volume exceeds the source keg volume."
+            )
+
+        if transferred_volume_liters > target_keg.packaging_format.capacity_liters:
+            raise InvalidKegTransferError(
+                "The transferred volume exceeds the target keg capacity."
+            )
+
+        remaining_volume_liters = (
+            source_keg.current_volume_liters - transferred_volume_liters
+        ).quantize(Decimal("0.001"))
+
+        source_previous_status = source_keg.status
+        source_beer_presentation_id = source_keg.beer_presentation_id
+        source_production_batch_id = source_keg.production_batch_id
+
+        source_new_status = (
+            KegStatus.DIRTY
+            if remaining_volume_liters == Decimal("0.000")
+            else KegStatus.TAPPED
+        )
+
+        remove_source_stock = source_previous_status == KegStatus.FILLED
+
+        if remove_source_stock and source_presentation.current_stock < 1:
+            raise InvalidKegTransferError(
+                "The source presentation has no available stock."
+            )
+
+        reference = generate_code(db, "keg_transfer")
+
+        try:
+            if remove_source_stock:
+                create_keg_transfer_consumption_movement(
+                    db,
+                    beer_presentation_id=source_presentation.id,
+                    quantity=1,
+                    reference=reference,
+                    notes=(f"Stock consumption from source keg {source_keg.code}."),
+                    occurred_at=transfer_data.occurred_at,
+                )
+
+                update_beer_presentation_stock(
+                    db,
+                    source_presentation,
+                    source_presentation.current_stock - 1,
+                )
+
+            create_keg_transfer_receipt_movement(
+                db,
+                beer_presentation_id=target_presentation.id,
+                quantity=1,
+                reference=reference,
+                notes=(f"Stock receipt in target keg {target_keg.code}."),
+                occurred_at=transfer_data.occurred_at,
+            )
+
+            update_beer_presentation_stock(
+                db,
+                target_presentation,
+                target_presentation.current_stock + 1,
+            )
+
+            source_movement = create_keg_movement(
+                db,
+                keg_id=source_keg.id,
+                movement_type=KegMovementType.TRANSFER,
+                previous_status=source_previous_status,
+                new_status=source_new_status,
+                resulting_volume_liters=remaining_volume_liters,
+                beer_presentation_id=source_beer_presentation_id,
+                production_batch_id=source_production_batch_id,
+                reference=reference,
+                notes=(
+                    transfer_data.notes
+                    or (
+                        f"Beer transferred from {source_keg.code} to {target_keg.code}."
+                    )
+                ),
+                occurred_at=transfer_data.occurred_at,
+                performed_by_user_id=performed_by_user_id,
+            )
+
+            target_movement = create_keg_movement(
+                db,
+                keg_id=target_keg.id,
+                movement_type=KegMovementType.TRANSFER,
+                previous_status=target_keg.status,
+                new_status=KegStatus.FILLED,
+                resulting_volume_liters=transferred_volume_liters,
+                beer_presentation_id=target_presentation.id,
+                production_batch_id=source_production_batch_id,
+                reference=reference,
+                notes=(
+                    transfer_data.notes
+                    or (
+                        f"Beer transferred from {source_keg.code} to {target_keg.code}."
+                    )
+                ),
+                occurred_at=transfer_data.occurred_at,
+                performed_by_user_id=performed_by_user_id,
+            )
+
+            update_keg_state(
+                db,
+                source_keg,
+                status=source_new_status,
+                current_volume_liters=remaining_volume_liters,
+                beer_presentation_id=(
+                    None
+                    if source_new_status == KegStatus.DIRTY
+                    else source_beer_presentation_id
+                ),
+                production_batch_id=(
+                    None
+                    if source_new_status == KegStatus.DIRTY
+                    else source_production_batch_id
+                ),
+                customer_id=None,
+            )
+
+            update_keg_state(
+                db,
+                target_keg,
+                status=KegStatus.FILLED,
+                current_volume_liters=transferred_volume_liters,
+                beer_presentation_id=target_presentation.id,
+                production_batch_id=source_production_batch_id,
+                customer_id=None,
+            )
+
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+
+        db.refresh(source_movement)
+        db.refresh(target_movement)
+
+        return KegTransferResponse(
+            reference=reference,
+            source_movement=source_movement,
+            target_movement=target_movement,
+        )
+
+    @staticmethod
     def return_keg(
         db: Session,
         return_data: KegReturnCreate,
@@ -252,7 +500,6 @@ class KegMovementService:
 
         return movement
 
-
     @staticmethod
     def wash(
         db: Session,
@@ -312,10 +559,7 @@ class KegMovementService:
         transfer_data: KegRemnantTransferCreate,
         performed_by_user_id: int | None = None,
     ) -> KegRemnantTransferResponse:
-        if (
-            len(transfer_data.source_keg_ids)
-            != len(set(transfer_data.source_keg_ids))
-        ):
+        if len(transfer_data.source_keg_ids) != len(set(transfer_data.source_keg_ids)):
             raise InvalidKegRemnantTransferError(
                 "A keg can only be selected once for a remnant transfer."
             )
@@ -332,9 +576,7 @@ class KegMovementService:
                 raise KegNotFoundError("The keg does not exist.")
 
             if not keg.active:
-                raise InactiveKegError(
-                    "Cannot transfer remnants from an inactive keg."
-                )
+                raise InactiveKegError("Cannot transfer remnants from an inactive keg.")
 
             if keg.status != KegStatus.TAPPED:
                 raise InvalidKegRemnantTransferError(
@@ -346,26 +588,17 @@ class KegMovementService:
                     "A source keg must contain remaining beer."
                 )
 
-            if (
-                keg.beer_presentation_id is None
-                or keg.production_batch_id is None
-            ):
+            if keg.beer_presentation_id is None or keg.production_batch_id is None:
                 raise InvalidKegRemnantTransferError(
                     "A source keg must have beer and production batch traceability."
                 )
 
             if source_beer_presentation_id is None:
-                source_beer_presentation_id = (
-                    keg.beer_presentation_id
-                )
-                source_production_batch_id = (
-                    keg.production_batch_id
-                )
+                source_beer_presentation_id = keg.beer_presentation_id
+                source_production_batch_id = keg.production_batch_id
             elif (
-                keg.beer_presentation_id
-                != source_beer_presentation_id
-                or keg.production_batch_id
-                != source_production_batch_id
+                keg.beer_presentation_id != source_beer_presentation_id
+                or keg.production_batch_id != source_production_batch_id
             ):
                 raise InvalidKegRemnantTransferError(
                     "All source kegs must belong to the same beer presentation and production batch."
@@ -385,16 +618,14 @@ class KegMovementService:
 
         if (
             not production_batch.active
-            or production_batch.status
-            != ProductionBatchStatus.COMPLETED
+            or production_batch.status != ProductionBatchStatus.COMPLETED
         ):
             raise InvalidKegRemnantTransferError(
                 "Remnants can only be returned to an active completed production batch."
             )
 
         resulting_available_bulk_volume_liters = (
-            production_batch.available_bulk_volume_liters
-            + recovered_volume_liters
+            production_batch.available_bulk_volume_liters + recovered_volume_liters
         )
 
         if (

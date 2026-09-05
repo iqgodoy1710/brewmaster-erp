@@ -33,6 +33,16 @@ class KegFillFromBulkCreate(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+class KegTransferCreate(BaseModel):
+    source_keg_id: int = Field(..., gt=0)
+    target_keg_id: int = Field(..., gt=0)
+    target_beer_presentation_id: int = Field(..., gt=0)
+    transferred_volume_liters: Decimal = Field(..., gt=0)
+    notes: str | None = None
+    occurred_at: datetime | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
 class KegMovementResponse(BaseModel):
     id: int
     keg_id: int
@@ -58,6 +68,12 @@ class KegMovementResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class KegTransferResponse(BaseModel):
+    reference: str
+    source_movement: KegMovementResponse
+    target_movement: KegMovementResponse
+
+    model_config = ConfigDict(from_attributes=True)
 
 class KegReturnCreate(BaseModel):
     keg_id: int = Field(..., gt=0)

@@ -30,6 +30,16 @@ const statusLabels: Record<ProductionBatch["status"], string> = {
   cancelled: "Cancelado",
 };
 
+type ProductionBatchFilter = "all" | ProductionBatch["status"];
+
+const batchFilterLabels: Record<ProductionBatchFilter, string> = {
+  all: "Todos",
+  planned: "Planificados",
+  in_progress: "En producción",
+  completed: "Completados",
+  cancelled: "Cancelados",
+};
+
 function ProductionPage() {
   const currentUser = useCurrentUser();
 
@@ -60,6 +70,7 @@ function ProductionPage() {
   const [hasLoaded, setHasLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [batchFilter, setBatchFilter] = useState<ProductionBatchFilter>("all");
 
   const loadProductionData = useCallback(async () => {
     try {
@@ -286,6 +297,9 @@ function ProductionPage() {
 
     return beer?.style ?? "—";
   };
+  const visibleBatches = batches.filter(
+    (batch) => batchFilter === "all" || batch.status === batchFilter,
+  );
   const packagedVolumeByBatchId = useMemo(() => {
     return packagingRuns.reduce<Record<number, number>>(
       (totals, packagingRun) => ({
@@ -410,8 +424,30 @@ function ProductionPage() {
 
           <section className="panel sales-panel">
             <h2>Lotes de producción</h2>
-
-            {batches.length === 0 ? (
+            <div
+              aria-label="Filtrar lotes por estado"
+              className="status-filters"
+              role="group"
+            >
+              {(Object.keys(batchFilterLabels) as ProductionBatchFilter[]).map(
+                (filter) => (
+                  <button
+                    aria-pressed={batchFilter === filter}
+                    className={
+                      batchFilter === filter
+                        ? "status-filter-button active"
+                        : "status-filter-button"
+                    }
+                    key={filter}
+                    onClick={() => setBatchFilter(filter)}
+                    type="button"
+                  >
+                    {batchFilterLabels[filter]}
+                  </button>
+                ),
+              )}
+            </div>
+            {visibleBatches.length === 0 ? (
               <p className="empty-state">Todavía no hay lotes de producción.</p>
             ) : (
               <div className="table-wrapper">
@@ -430,7 +466,7 @@ function ProductionPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {batches.map((batch) => (
+                    {visibleBatches.map((batch) => (
                       <tr key={batch.id}>
                         <td>{batch.code}</td>
                         <td>{batchStyle(batch)}</td>

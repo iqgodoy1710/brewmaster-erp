@@ -7,6 +7,7 @@ import type {
   BeerPresentationPackagingMaterial,
   RawMaterialReference,
   PackagingFormat,
+  Category,
 } from "../types/api";
 import { hasRole, useCurrentUser } from "../lib/auth";
 
@@ -26,6 +27,9 @@ function BeerPresentationPackagingMaterialsPage() {
     [],
   );
   const [rawMaterials, setRawMaterials] = useState<RawMaterialReference[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [rawMaterialSearch, setRawMaterialSearch] = useState("");
+  const [rawMaterialCategoryId, setRawMaterialCategoryId] = useState("");
   const [materials, setMaterials] = useState<
     BeerPresentationPackagingMaterial[]
   >([]);
@@ -62,21 +66,41 @@ function BeerPresentationPackagingMaterialsPage() {
     [rawMaterials],
   );
 
+  const filteredRawMaterials = useMemo(() => {
+    const normalizedSearch = rawMaterialSearch.trim().toLowerCase();
+
+    return rawMaterials.filter((rawMaterial) => {
+      const matchesCategory =
+        !rawMaterialCategoryId ||
+        rawMaterial.category_id === Number(rawMaterialCategoryId);
+
+      const matchesSearch =
+        !normalizedSearch ||
+        `${rawMaterial.code} ${rawMaterial.name}`
+          .toLowerCase()
+          .includes(normalizedSearch);
+
+      return matchesCategory && matchesSearch;
+    });
+  }, [rawMaterialCategoryId, rawMaterialSearch, rawMaterials]);
+
   const loadBaseData = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const [presentationsData, rawMaterialsData, formatsData] =
+      const [presentationsData, rawMaterialsData, formatsData, categoriesData] =
         await Promise.all([
           apiGet<BeerPresentation[]>("/beer-presentations/"),
           apiGet<RawMaterialReference[]>("/raw-materials/references"),
           apiGet<PackagingFormat[]>("/packaging-formats/"),
+          apiGet<Category[]>("/categories/"),
         ]);
 
       setPresentations(presentationsData);
       setPackagingFormats(formatsData);
       setRawMaterials(rawMaterialsData);
+      setCategories(categoriesData);
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -192,6 +216,37 @@ function BeerPresentationPackagingMaterialsPage() {
               <form className="sale-form" onSubmit={handleSubmit}>
                 <div className="form-grid">
                   <label>
+                    Buscar insumo
+                    <input
+                      onChange={(event) =>
+                        setRawMaterialSearch(event.target.value)
+                      }
+                      placeholder="Código o nombre"
+                      type="search"
+                      value={rawMaterialSearch}
+                    />
+                  </label>
+
+                  <label>
+                    Categoría
+                    <select
+                      onChange={(event) =>
+                        setRawMaterialCategoryId(event.target.value)
+                      }
+                      value={rawMaterialCategoryId}
+                    >
+                      <option value="">Todas las categorías</option>
+
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <div className="form-grid">
+                  <label>
                     Presentación
                     <select
                       value={beerPresentationId}
@@ -215,7 +270,7 @@ function BeerPresentationPackagingMaterialsPage() {
                       onChange={(event) => setRawMaterialId(event.target.value)}
                     >
                       <option value="">Seleccioná un insumo</option>
-                      {rawMaterials.map((rawMaterial) => (
+                      {filteredRawMaterials.map((rawMaterial) => (
                         <option key={rawMaterial.id} value={rawMaterial.id}>
                           {rawMaterial.code} · {rawMaterial.name}
                         </option>

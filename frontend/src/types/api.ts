@@ -419,7 +419,8 @@ export type KegMovementType =
   | "remnant_transfer"
   | "inventory_adjustment"
   | "out_of_service"
-  | "repackaging";
+  | "repackaging"
+  | "transfer";
 
 export type KegMovement = {
   id: number;
@@ -449,7 +450,11 @@ export type KegRemnantTransferResponse = {
   resulting_available_bulk_volume_liters: string;
   source_movements: KegMovement[];
 };
-
+export type KegTransferResponse = {
+  reference: string;
+  source_movement: KegMovement;
+  target_movement: KegMovement;
+};
 
 export type KegRepackagingRun = {
   id: number;
@@ -540,4 +545,3 @@ export type DeliveryOrderDetail = DeliveryOrder & {
   items: DeliveryOrderItem[];
   kegs: DeliveryOrderKeg[];
 };
-

@@ -7,6 +7,7 @@ import type {
   RawMaterialMovementType,
   RawMaterialStockMovement,
   Supplier,
+  Unit,
 } from "../types/api";
 
 const formatNumber = (value: string) =>
@@ -52,6 +53,7 @@ const manualMovementTypes: RawMaterialMovementType[] = [
 function RawMaterialMovementsPage() {
   const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
   const [movements, setMovements] = useState<RawMaterialStockMovement[]>([]);
   const [rawMaterialId, setRawMaterialId] = useState("");
   const [rawMaterialSearch, setRawMaterialSearch] = useState("");
@@ -71,13 +73,15 @@ function RawMaterialMovementsPage() {
 
   const loadBaseData = useCallback(async () => {
     try {
-      const [rawMaterialsData, suppliersData] = await Promise.all([
+      const [rawMaterialsData, suppliersData, unitsData] = await Promise.all([
         apiGet<RawMaterial[]>("/raw-materials/"),
         apiGet<Supplier[]>("/suppliers/"),
+        apiGet<Unit[]>("/units/"),
       ]);
 
       setRawMaterials(rawMaterialsData);
       setSuppliers(suppliersData);
+      setUnits(unitsData);
       setHasLoaded(true);
     } catch (caughtError) {
       setError(
@@ -129,6 +133,12 @@ function RawMaterialMovementsPage() {
       ),
     [rawMaterialId, rawMaterials],
   );
+  const selectedUnit = useMemo(
+    () =>
+      units.find((unit) => unit.id === selectedRawMaterial?.unit_id) ?? null,
+    [selectedRawMaterial, units],
+  );
+
   const filteredRawMaterials = useMemo(() => {
     const normalizedSearch = rawMaterialSearch.trim().toLowerCase();
 
@@ -293,7 +303,7 @@ function RawMaterialMovementsPage() {
 
               <div className="form-grid">
                 <label>
-                  Cantidad
+                  Cantidad{selectedUnit ? ` (${selectedUnit.symbol})` : ""}
                   <input
                     min="0.001"
                     onChange={(event) => setQuantity(event.target.value)}
@@ -370,6 +380,7 @@ function RawMaterialMovementsPage() {
                 <strong>{selectedRawMaterial.name}</strong>
                 {" · Stock actual: "}
                 {formatNumber(selectedRawMaterial.current_stock)}
+                {selectedUnit ? ` ${selectedUnit.symbol}` : ""}
               </p>
             )}
 
@@ -391,6 +402,7 @@ function RawMaterialMovementsPage() {
                       <th>Fecha</th>
                       <th>Tipo</th>
                       <th>Cantidad</th>
+                      <th>Unidad</th>
                       <th>Proveedor</th>
                       <th>Costo</th>
                       <th>Referencia</th>
@@ -408,6 +420,7 @@ function RawMaterialMovementsPage() {
                           <td>{formatDate(movement.occurred_at)}</td>
                           <td>{movementLabels[movement.movement_type]}</td>
                           <td>{formatNumber(movement.quantity)}</td>
+                          <td>{selectedUnit?.symbol ?? "—"}</td>
                           <td>{supplier?.name ?? "—"}</td>
                           <td>{formatCurrency(movement.unit_cost)}</td>
                           <td>{movement.reference ?? "—"}</td>

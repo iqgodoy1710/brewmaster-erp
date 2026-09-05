@@ -1514,3 +1514,185 @@ def test_fill_last_keg_from_bulk_with_partial_volume(
     assert Decimal(updated_keg["current_volume_liters"]) == Decimal(
         "8.500"
     )
+
+def test_transfer_beer_from_fifty_liter_keg_into_two_twenty_liter_kegs(
+    client,
+):
+    data = create_completed_batch_with_presentation(
+        client,
+        packaging_format_type="keg",
+        capacity_liters="50.000",
+    )
+
+    source_presentation = data["beer_presentation"]
+    production_batch = data["production_batch"]
+
+    source_keg_response = client.post(
+        "/kegs/",
+        json={
+            "code": "K50-SOURCE-001",
+            "packaging_format_id": (
+                source_presentation["packaging_format_id"]
+            ),
+            "form_factor": "standard",
+        },
+    )
+    assert source_keg_response.status_code == 201
+
+    source_keg = source_keg_response.json()
+
+    filling_response = client.post(
+        "/keg-movements/fill-from-bulk",
+        json={
+            "keg_id": source_keg["id"],
+            "production_batch_id": production_batch["id"],
+            "beer_presentation_id": source_presentation["id"],
+        },
+    )
+    assert filling_response.status_code == 201
+
+    target_format_response = client.post(
+        "/packaging-formats/",
+        json={
+            "name": "Test Keg 20 L",
+            "capacity_liters": "20.000",
+            "format_type": "keg",
+        },
+    )
+    assert target_format_response.status_code == 201
+
+    target_format = target_format_response.json()
+
+    target_presentation_response = client.post(
+        "/beer-presentations/",
+        json={
+            "name": "IPA Test Keg 20 L",
+            "beer_id": source_presentation["beer_id"],
+            "packaging_format_id": target_format["id"],
+        },
+    )
+    assert target_presentation_response.status_code == 201
+
+    target_presentation = target_presentation_response.json()
+
+    target_kegs = []
+
+    for code in ("K20-TARGET-001", "K20-TARGET-002"):
+        keg_response = client.post(
+            "/kegs/",
+            json={
+                "code": code,
+                "packaging_format_id": target_format["id"],
+                "form_factor": "standard",
+            },
+        )
+        assert keg_response.status_code == 201
+        target_kegs.append(keg_response.json())
+
+    first_transfer_response = client.post(
+        "/keg-movements/transfer",
+        json={
+            "source_keg_id": source_keg["id"],
+            "target_keg_id": target_kegs[0]["id"],
+            "target_beer_presentation_id": (
+                target_presentation["id"]
+            ),
+            "transferred_volume_liters": "20.000",
+        },
+    )
+    assert first_transfer_response.status_code == 201
+
+    first_transfer = first_transfer_response.json()
+
+    assert first_transfer["reference"] == "TRB-000001"
+    assert (
+        first_transfer["source_movement"]["movement_type"]
+        == "transfer"
+    )
+    assert (
+        first_transfer["source_movement"][
+            "resulting_volume_liters"
+        ]
+        == "30.000"
+    )
+    assert (
+        first_transfer["target_movement"][
+            "resulting_volume_liters"
+        ]
+        == "20.000"
+    )
+
+    second_transfer_response = client.post(
+        "/keg-movements/transfer",
+        json={
+            "source_keg_id": source_keg["id"],
+            "target_keg_id": target_kegs[1]["id"],
+            "target_beer_presentation_id": (
+                target_presentation["id"]
+            ),
+            "transferred_volume_liters": "20.000",
+        },
+    )
+    assert second_transfer_response.status_code == 201
+
+    second_transfer = second_transfer_response.json()
+
+    assert second_transfer["reference"] == "TRB-000002"
+    assert (
+        second_transfer["source_movement"][
+            "resulting_volume_liters"
+        ]
+        == "10.000"
+    )
+    assert (
+        second_transfer["source_movement"]["new_status"]
+        == "tapped"
+    )
+
+    updated_source = client.get(
+        f"/kegs/by-code/{source_keg['code']}"
+    ).json()
+
+    assert updated_source["status"] == "tapped"
+    assert updated_source["current_volume_liters"] == "10.000"
+    assert (
+        updated_source["production_batch_id"]
+        == production_batch["id"]
+    )
+
+    for target_keg in target_kegs:
+        updated_target = client.get(
+            f"/kegs/by-code/{target_keg['code']}"
+        ).json()
+
+        assert updated_target["status"] == "filled"
+        assert (
+            updated_target["current_volume_liters"]
+            == "20.000"
+        )
+        assert (
+            updated_target["beer_presentation_id"]
+            == target_presentation["id"]
+        )
+        assert (
+            updated_target["production_batch_id"]
+            == production_batch["id"]
+        )
+
+    presentations = client.get(
+        "/beer-presentations/"
+    ).json()
+
+    source_presentation_result = next(
+        presentation
+        for presentation in presentations
+        if presentation["id"] == source_presentation["id"]
+    )
+    target_presentation_result = next(
+        presentation
+        for presentation in presentations
+        if presentation["id"] == target_presentation["id"]
+    )
+
+    assert source_presentation_result["current_stock"] == 0
+    assert target_presentation_result["current_stock"] == 2
