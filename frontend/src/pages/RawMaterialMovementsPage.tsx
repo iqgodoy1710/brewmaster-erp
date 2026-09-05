@@ -198,7 +198,7 @@ function RawMaterialMovementsPage() {
 
     if (requiresSupplier) {
       movementData.supplier_id = Number(supplierId);
-      movementData.unit_cost = unitCost;
+      movementData.unit_cost = parsedUnitCost;
     }
 
     try {
@@ -343,16 +343,27 @@ function RawMaterialMovementsPage() {
                     </select>
                   </label>
 
-                  <label>
+                                    <label>
                     Costo unitario
                     <input
                       min="0"
-                      onChange={(event) => setUnitCost(event.target.value)}
+                      onChange={(event) =>
+                        setUnitCost(event.target.value)
+                      }
+                      placeholder="0,00"
                       required
                       step="0.01"
                       type="number"
                       value={unitCost}
                     />
+
+                    <span className="form-help">
+                      {selectedRawMaterial
+                        ? `Costo vigente: ${formatCurrency(
+                            selectedRawMaterial.current_cost,
+                          )}. Ingresá 0 para conservarlo.`
+                        : "Seleccioná un insumo para consultar su costo vigente."}
+                    </span>
                   </label>
                 </div>
               )}

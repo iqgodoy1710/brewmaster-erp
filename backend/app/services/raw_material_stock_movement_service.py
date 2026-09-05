@@ -8,6 +8,7 @@ from app.common.exceptions import (
 )
 from app.crud.raw_material import (
     get_raw_material_by_id,
+    update_raw_material_cost,
     update_raw_material_stock,
 )
 from app.crud.raw_material_stock_movement import (
@@ -69,6 +70,16 @@ class RawMaterialStockMovementService:
                 raw_material,
                 new_stock,
             )
+            if (
+                movement_data.movement_type == RawMaterialMovementType.PURCHASE_RECEIPT
+                and movement_data.unit_cost is not None
+                and movement_data.unit_cost > Decimal("0")
+            ):
+                update_raw_material_cost(
+                    db,
+                    raw_material,
+                    movement_data.unit_cost,
+                )
             db.commit()
         except Exception:
             db.rollback()

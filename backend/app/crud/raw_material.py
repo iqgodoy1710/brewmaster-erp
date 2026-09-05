@@ -51,6 +51,17 @@ def update_raw_material(
 
     return raw_material
 
+def update_raw_material_cost(
+    db: Session,
+    raw_material: RawMaterial,
+    current_cost: Decimal,
+) -> RawMaterial:
+    raw_material.current_cost = current_cost
+
+    db.flush()
+
+    return raw_material
+
 def deactivate_raw_material(
     db: Session,
     raw_material: RawMaterial,
