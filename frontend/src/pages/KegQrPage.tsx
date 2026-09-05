@@ -15,6 +15,7 @@ import type {
   ProductionBatch,
   Recipe,
   DeliveryOrder,
+  Customer,
 } from "../types/api";
 
 const statusLabels: Record<KegStatus, string> = {
@@ -51,6 +52,7 @@ function KegQrPage() {
   const [productionBatches, setProductionBatches] = useState<ProductionBatch[]>(
     [],
   );
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [beers, setBeers] = useState<Beer[]>([]);
 
@@ -83,6 +85,7 @@ function KegQrPage() {
         recipesData,
         beersData,
         deliveryOrdersData,
+        customersData,
       ] = await Promise.all([
         apiGet<Keg>(`/kegs/by-code/${encodeURIComponent(code)}`),
         apiGet<PackagingFormat[]>("/packaging-formats/"),
@@ -91,6 +94,7 @@ function KegQrPage() {
         apiGet<Recipe[]>("/recipes/"),
         apiGet<Beer[]>("/beers/"),
         apiGet<DeliveryOrder[]>("/delivery-orders/"),
+        apiGet<Customer[]>("/customers/"),
       ]);
 
       setKeg(kegData);
@@ -100,6 +104,7 @@ function KegQrPage() {
       setBeers(beersData);
       setPresentations(presentationsData);
       setDeliveryOrders(deliveryOrdersData);
+      setCustomers(customersData);
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -119,6 +124,24 @@ function KegQrPage() {
     () =>
       formats.find((format) => format.id === keg?.packaging_format_id) ?? null,
     [formats, keg],
+  );
+  const kegPresentation = useMemo(
+    () =>
+      presentations.find(
+        (presentation) => presentation.id === keg?.beer_presentation_id,
+      ) ?? null,
+    [keg, presentations],
+  );
+
+  const kegBeer = useMemo(
+    () => beers.find((beer) => beer.id === kegPresentation?.beer_id) ?? null,
+    [beers, kegPresentation],
+  );
+
+  const kegCustomer = useMemo(
+    () =>
+      customers.find((customer) => customer.id === keg?.customer_id) ?? null,
+    [customers, keg],
   );
 
   const eligibleProductionBatches = useMemo(
@@ -411,6 +434,22 @@ function KegQrPage() {
                 <strong>Volumen actual:</strong>{" "}
                 {formatVolume(keg.current_volume_liters)} L
               </p>
+                            {kegPresentation && (
+                <p>
+                  <strong>Cerveza:</strong>{" "}
+                  {kegBeer?.name ?? kegPresentation.name}
+                  {kegBeer?.style
+                    ? ` · ${kegBeer.style}`
+                    : ""}
+                </p>
+              )}
+
+              {keg.customer_id !== null && (
+                <p>
+                  <strong>Cliente:</strong>{" "}
+                  {kegCustomer?.name ?? "Cliente no encontrado"}
+                </p>
+              )}
               <p>
                 <strong>Variante:</strong> {keg.form_factor}
               </p>
@@ -542,6 +581,7 @@ function KegQrPage() {
                 <label>
                   Lote de producción
                   <select
+                  className="emphasized-select"
                     onChange={(event) => {
                       setProductionBatchId(event.target.value);
                       setFillPresentationId("");

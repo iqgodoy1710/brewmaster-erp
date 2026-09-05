@@ -391,6 +391,28 @@ function KegsPage() {
     );
   }
 
+  function getKegBeerLabel(keg: Keg): string {
+    if (keg.beer_presentation_id === null) {
+      return "—";
+    }
+
+    const presentation = presentations.find(
+      (item) => item.id === keg.beer_presentation_id,
+    );
+
+    if (!presentation) {
+      return "Presentación no encontrada";
+    }
+
+    const beer = beers.find((item) => item.id === presentation.beer_id);
+
+    if (!beer) {
+      return presentation.name;
+    }
+
+    return `${beer.name}${beer.style ? ` · ${beer.style}` : ""}`;
+  }
+
   async function refreshData() {
     await loadData();
 
@@ -848,6 +870,7 @@ function KegsPage() {
                     <label>
                       Barril limpio
                       <select
+                        className="emphasized-select"
                         onChange={(event) => {
                           setDirectFillKegId(event.target.value);
                           setDirectPresentationId("");
@@ -868,6 +891,7 @@ function KegsPage() {
                     <label>
                       Lote de producción
                       <select
+                        className="emphasized-select"
                         onChange={(event) => {
                           setDirectProductionBatchId(event.target.value);
                           setDirectPresentationId("");
@@ -1351,6 +1375,7 @@ function KegsPage() {
                       <th>Formato</th>
                       <th>Variante</th>
                       <th>Estado</th>
+                      <th>Cerveza / estilo</th>
                       <th>Cliente</th>
                       <th>Volumen actual</th>
                       <th>Etiqueta</th>
@@ -1364,6 +1389,7 @@ function KegsPage() {
                         <td>{getFormatLabel(keg.packaging_format_id)}</td>
                         <td>{formFactorLabels[keg.form_factor]}</td>
                         <td>{statusLabels[keg.status]}</td>
+                        <td>{getKegBeerLabel(keg)}</td>
                         <td>{getCustomerName(keg.customer_id)}</td>
                         <td>{formatVolume(keg.current_volume_liters)} L</td>
                         <td>

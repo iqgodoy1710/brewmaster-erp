@@ -870,3 +870,21 @@ th:last-child {
     animation-timing-function: linear;
   }
 }
+select.emphasized-select {
+  font-weight: 700;
+}
+
+select.emphasized-select:invalid {
+  color: #52647f;
+  font-weight: 400;
+}
+
+select.emphasized-select option {
+  color: #172033;
+  font-weight: 700;
+}
+
+select.emphasized-select option[value=""] {
+  color: #52647f;
+  font-weight: 400;
+}
