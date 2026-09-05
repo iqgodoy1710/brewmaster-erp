@@ -385,6 +385,37 @@ th:last-child {
   color: #166534;
   background: #effcf3;
 }
+.dashboard > .error-message,
+.dashboard > .success-message {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  z-index: 1000;
+  width: min(38rem, calc(100% - 2rem));
+  margin: 0;
+  box-shadow: 0 12px 30px rgb(15 23 42 / 22%);
+  pointer-events: none;
+  animation: toast-message-lifecycle 7s ease forwards;
+}
+
+@keyframes toast-message-lifecycle {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -0.75rem);
+  }
+
+  8%,
+  85% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  100% {
+    visibility: hidden;
+    opacity: 0;
+    transform: translate(-50%, -0.5rem);
+  }
+}
 
 .sales-form-panel {
   margin-bottom: 1rem;
@@ -830,4 +861,12 @@ th:last-child {
   display: grid;
   gap: 0.4rem;
   font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard > .error-message,
+  .dashboard > .success-message {
+    animation-duration: 12s;
+    animation-timing-function: linear;
+  }
 }
