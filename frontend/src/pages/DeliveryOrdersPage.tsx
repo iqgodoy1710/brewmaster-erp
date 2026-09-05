@@ -32,6 +32,8 @@ function DeliveryOrdersPage() {
     [],
   );
   const [kegs, setKegs] = useState<Keg[]>([]);
+  const [requestedQuantitiesByItemId, setRequestedQuantitiesByItemId] =
+    useState<Record<number, string>>({});
 
   const [selectedOrderCode, setSelectedOrderCode] = useState("");
   const [selectedOrder, setSelectedOrder] =
@@ -197,6 +199,23 @@ function DeliveryOrdersPage() {
     }
 
     void loadPrices();
+  }, [selectedOrder]);
+
+  useEffect(() => {
+    if (!selectedOrder) {
+      setRequestedQuantitiesByItemId({});
+
+      return;
+    }
+
+    setRequestedQuantitiesByItemId(
+      Object.fromEntries(
+        selectedOrder.items.map((item) => [
+          item.id,
+          String(item.requested_quantity),
+        ]),
+      ),
+    );
   }, [selectedOrder]);
 
   function getPresentationName(presentationIdToFind: number): string {
@@ -696,6 +715,45 @@ function DeliveryOrdersPage() {
     }
   }
 
+  async function closeDeliveryOrderItem(itemId: number) {
+    if (!selectedOrder) {
+      return;
+    }
+
+    const quantity = Number(requestedQuantitiesByItemId[itemId]);
+
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      setError("La cantidad debe ser un número entero mayor a cero.");
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setIsSaving(true);
+
+    try {
+      await apiPost(
+        `/delivery-orders/${encodeURIComponent(
+          selectedOrder.code,
+        )}/items/${itemId}/close`,
+        {
+          requested_quantity: quantity,
+        },
+      );
+
+      setSuccess("El artículo quedó preparado.");
+      await refreshOrder(selectedOrder.code);
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "No se pudo cerrar el artículo.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   async function updatePicking(itemId: number, pickedQuantity: string) {
     if (!selectedOrder) {
       return;
@@ -876,6 +934,12 @@ function DeliveryOrdersPage() {
       setIsSaving(false);
     }
   }
+  const allSelectedOrderItemsAreClosed =
+    selectedOrder !== null &&
+    selectedOrder.items.length > 0 &&
+    selectedOrder.items.every(
+      (item) => item.picked_quantity === item.requested_quantity,
+    );
 
   return (
     <main className="dashboard">
@@ -984,7 +1048,8 @@ function DeliveryOrdersPage() {
 
                 {selectedOrder.notes && <p>Notas: {selectedOrder.notes}</p>}
 
-                {selectedOrder.status === "draft" && (
+                {(selectedOrder.status === "draft" ||
+                  selectedOrder.status === "picking") && (
                   <>
                     <div className="sale-line-editor">
                       <h3>Agregar artículo</h3>
@@ -1039,16 +1104,6 @@ function DeliveryOrdersPage() {
                         </button>
                       </form>
                     </div>
-
-                    {selectedOrder.items.length > 0 && (
-                      <button
-                        disabled={isSaving}
-                        onClick={startPicking}
-                        type="button"
-                      >
-                        Iniciar preparación
-                      </button>
-                    )}
                   </>
                 )}
 
@@ -1089,17 +1144,38 @@ function DeliveryOrdersPage() {
                               <td>
                                 <div className="form-actions">
                                   <input
-                                    defaultValue={item.requested_quantity}
+                                    aria-label="Cantidad solicitada"
                                     min="1"
-                                    onBlur={(event) =>
-                                      void updateDraftItem(
-                                        item.id,
-                                        event.target.value,
+                                    onChange={(event) =>
+                                      setRequestedQuantitiesByItemId(
+                                        (currentValues) => ({
+                                          ...currentValues,
+                                          [item.id]: event.target.value,
+                                        }),
                                       )
                                     }
                                     step="1"
                                     type="number"
+                                    value={
+                                      requestedQuantitiesByItemId[item.id] ??
+                                      String(item.requested_quantity)
+                                    }
                                   />
+
+                                  <button
+                                    className="secondary-button"
+                                    disabled={isSaving}
+                                    onClick={() =>
+                                      void updateDraftItem(
+                                        item.id,
+                                        requestedQuantitiesByItemId[item.id] ??
+                                          String(item.requested_quantity),
+                                      )
+                                    }
+                                    type="button"
+                                  >
+                                    Guardar
+                                  </button>
 
                                   <button
                                     className="danger-button"
@@ -1117,20 +1193,65 @@ function DeliveryOrdersPage() {
 
                             {selectedOrder.status === "picking" && (
                               <td>
-                                <div className="form-actions">
-                                  <input
-                                    defaultValue={item.picked_quantity}
-                                    min="0"
-                                    onBlur={(event) =>
-                                      void updatePicking(
-                                        item.id,
-                                        event.target.value,
-                                      )
-                                    }
-                                    step="1"
-                                    type="number"
-                                  />
-                                </div>
+                                {item.picked_quantity ===
+                                item.requested_quantity ? (
+                                  <div className="form-actions">
+                                    <span className="status-badge">Listo</span>
+
+                                    <button
+                                      className="secondary-button"
+                                      disabled={isSaving}
+                                      onClick={() =>
+                                        void updatePicking(item.id, "0")
+                                      }
+                                      type="button"
+                                    >
+                                      Reabrir
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="form-actions">
+                                    <input
+                                      aria-label="Cantidad del artículo"
+                                      min="1"
+                                      onChange={(event) =>
+                                        setRequestedQuantitiesByItemId(
+                                          (currentValues) => ({
+                                            ...currentValues,
+                                            [item.id]: event.target.value,
+                                          }),
+                                        )
+                                      }
+                                      step="1"
+                                      type="number"
+                                      value={
+                                        requestedQuantitiesByItemId[item.id] ??
+                                        String(item.requested_quantity)
+                                      }
+                                    />
+
+                                    <button
+                                      disabled={isSaving}
+                                      onClick={() =>
+                                        void closeDeliveryOrderItem(item.id)
+                                      }
+                                      type="button"
+                                    >
+                                      Cerrar ítem
+                                    </button>
+
+                                    <button
+                                      className="danger-button"
+                                      disabled={isSaving}
+                                      onClick={() =>
+                                        void removeDraftItem(item.id)
+                                      }
+                                      type="button"
+                                    >
+                                      Cancelar ítem
+                                    </button>
+                                  </div>
+                                )}
                               </td>
                             )}
 
@@ -1231,14 +1352,32 @@ function DeliveryOrdersPage() {
                   )}
 
                 <div className="form-actions">
+                  {selectedOrder.status === "draft" &&
+                    selectedOrder.items.length > 0 && (
+                      <button
+                        disabled={isSaving}
+                        onClick={startPicking}
+                        type="button"
+                      >
+                        Iniciar preparación
+                      </button>
+                    )}
                   {selectedOrder.status === "picking" && (
-                    <button
-                      disabled={isSaving}
-                      onClick={deliverOrder}
-                      type="button"
-                    >
-                      Registrar entrega y emitir remito
-                    </button>
+                    <>
+                      <button
+                        disabled={isSaving || !allSelectedOrderItemsAreClosed}
+                        onClick={deliverOrder}
+                        type="button"
+                      >
+                        Registrar entrega y emitir remito
+                      </button>
+
+                      {!allSelectedOrderItemsAreClosed && (
+                        <p className="form-help">
+                          Cerrá todos los ítems para registrar la entrega.
+                        </p>
+                      )}
+                    </>
                   )}
 
                   {selectedOrder.status === "delivered_pending_pricing" &&

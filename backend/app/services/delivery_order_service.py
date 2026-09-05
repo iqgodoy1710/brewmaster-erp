@@ -68,6 +68,7 @@ from app.schemas.delivery_order import (
     DeliveryOrderClose,
     DeliveryOrderCreate,
     DeliveryOrderDeliver,
+    DeliveryOrderItemClose,
     DeliveryOrderItemCreate,
     DeliveryOrderItemUpdate,
     DeliveryOrderKegCreate,
@@ -179,11 +180,13 @@ class DeliveryOrderService:
     ):
         delivery_order = DeliveryOrderService.get_detail(db, code)
 
-        DeliveryOrderService._require_status(
-            delivery_order,
+        if delivery_order.status not in {
             DeliveryOrderStatus.DRAFT,
-            "Items can only be added to draft delivery orders.",
-        )
+            DeliveryOrderStatus.PICKING,
+        }:
+            raise InvalidDeliveryOrderStatusError(
+                "Items can only be added to draft or picking delivery orders."
+            )
 
         beer_presentation = get_beer_presentation_by_id(
             db,
@@ -230,17 +233,27 @@ class DeliveryOrderService:
     ):
         delivery_order = DeliveryOrderService.get_detail(db, code)
 
-        DeliveryOrderService._require_status(
-            delivery_order,
+        if delivery_order.status not in {
             DeliveryOrderStatus.DRAFT,
-            "Items can only be updated in draft delivery orders.",
-        )
+            DeliveryOrderStatus.PICKING,
+        }:
+            raise InvalidDeliveryOrderStatusError(
+                "Items can only be updated in draft or picking delivery orders."
+            )
 
         item = DeliveryOrderService._get_order_item(
             db,
             delivery_order.id,
             delivery_order_item_id,
         )
+        if (
+            delivery_order.status == DeliveryOrderStatus.PICKING
+            and item_data.requested_quantity is not None
+            and item_data.requested_quantity < item.picked_quantity
+        ):
+            raise InvalidDeliveryOrderStatusError(
+                "The requested quantity cannot be lower than the picked quantity."
+            )
 
         try:
             update_delivery_order_item(
@@ -264,17 +277,27 @@ class DeliveryOrderService:
     ) -> None:
         delivery_order = DeliveryOrderService.get_detail(db, code)
 
-        DeliveryOrderService._require_status(
-            delivery_order,
+        if delivery_order.status not in {
             DeliveryOrderStatus.DRAFT,
-            "Items can only be removed from draft delivery orders.",
-        )
+            DeliveryOrderStatus.PICKING,
+        }:
+            raise InvalidDeliveryOrderStatusError(
+                "Items can only be removed from draft or picking delivery orders."
+            )
 
         item = DeliveryOrderService._get_order_item(
             db,
             delivery_order.id,
             delivery_order_item_id,
         )
+
+        if (
+            delivery_order.status == DeliveryOrderStatus.PICKING
+            and item.picked_quantity > 0
+        ):
+            raise InvalidDeliveryOrderStatusError(
+                "A picked delivery order item cannot be removed."
+            )
 
         try:
             delete_delivery_order_item(db, item)
@@ -357,6 +380,53 @@ class DeliveryOrderService:
                 item,
                 picking_data.picked_quantity,
             )
+            db.commit()
+            db.refresh(item)
+        except Exception:
+            db.rollback()
+            raise
+
+        return item
+
+    @staticmethod
+    def close_item(
+        db: Session,
+        code: str,
+        delivery_order_item_id: int,
+        close_data: DeliveryOrderItemClose,
+    ):
+        delivery_order = DeliveryOrderService.get_detail(
+            db,
+            code,
+        )
+
+        DeliveryOrderService._require_status(
+            delivery_order,
+            DeliveryOrderStatus.PICKING,
+            "Items can only be closed while picking.",
+        )
+
+        item = DeliveryOrderService._get_order_item(
+            db,
+            delivery_order.id,
+            delivery_order_item_id,
+        )
+
+        try:
+            update_delivery_order_item(
+                db,
+                item,
+                DeliveryOrderItemUpdate(
+                    requested_quantity=(close_data.requested_quantity),
+                ),
+            )
+
+            update_delivery_order_item_picking(
+                db,
+                item,
+                close_data.requested_quantity,
+            )
+
             db.commit()
             db.refresh(item)
         except Exception:
@@ -492,6 +562,16 @@ class DeliveryOrderService:
             DeliveryOrderStatus.PICKING,
             "Only delivery orders in picking can be delivered.",
         )
+        open_items = [
+            item
+            for item in delivery_order.items
+            if item.picked_quantity != item.requested_quantity
+        ]
+
+        if open_items:
+            raise InvalidDeliveryOrderItemError(
+                "All delivery order items must be closed before delivery."
+            )
 
         items_with_quantity = [
             item for item in delivery_order.items if item.picked_quantity > 0

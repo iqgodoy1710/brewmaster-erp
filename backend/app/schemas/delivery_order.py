@@ -39,6 +39,11 @@ class DeliveryOrderPickingUpdate(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+class DeliveryOrderItemClose(BaseModel):
+    requested_quantity: int = Field(..., gt=0)
+
+    model_config = ConfigDict(extra="forbid")
+
 
 class DeliveryOrderKegCreate(BaseModel):
     keg_id: int = Field(..., gt=0)

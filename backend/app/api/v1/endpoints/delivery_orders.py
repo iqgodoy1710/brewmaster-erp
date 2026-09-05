@@ -7,6 +7,7 @@ from app.schemas.delivery_order import (
     DeliveryOrderCreate,
     DeliveryOrderDeliver,
     DeliveryOrderDetailResponse,
+    DeliveryOrderItemClose,
     DeliveryOrderItemCreate,
     DeliveryOrderItemResponse,
     DeliveryOrderItemUpdate,
@@ -113,6 +114,24 @@ def update_delivery_order_item(
         code,
         delivery_order_item_id,
         item,
+    )
+
+
+@router.post(
+    "/{code}/items/{delivery_order_item_id}/close",
+    response_model=DeliveryOrderItemResponse,
+)
+def close_delivery_order_item(
+    code: str,
+    close_data: DeliveryOrderItemClose,
+    delivery_order_item_id: int = Path(..., gt=0),
+    db: Session = Depends(get_db),
+):
+    return DeliveryOrderService.close_item(
+        db,
+        code,
+        delivery_order_item_id,
+        close_data,
     )
 
 
