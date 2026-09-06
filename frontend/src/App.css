@@ -395,7 +395,7 @@ th:last-child {
   margin: 0;
   box-shadow: 0 12px 30px rgb(15 23 42 / 22%);
   pointer-events: none;
-  animation: toast-message-lifecycle 7s ease forwards;
+  animation: toast-message-lifecycle 5s ease forwards;
 }
 
 @keyframes toast-message-lifecycle {
@@ -887,4 +887,62 @@ select.emphasized-select option {
 select.emphasized-select option[value=""] {
   color: #52647f;
   font-weight: 400;
+}
+
+.stock-groups {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.stock-group {
+  overflow: hidden;
+  border: 1px solid #d8e0ed;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.stock-group summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  color: #172033;
+  cursor: pointer;
+  background: #f6f8fc;
+}
+
+.stock-group summary:hover {
+  background: #edf2f8;
+}
+
+.stock-group summary strong {
+  font-size: 0.95rem;
+}
+
+.stock-group summary span {
+  color: #52647f;
+  font-size: 0.85rem;
+  font-weight: 650;
+  text-align: right;
+}
+
+.stock-group[open] summary {
+  border-bottom: 1px solid #d8e0ed;
+}
+
+.stock-group .table-wrapper {
+  padding: 0 0.75rem 0.5rem;
+}
+
+@media (max-width: 720px) {
+  .stock-group summary {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .stock-group summary span {
+    text-align: left;
+  }
 }

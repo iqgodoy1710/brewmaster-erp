@@ -190,9 +190,7 @@ function KegQrPage() {
 
     const beer = beers.find((item) => item.id === recipe?.beer_id);
 
-    const beerLabel = beer
-      ? `${beer.name}${beer.style ? ` · ${beer.style}` : ""}`
-      : "Cerveza no disponible";
+    const beerLabel = beer?.name ?? "Cerveza no disponible";
 
     const availabilityLabel =
       batch.status === "in_progress"
@@ -434,13 +432,10 @@ function KegQrPage() {
                 <strong>Volumen actual:</strong>{" "}
                 {formatVolume(keg.current_volume_liters)} L
               </p>
-                            {kegPresentation && (
+              {kegPresentation && (
                 <p>
                   <strong>Cerveza:</strong>{" "}
                   {kegBeer?.name ?? kegPresentation.name}
-                  {kegBeer?.style
-                    ? ` · ${kegBeer.style}`
-                    : ""}
                 </p>
               )}
 
@@ -581,7 +576,7 @@ function KegQrPage() {
                 <label>
                   Lote de producción
                   <select
-                  className="emphasized-select"
+                    className="emphasized-select"
                     onChange={(event) => {
                       setProductionBatchId(event.target.value);
                       setFillPresentationId("");

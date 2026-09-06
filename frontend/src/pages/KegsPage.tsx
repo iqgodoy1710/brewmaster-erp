@@ -361,9 +361,7 @@ function KegsPage() {
       (currentBeer) => currentBeer.id === recipe?.beer_id,
     );
 
-    const beerLabel = beer
-      ? `${beer.name}${beer.style ? ` · ${beer.style}` : ""}`
-      : "Cerveza no disponible";
+    const beerLabel = beer?.name ?? "Cerveza no disponible";
 
     const availabilityLabel =
       batch.status === "in_progress"
@@ -410,7 +408,7 @@ function KegsPage() {
       return presentation.name;
     }
 
-    return `${beer.name}${beer.style ? ` · ${beer.style}` : ""}`;
+    return beer.name;
   }
 
   async function refreshData() {
@@ -1375,7 +1373,7 @@ function KegsPage() {
                       <th>Formato</th>
                       <th>Variante</th>
                       <th>Estado</th>
-                      <th>Cerveza / estilo</th>
+                      <th>Cerveza</th>
                       <th>Cliente</th>
                       <th>Volumen actual</th>
                       <th>Etiqueta</th>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 import "../App.css";
 import { apiGet } from "../lib/api";
@@ -109,6 +109,53 @@ function DashboardPage() {
     closed: "Cerrado",
     cancelled: "Cancelado",
   };
+  const kegStockGroups = useMemo(() => {
+    const groups = new Map<number, KegFinishedProductStock[]>();
+
+    kegStock.forEach((item) => {
+      const currentItems = groups.get(item.beer_id) ?? [];
+      currentItems.push(item);
+      groups.set(item.beer_id, currentItems);
+    });
+
+    return Array.from(groups.entries())
+      .map(([beerId, items]) => ({
+        beerId,
+        beerName: items[0]?.beer_name ?? "Cerveza",
+        totalKegs: items.reduce((total, item) => total + item.keg_count, 0),
+        totalVolume: items.reduce(
+          (total, item) => total + Number(item.total_volume_liters),
+          0,
+        ),
+        items,
+      }))
+      .sort((first, second) => first.beerName.localeCompare(second.beerName));
+  }, [kegStock]);
+
+  const packagedStockGroups = useMemo(() => {
+    const groups = new Map<string, PackagedFinishedProductStock[]>();
+
+    packagedStock.forEach((item) => {
+      const currentItems = groups.get(item.beer_name) ?? [];
+      currentItems.push(item);
+      groups.set(item.beer_name, currentItems);
+    });
+
+    return Array.from(groups.entries())
+      .map(([beerName, items]) => ({
+        beerName,
+        totalUnits: items.reduce(
+          (total, item) => total + item.current_stock,
+          0,
+        ),
+        totalVolume: items.reduce(
+          (total, item) => total + Number(item.total_volume_liters),
+          0,
+        ),
+        items,
+      }))
+      .sort((first, second) => first.beerName.localeCompare(second.beerName));
+  }, [packagedStock]);
 
   return (
     <main className="dashboard">
@@ -236,83 +283,126 @@ function DashboardPage() {
             <article className="panel">
               <h2>Stock de producto terminado · Barriles</h2>
 
-              {kegStock.length === 0 ? (
+              {kegStockGroups.length === 0 ? (
                 <p className="empty-state">
                   No hay barriles llenos disponibles en fábrica.
                 </p>
               ) : (
-                <div className="table-wrapper">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Cerveza</th>
-                        <th>Estilo</th>
-                        <th>Formato</th>
-                        <th>Variante</th>
-                        <th>Barriles</th>
-                        <th>Litros</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {kegStock.map((item) => (
-                        <tr
-                          key={`${item.beer_id}-${item.packaging_format_id}-${item.form_factor}`}
-                        >
-                          <td>{item.beer_name}</td>
-                          <td>{item.beer_style ?? "—"}</td>
-                          <td>{item.packaging_format_name}</td>
-                          <td>
-                            {
-                              {
-                                standard: "Estándar",
-                                flat: "Flat",
-                                slim: "Slim",
-                              }[item.form_factor]
-                            }
-                          </td>
-                          <td>{item.keg_count}</td>
-                          <td>{formatQuantity(item.total_volume_liters)} L</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="stock-groups">
+                  {kegStockGroups.map((group) => (
+                    <details className="stock-group" key={group.beerId}>
+                      <summary>
+                        <strong>{group.beerName}</strong>
+
+                        <span>
+                          {group.totalKegs} barriles ·{" "}
+                          {formatQuantity(String(group.totalVolume))} L
+                        </span>
+                      </summary>
+
+                      <div className="table-wrapper">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Formato</th>
+                              <th>Variante</th>
+                              <th>Barriles</th>
+                              <th>Litros</th>
+                            </tr>
+                          </thead>
+
+                          <tbody>
+                            {group.items.map((item) => (
+                              <tr
+                                key={`${item.packaging_format_id}-${item.form_factor}`}
+                              >
+                                <td>{item.packaging_format_name}</td>
+                                <td>
+                                  {
+                                    {
+                                      standard: "Estándar",
+                                      flat: "Flat",
+                                      slim: "Slim",
+                                    }[item.form_factor]
+                                  }
+                                </td>
+                                <td>{item.keg_count}</td>
+                                <td>
+                                  {formatQuantity(item.total_volume_liters)} L
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </details>
+                  ))}
                 </div>
               )}
             </article>
 
-            <article className="panel">
-              <h2>Stock de producto terminado · Botellas y latas</h2>
+                        <article className="panel">
+              <h2>
+                Stock de producto terminado · Botellas
+              </h2>
 
-              {packagedStock.length === 0 ? (
+              {packagedStockGroups.length === 0 ? (
                 <p className="empty-state">
-                  No hay botellas ni latas disponibles.
+                  No hay botellas disponibles.
                 </p>
               ) : (
-                <div className="table-wrapper">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Cerveza</th>
-                        <th>Estilo</th>
-                        <th>Presentación</th>
-                        <th>Formato</th>
-                        <th>Unidades</th>
-                        <th>Litros</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {packagedStock.map((item) => (
-                        <tr key={item.beer_presentation_id}>
-                          <td>{item.beer_name}</td>
-                          <td>{item.beer_style ?? "—"}</td>
-                          <td>{item.beer_presentation_name}</td>
-                          <td>{item.packaging_format_name}</td>
-                          <td>{item.current_stock}</td>
-                          <td>{formatQuantity(item.total_volume_liters)} L</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="stock-groups">
+                  {packagedStockGroups.map((group) => (
+                    <details
+                      className="stock-group"
+                      key={group.beerName}
+                    >
+                      <summary>
+                        <strong>{group.beerName}</strong>
+
+                        <span>
+                          {group.totalUnits} unidades ·{" "}
+                          {formatQuantity(
+                            String(group.totalVolume),
+                          )}{" "}
+                          L
+                        </span>
+                      </summary>
+
+                      <div className="table-wrapper">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Presentación</th>
+                              <th>Formato</th>
+                              <th>Unidades</th>
+                              <th>Litros</th>
+                            </tr>
+                          </thead>
+
+                          <tbody>
+                            {group.items.map((item) => (
+                              <tr key={item.beer_presentation_id}>
+                                <td>
+                                  {item.beer_presentation_name}
+                                </td>
+                                <td>
+                                  {item.packaging_format_name}
+                                </td>
+                                <td>{item.current_stock}</td>
+                                <td>
+                                  {formatQuantity(
+                                    item.total_volume_liters,
+                                  )}{" "}
+                                  L
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </details>
+                  ))}
                 </div>
               )}
             </article>

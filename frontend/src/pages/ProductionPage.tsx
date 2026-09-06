@@ -70,7 +70,8 @@ function ProductionPage() {
   const [hasLoaded, setHasLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [batchFilter, setBatchFilter] = useState<ProductionBatchFilter>("all");
+    const [batchFilter, setBatchFilter] =
+    useState<ProductionBatchFilter>("in_progress");
 
   const loadProductionData = useCallback(async () => {
     try {
