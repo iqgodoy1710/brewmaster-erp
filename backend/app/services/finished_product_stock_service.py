@@ -24,6 +24,7 @@ class FinishedProductStockService:
                 packaging_format_id=row.packaging_format_id,
                 packaging_format_name=row.packaging_format_name,
                 form_factor=row.form_factor,
+                keg_codes=sorted(row.keg_codes),
                 keg_count=row.keg_count,
                 total_volume_liters=row.total_volume_liters,
             )
@@ -49,3 +50,4 @@ class FinishedProductStockService:
             )
             for row in rows
         ]
+

@@ -300,40 +300,40 @@ function DashboardPage() {
                         </span>
                       </summary>
 
-                      <div className="table-wrapper">
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>Formato</th>
-                              <th>Variante</th>
-                              <th>Barriles</th>
-                              <th>Litros</th>
-                            </tr>
-                          </thead>
-
-                          <tbody>
-                            {group.items.map((item) => (
-                              <tr
-                                key={`${item.packaging_format_id}-${item.form_factor}`}
-                              >
-                                <td>{item.packaging_format_name}</td>
-                                <td>
+                      <div className="stock-subgroups">
+                        {group.items.map((item) => (
+                          <details
+                            className="stock-subgroup"
+                            key={`${item.packaging_format_id}-${item.form_factor}`}
+                          >
+                            <summary>
+                              <span>
+                                <strong>{item.packaging_format_name}</strong>
+                                {" · "}
+                                {
                                   {
-                                    {
-                                      standard: "Estándar",
-                                      flat: "Flat",
-                                      slim: "Slim",
-                                    }[item.form_factor]
-                                  }
-                                </td>
-                                <td>{item.keg_count}</td>
-                                <td>
-                                  {formatQuantity(item.total_volume_liters)} L
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                                    standard: "Estándar",
+                                    flat: "Flat",
+                                    slim: "Slim",
+                                  }[item.form_factor]
+                                }
+                              </span>
+
+                              <span>
+                                {item.keg_count} barriles ·{" "}
+                                {formatQuantity(item.total_volume_liters)} L
+                              </span>
+                            </summary>
+
+                            <div className="keg-code-list">
+                              {item.keg_codes.map((code) => (
+                                <span className="keg-code-badge" key={code}>
+                                  {code}
+                                </span>
+                              ))}
+                            </div>
+                          </details>
+                        ))}
                       </div>
                     </details>
                   ))}
@@ -341,31 +341,21 @@ function DashboardPage() {
               )}
             </article>
 
-                        <article className="panel">
-              <h2>
-                Stock de producto terminado · Botellas
-              </h2>
+            <article className="panel">
+              <h2>Stock de producto terminado · Botellas</h2>
 
               {packagedStockGroups.length === 0 ? (
-                <p className="empty-state">
-                  No hay botellas disponibles.
-                </p>
+                <p className="empty-state">No hay botellas disponibles.</p>
               ) : (
                 <div className="stock-groups">
                   {packagedStockGroups.map((group) => (
-                    <details
-                      className="stock-group"
-                      key={group.beerName}
-                    >
+                    <details className="stock-group" key={group.beerName}>
                       <summary>
                         <strong>{group.beerName}</strong>
 
                         <span>
                           {group.totalUnits} unidades ·{" "}
-                          {formatQuantity(
-                            String(group.totalVolume),
-                          )}{" "}
-                          L
+                          {formatQuantity(String(group.totalVolume))} L
                         </span>
                       </summary>
 
@@ -383,18 +373,11 @@ function DashboardPage() {
                           <tbody>
                             {group.items.map((item) => (
                               <tr key={item.beer_presentation_id}>
-                                <td>
-                                  {item.beer_presentation_name}
-                                </td>
-                                <td>
-                                  {item.packaging_format_name}
-                                </td>
+                                <td>{item.beer_presentation_name}</td>
+                                <td>{item.packaging_format_name}</td>
                                 <td>{item.current_stock}</td>
                                 <td>
-                                  {formatQuantity(
-                                    item.total_volume_liters,
-                                  )}{" "}
-                                  L
+                                  {formatQuantity(item.total_volume_liters)} L
                                 </td>
                               </tr>
                             ))}

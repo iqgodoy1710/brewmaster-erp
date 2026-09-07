@@ -482,6 +482,7 @@ export type KegFinishedProductStock = {
   packaging_format_id: number;
   packaging_format_name: string;
   form_factor: KegFormFactor;
+  keg_codes: string[];
   keg_count: number;
   total_volume_liters: string;
 };

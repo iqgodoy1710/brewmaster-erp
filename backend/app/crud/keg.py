@@ -77,6 +77,7 @@ def get_filled_keg_stock_summary(
             PackagingFormat.id.label("packaging_format_id"),
             PackagingFormat.name.label("packaging_format_name"),
             Keg.form_factor.label("form_factor"),
+            func.array_agg(Keg.code).label("keg_codes"),
             func.count(Keg.id).label("keg_count"),
             func.coalesce(
                 func.sum(Keg.current_volume_liters),

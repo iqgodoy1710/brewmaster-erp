@@ -16,6 +16,7 @@ import type {
   Recipe,
   DeliveryOrder,
   Customer,
+  KegRepackagingRun,
 } from "../types/api";
 
 const statusLabels: Record<KegStatus, string> = {
@@ -61,6 +62,10 @@ function KegQrPage() {
   const [isPartialFill, setIsPartialFill] = useState(false);
   const [filledVolume, setFilledVolume] = useState("");
   const [fillNotes, setFillNotes] = useState("");
+  const [bottlePresentationId, setBottlePresentationId] = useState("");
+  const [bottleQuantity, setBottleQuantity] = useState("");
+  const [bottlingRemainingVolume, setBottlingRemainingVolume] = useState("0");
+  const [bottlingNotes, setBottlingNotes] = useState("");
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -137,6 +142,59 @@ function KegQrPage() {
     () => beers.find((beer) => beer.id === kegPresentation?.beer_id) ?? null,
     [beers, kegPresentation],
   );
+
+  const formatById = useMemo(
+    () => new Map(formats.map((format) => [format.id, format])),
+    [formats],
+  );
+
+  const compatibleBottlePresentations = useMemo(() => {
+    if (!kegPresentation) {
+      return [];
+    }
+
+    return presentations.filter((presentation) => {
+      const format = formatById.get(presentation.packaging_format_id);
+
+      return (
+        presentation.active &&
+        presentation.beer_id === kegPresentation.beer_id &&
+        format?.format_type === "bottle"
+      );
+    });
+  }, [formatById, kegPresentation, presentations]);
+
+  const selectedBottlePresentation = useMemo(
+    () =>
+      compatibleBottlePresentations.find(
+        (presentation) => presentation.id === Number(bottlePresentationId),
+      ) ?? null,
+    [bottlePresentationId, compatibleBottlePresentations],
+  );
+
+  const bottledVolume = useMemo(() => {
+    if (!selectedBottlePresentation || !bottleQuantity) {
+      return 0;
+    }
+
+    const format = formatById.get(
+      selectedBottlePresentation.packaging_format_id,
+    );
+
+    return Number(format?.capacity_liters ?? 0) * Number(bottleQuantity);
+  }, [bottleQuantity, formatById, selectedBottlePresentation]);
+
+  const bottlingWaste = useMemo(() => {
+    if (!keg || !bottleQuantity) {
+      return null;
+    }
+
+    return (
+      Number(keg.current_volume_liters) -
+      bottledVolume -
+      Number(bottlingRemainingVolume || 0)
+    );
+  }, [bottledVolume, bottleQuantity, bottlingRemainingVolume, keg]);
 
   const kegCustomer = useMemo(
     () =>
@@ -346,6 +404,66 @@ function KegQrPage() {
     }
   }
 
+  async function bottleFromKeg(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const quantity = Number(bottleQuantity);
+    const remainingVolume = Number(bottlingRemainingVolume);
+
+    if (!keg || !selectedBottlePresentation) {
+      setError("Seleccioná una presentación de botella.");
+      return;
+    }
+
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      setError("La cantidad de botellas debe ser un entero mayor a cero.");
+      return;
+    }
+
+    if (!Number.isFinite(remainingVolume) || remainingVolume < 0) {
+      setError("El volumen remanente debe ser igual o mayor a cero.");
+      return;
+    }
+
+    if (bottledVolume + remainingVolume > Number(keg.current_volume_liters)) {
+      setError(
+        "Las botellas producidas y el remanente superan el volumen disponible.",
+      );
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setIsSubmitting(true);
+
+    try {
+      const run = await apiPost<KegRepackagingRun>("/keg-repackaging-runs/", {
+        keg_id: keg.id,
+        target_beer_presentation_id: selectedBottlePresentation.id,
+        packaged_quantity: quantity,
+        remaining_volume_liters: bottlingRemainingVolume,
+        notes: bottlingNotes.trim() || null,
+      });
+
+      setBottlePresentationId("");
+      setBottleQuantity("");
+      setBottlingRemainingVolume("0");
+      setBottlingNotes("");
+
+      setSuccess(`El embotellado ${run.code} fue registrado correctamente.`);
+
+      await loadData();
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "No se pudo registrar el embotellado.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   async function assignKegToDeliveryOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -504,6 +622,119 @@ function KegQrPage() {
               </form>
             </section>
           )}
+
+          {canOperate &&
+            (keg.status === "filled" || keg.status === "tapped") &&
+            Number(keg.current_volume_liters) > 0 && (
+              <section className="panel sales-form-panel">
+                <h2>Embotellar desde este barril</h2>
+
+                <p className="form-help">
+                  Registrá la cantidad real de botellas obtenidas y el volumen
+                  que permanece en el barril. La diferencia será registrada como
+                  merma.
+                </p>
+
+                <form className="sale-form" onSubmit={bottleFromKeg}>
+                  <label>
+                    Presentación de botella
+                    <select
+                      onChange={(event) =>
+                        setBottlePresentationId(event.target.value)
+                      }
+                      required
+                      value={bottlePresentationId}
+                    >
+                      <option value="">Seleccioná una presentación</option>
+
+                      {compatibleBottlePresentations.map((presentation) => (
+                        <option key={presentation.id} value={presentation.id}>
+                          {presentation.code} · {presentation.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <div className="form-grid">
+                    <label>
+                      Cantidad real de botellas
+                      <input
+                        min="1"
+                        onChange={(event) =>
+                          setBottleQuantity(event.target.value)
+                        }
+                        required
+                        step="1"
+                        type="number"
+                        value={bottleQuantity}
+                      />
+                    </label>
+
+                    <label>
+                      Volumen remanente en el barril (L)
+                      <input
+                        max={keg.current_volume_liters}
+                        min="0"
+                        onChange={(event) =>
+                          setBottlingRemainingVolume(event.target.value)
+                        }
+                        required
+                        step="0.001"
+                        type="number"
+                        value={bottlingRemainingVolume}
+                      />
+                    </label>
+                  </div>
+
+                  {selectedBottlePresentation && (
+                    <div className="form-help">
+                      <p>
+                        Volumen en botellas:{" "}
+                        <strong>{formatVolume(String(bottledVolume))} L</strong>
+                      </p>
+
+                      <p>
+                        Merma calculada:{" "}
+                        <strong>
+                          {bottlingWaste === null
+                            ? "—"
+                            : `${formatVolume(String(bottlingWaste))} L`}
+                        </strong>
+                      </p>
+                    </div>
+                  )}
+
+                  <label>
+                    Notas
+                    <input
+                      onChange={(event) => setBottlingNotes(event.target.value)}
+                      placeholder="Observaciones opcionales."
+                      value={bottlingNotes}
+                    />
+                  </label>
+
+                  <button
+                    disabled={
+                      isSubmitting ||
+                      !selectedBottlePresentation ||
+                      compatibleBottlePresentations.length === 0
+                    }
+                    type="submit"
+                  >
+                    {isSubmitting
+                      ? "Registrando embotellado..."
+                      : "Registrar embotellado"}
+                  </button>
+
+                  {compatibleBottlePresentations.length === 0 && (
+                    <p className="form-help">
+                      No existen presentaciones de botella configuradas para
+                      esta cerveza.
+                    </p>
+                  )}
+                </form>
+              </section>
+            )}
 
           {canOperate && keg.status === "at_customer" && (
             <section className="panel sales-form-panel">

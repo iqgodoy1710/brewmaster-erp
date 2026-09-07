@@ -9,6 +9,7 @@ import type {
   Keg,
   KegRepackagingRun,
   PackagingFormat,
+  Beer,
 } from "../types/api";
 
 const formatNumber = (value: string | number) =>
@@ -29,6 +30,7 @@ function KegRepackagingPage() {
     hasRole(currentUser, "admin") || hasRole(currentUser, "operator");
 
   const [kegs, setKegs] = useState<Keg[]>([]);
+  const [beers, setBeers] = useState<Beer[]>([]);
   const [presentations, setPresentations] = useState<BeerPresentation[]>([]);
   const [formats, setFormats] = useState<PackagingFormat[]>([]);
   const [runs, setRuns] = useState<KegRepackagingRun[]>([]);
@@ -48,15 +50,17 @@ function KegRepackagingPage() {
     try {
       setError(null);
 
-      const [kegsData, presentationsData, formatsData, runsData] =
+      const [kegsData, beersData, presentationsData, formatsData, runsData] =
         await Promise.all([
           apiGet<Keg[]>("/kegs/"),
+          apiGet<Beer[]>("/beers/"),
           apiGet<BeerPresentation[]>("/beer-presentations/"),
           apiGet<PackagingFormat[]>("/packaging-formats/"),
           apiGet<KegRepackagingRun[]>("/keg-repackaging-runs/"),
         ]);
 
       setKegs(kegsData);
+      setBeers(beersData);
       setPresentations(presentationsData);
       setFormats(formatsData);
       setRuns(runsData);
@@ -75,6 +79,11 @@ function KegRepackagingPage() {
     void loadData();
   }, [loadData]);
 
+  const beerById = useMemo(
+    () => new Map(beers.map((beer) => [beer.id, beer])),
+    [beers],
+  );
+
   const formatById = useMemo(
     () => new Map(formats.map((format) => [format.id, format])),
     [formats],
@@ -83,13 +92,24 @@ function KegRepackagingPage() {
   const presentationById = useMemo(
     () =>
       new Map(
-        presentations.map((presentation) => [
-          presentation.id,
-          presentation,
-        ]),
+        presentations.map((presentation) => [presentation.id, presentation]),
       ),
     [presentations],
   );
+
+  function getKegBeerName(keg: Keg): string {
+    if (keg.beer_presentation_id === null) {
+      return "Cerveza no identificada";
+    }
+
+    const presentation = presentationById.get(keg.beer_presentation_id);
+
+    if (!presentation) {
+      return "Cerveza no identificada";
+    }
+
+    return beerById.get(presentation.beer_id)?.name ?? presentation.name;
+  }
 
   const eligibleKegs = useMemo(
     () =>
@@ -112,7 +132,7 @@ function KegRepackagingPage() {
   const sourcePresentation = useMemo(
     () =>
       selectedKeg?.beer_presentation_id
-        ? presentationById.get(selectedKeg.beer_presentation_id) ?? null
+        ? (presentationById.get(selectedKeg.beer_presentation_id) ?? null)
         : null,
     [presentationById, selectedKeg],
   );
@@ -136,8 +156,7 @@ function KegRepackagingPage() {
   const selectedTargetPresentation = useMemo(
     () =>
       compatibleBottlePresentations.find(
-        (presentation) =>
-          presentation.id === Number(targetPresentationId),
+        (presentation) => presentation.id === Number(targetPresentationId),
       ) ?? null,
     [compatibleBottlePresentations, targetPresentationId],
   );
@@ -152,11 +171,7 @@ function KegRepackagingPage() {
     );
 
     return Number(format?.capacity_liters ?? 0) * Number(packagedQuantity);
-  }, [
-    formatById,
-    packagedQuantity,
-    selectedTargetPresentation,
-  ]);
+  }, [formatById, packagedQuantity, selectedTargetPresentation]);
 
   const calculatedWaste = useMemo(() => {
     if (!selectedKeg || !packagedQuantity) {
@@ -186,10 +201,7 @@ function KegRepackagingPage() {
       return;
     }
 
-    if (
-      !Number.isFinite(parsedRemainingVolume) ||
-      parsedRemainingVolume < 0
-    ) {
+    if (!Number.isFinite(parsedRemainingVolume) || parsedRemainingVolume < 0) {
       setError("El volumen remanente debe ser un número igual o mayor a cero.");
       return;
     }
@@ -209,16 +221,13 @@ function KegRepackagingPage() {
       setError(null);
       setSuccess(null);
 
-      const run = await apiPost<KegRepackagingRun>(
-        "/keg-repackaging-runs/",
-        {
-          keg_id: selectedKeg.id,
-          target_beer_presentation_id: selectedTargetPresentation.id,
-          packaged_quantity: quantity,
-          remaining_volume_liters: remainingVolume,
-          notes: notes.trim() || null,
-        },
-      );
+      const run = await apiPost<KegRepackagingRun>("/keg-repackaging-runs/", {
+        keg_id: selectedKeg.id,
+        target_beer_presentation_id: selectedTargetPresentation.id,
+        packaged_quantity: quantity,
+        remaining_volume_liters: remainingVolume,
+        notes: notes.trim() || null,
+      });
 
       setKegId("");
       setTargetPresentationId("");
@@ -293,9 +302,8 @@ function KegRepackagingPage() {
 
                       {eligibleKegs.map((keg) => (
                         <option key={keg.id} value={keg.id}>
-                          {keg.code} · {formatNumber(
-                            keg.current_volume_liters,
-                          )} L
+                          {keg.code} · {getKegBeerName(keg)} ·{" "}
+                          {formatNumber(keg.current_volume_liters)} L
                         </option>
                       ))}
                     </select>
@@ -445,18 +453,13 @@ function KegRepackagingPage() {
                             "—"}
                         </td>
                         <td>
-                          {presentationById.get(
-                            run.target_beer_presentation_id,
-                          )?.name ?? "—"}
+                          {presentationById.get(run.target_beer_presentation_id)
+                            ?.name ?? "—"}
                         </td>
                         <td>{run.packaged_quantity}</td>
-                        <td>
-                          {formatNumber(run.packaged_volume_liters)} L
-                        </td>
+                        <td>{formatNumber(run.packaged_volume_liters)} L</td>
                         <td>{formatNumber(run.waste_volume_liters)} L</td>
-                        <td>
-                          {formatNumber(run.remaining_volume_liters)} L
-                        </td>
+                        <td>{formatNumber(run.remaining_volume_liters)} L</td>
                         <td>{formatDate(run.occurred_at)}</td>
                       </tr>
                     ))}

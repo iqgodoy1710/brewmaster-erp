@@ -22,6 +22,8 @@ const statusLabels = {
   cancelled: "Cancelado",
 };
 
+type PresentationTypeFilter = "all" | "packaged" | "keg";
+
 function DeliveryOrdersPage() {
   const user = useCurrentUser();
 
@@ -44,7 +46,9 @@ function DeliveryOrdersPage() {
 
   const [presentationId, setPresentationId] = useState("");
   const [requestedQuantity, setRequestedQuantity] = useState("1");
-
+  const [presentationSearch, setPresentationSearch] = useState("");
+  const [presentationTypeFilter, setPresentationTypeFilter] =
+    useState<PresentationTypeFilter>("all");
   const [selectedKegId, setSelectedKegId] = useState("");
   const [pricesByItemId, setPricesByItemId] = useState<Record<number, string>>(
     {},
@@ -73,6 +77,40 @@ function DeliveryOrdersPage() {
         .map((presentation) => presentation.id),
     );
   }, [packagingFormats, presentations]);
+
+  const filteredPresentations = useMemo(() => {
+    const normalizedSearch = presentationSearch.trim().toLowerCase();
+
+    return presentations.filter((presentation) => {
+      if (!presentation.active) {
+        return false;
+      }
+
+      const isKeg = kegPresentationIds.has(presentation.id);
+
+      if (presentationTypeFilter === "keg" && !isKeg) {
+        return false;
+      }
+
+      if (presentationTypeFilter === "packaged" && isKeg) {
+        return false;
+      }
+
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      return (
+        presentation.code.toLowerCase().includes(normalizedSearch) ||
+        presentation.name.toLowerCase().includes(normalizedSearch)
+      );
+    });
+  }, [
+    kegPresentationIds,
+    presentationSearch,
+    presentationTypeFilter,
+    presentations,
+  ]);
 
   const compatibleFilledKegs = useMemo(() => {
     if (!selectedOrder) {
@@ -1055,6 +1093,67 @@ function DeliveryOrdersPage() {
                       <h3>Agregar artículo</h3>
 
                       <form className="sale-form" onSubmit={addItem}>
+                        <div className="presentation-filter-controls">
+                          <label>
+                            Buscar presentación
+                            <input
+                              onChange={(event) => {
+                                setPresentationSearch(event.target.value);
+                                setPresentationId("");
+                              }}
+                              placeholder="Código o nombre de la presentación"
+                              type="search"
+                              value={presentationSearch}
+                            />
+                          </label>
+
+                          <div
+                            aria-label="Tipo de presentación"
+                            className="status-filters"
+                            role="group"
+                          >
+                            <button
+                              className={`status-filter-button ${
+                                presentationTypeFilter === "all" ? "active" : ""
+                              }`}
+                              onClick={() => {
+                                setPresentationTypeFilter("all");
+                                setPresentationId("");
+                              }}
+                              type="button"
+                            >
+                              Todos
+                            </button>
+
+                            <button
+                              className={`status-filter-button ${
+                                presentationTypeFilter === "packaged"
+                                  ? "active"
+                                  : ""
+                              }`}
+                              onClick={() => {
+                                setPresentationTypeFilter("packaged");
+                                setPresentationId("");
+                              }}
+                              type="button"
+                            >
+                              Botellas
+                            </button>
+
+                            <button
+                              className={`status-filter-button ${
+                                presentationTypeFilter === "keg" ? "active" : ""
+                              }`}
+                              onClick={() => {
+                                setPresentationTypeFilter("keg");
+                                setPresentationId("");
+                              }}
+                              type="button"
+                            >
+                              Barriles
+                            </button>
+                          </div>
+                        </div>
                         <div className="form-grid line-grid">
                           <label>
                             Presentación
@@ -1068,7 +1167,7 @@ function DeliveryOrdersPage() {
                                 Seleccioná una presentación
                               </option>
 
-                              {presentations.map((presentation) => (
+                              {filteredPresentations.map((presentation) => (
                                 <option
                                   key={presentation.id}
                                   value={presentation.id}
@@ -1078,6 +1177,11 @@ function DeliveryOrdersPage() {
                                   {presentation.current_stock}
                                 </option>
                               ))}
+                              {filteredPresentations.length === 0 && (
+                                <option disabled value="">
+                                  No se encontraron presentaciones
+                                </option>
+                              )}
                             </select>
                           </label>
 
@@ -1113,7 +1217,7 @@ function DeliveryOrdersPage() {
                   </p>
                 ) : (
                   <div className="table-wrapper">
-                    <table>
+                    <table className="delivery-order-items-table">
                       <thead>
                         <tr>
                           <th>Presentación</th>
@@ -1134,14 +1238,20 @@ function DeliveryOrdersPage() {
                       <tbody>
                         {selectedOrder.items.map((item) => (
                           <tr key={item.id}>
-                            <td>
+                            <td data-label="Presentación">
                               {getPresentationName(item.beer_presentation_id)}
                             </td>
-                            <td>{item.requested_quantity}</td>
-                            <td>{item.picked_quantity}</td>
-                            <td>{item.delivered_quantity}</td>
+                            <td data-label="Solicitado">
+                              {item.requested_quantity}
+                            </td>
+                            <td data-label="Preparado">
+                              {item.picked_quantity}
+                            </td>
+                            <td data-label="Entregado">
+                              {item.delivered_quantity}
+                            </td>
                             {selectedOrder.status === "draft" && (
-                              <td>
+                              <td data-label="Acciones">
                                 <div className="form-actions">
                                   <input
                                     aria-label="Cantidad solicitada"
@@ -1192,7 +1302,7 @@ function DeliveryOrdersPage() {
                             )}
 
                             {selectedOrder.status === "picking" && (
-                              <td>
+                              <td data-label="Acciones">
                                 {item.picked_quantity ===
                                 item.requested_quantity ? (
                                   <div className="form-actions">
@@ -1257,7 +1367,7 @@ function DeliveryOrdersPage() {
 
                             {selectedOrder.status ===
                               "delivered_pending_pricing" && (
-                              <td>
+                              <td data-label="Precio final">
                                 {item.delivered_quantity > 0 ? (
                                   <input
                                     min="0.01"

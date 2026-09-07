@@ -24,3 +24,14 @@ class PackagedFinishedProductStockResponse(BaseModel):
     packaging_format_name: str
     current_stock: int
     total_volume_liters: Decimal
+
+class KegFinishedProductStockResponse(BaseModel):
+    beer_id: int
+    beer_name: str
+    beer_style: str | None
+    packaging_format_id: int
+    packaging_format_name: str
+    form_factor: KegFormFactor
+    keg_codes: list[str]
+    keg_count: int
+    total_volume_liters: Decimal
