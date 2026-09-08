@@ -6,12 +6,16 @@ from app.schemas.raw_material import RawMaterialCreate, RawMaterialUpdate
 from sqlalchemy.orm import Session
 
 
-def get_raw_materials(db: Session):
-    return (
-        db.query(RawMaterial)
-        .filter(RawMaterial.active.is_(True))
-        .all()
-    )
+def get_raw_materials(
+    db: Session,
+    include_inactive: bool = False,
+):
+    query = db.query(RawMaterial)
+
+    if not include_inactive:
+        query = query.filter(RawMaterial.active.is_(True))
+
+    return query.order_by(RawMaterial.name).all()
 
 def create_raw_material(
     db: Session,
@@ -67,6 +71,17 @@ def deactivate_raw_material(
     raw_material: RawMaterial,
 ) -> RawMaterial:
     raw_material.active = False
+
+    db.commit()
+    db.refresh(raw_material)
+
+    return raw_material
+
+def reactivate_raw_material(
+    db: Session,
+    raw_material: RawMaterial,
+) -> RawMaterial:
+    raw_material.active = True
 
     db.commit()
     db.refresh(raw_material)

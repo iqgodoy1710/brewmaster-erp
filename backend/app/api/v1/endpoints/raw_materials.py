@@ -31,9 +31,13 @@ router = APIRouter(prefix="/raw-materials", tags=["Raw Materials"])
     ],
 )
 def read_raw_materials(
+    include_inactive: bool = False,
     db: Session = Depends(get_db),
 ):
-    return RawMaterialService.get_all(db)
+    return RawMaterialService.get_all(
+        db,
+        include_inactive=include_inactive,
+    )
 
 
 @router.post(
@@ -74,6 +78,7 @@ def read_raw_material_low_stock_alerts(
 ):
     return RawMaterialService.get_low_stock_alerts(db)
 
+
 @router.get(
     "/references",
     response_model=list[RawMaterialReferenceResponse],
@@ -91,6 +96,7 @@ def read_raw_material_references(
     db: Session = Depends(get_db),
 ):
     return RawMaterialService.get_references(db)
+
 
 @router.get(
     "/{code}",
@@ -133,6 +139,25 @@ def update_raw_material(
         code,
         raw_material,
     )
+
+
+@router.post(
+    "/{code}/reactivate",
+    response_model=RawMaterialResponse,
+    dependencies=[
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+                UserRole.MANAGEMENT,
+            )
+        )
+    ],
+)
+def reactivate_raw_material(
+    code: str,
+    db: Session = Depends(get_db),
+):
+    return RawMaterialService.reactivate(db, code)
 
 
 @router.delete(

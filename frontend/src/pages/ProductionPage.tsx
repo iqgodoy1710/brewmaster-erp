@@ -70,7 +70,7 @@ function ProductionPage() {
   const [hasLoaded, setHasLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-    const [batchFilter, setBatchFilter] =
+  const [batchFilter, setBatchFilter] =
     useState<ProductionBatchFilter>("in_progress");
 
   const loadProductionData = useCallback(async () => {
@@ -259,6 +259,36 @@ function ProductionPage() {
     }
   }
 
+  async function replanProductionBatch(batch: ProductionBatch) {
+    if (!window.confirm(`¿Querés volver a planificar el lote ${batch.code}?`)) {
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setTransitioningBatchId(batch.id);
+
+    try {
+      const replannedBatch = await apiPost<ProductionBatch>(
+        `/production-batches/${encodeURIComponent(batch.code)}/replan`,
+      );
+
+      setSuccess(
+        `El lote ${replannedBatch.code} volvió al estado planificado.`,
+      );
+
+      await loadProductionData();
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "No se pudo volver a planificar el lote.",
+      );
+    } finally {
+      setTransitioningBatchId(null);
+    }
+  }
+
   const plannedBatches = useMemo(
     () => batches.filter((batch) => batch.status === "planned").length,
     [batches],
@@ -287,16 +317,12 @@ function ProductionPage() {
       `${formatNumber(recipe.target_volume_liters)} L`
     );
   };
-  const batchStyle = (batch: ProductionBatch) => {
-    const recipe = recipes.find(
-      (currentRecipe) => currentRecipe.id === batch.recipe_id,
-    );
+  const batchBeerName = (batch: ProductionBatch) => {
+    const recipe = recipes.find((item) => item.id === batch.recipe_id);
 
-    const beer = beers.find(
-      (currentBeer) => currentBeer.id === recipe?.beer_id,
-    );
+    const beer = beers.find((item) => item.id === recipe?.beer_id);
 
-    return beer?.style ?? "—";
+    return beer?.name ?? "—";
   };
   const visibleBatches = batches.filter(
     (batch) => batchFilter === "all" || batch.status === batchFilter,
@@ -456,7 +482,7 @@ function ProductionPage() {
                   <thead>
                     <tr>
                       <th>Lote</th>
-                      <th>Estilo</th>
+                      <th>Cerveza</th>
                       <th>Estado</th>
                       <th>Volumen planificado</th>
                       <th>Volumen producido</th>
@@ -470,7 +496,7 @@ function ProductionPage() {
                     {visibleBatches.map((batch) => (
                       <tr key={batch.id}>
                         <td>{batch.code}</td>
-                        <td>{batchStyle(batch)}</td>
+                        <td>{batchBeerName(batch)}</td>
                         <td>{statusLabels[batch.status]}</td>
                         <td>{formatNumber(batch.planned_volume_liters)} L</td>
                         <td>
@@ -545,6 +571,17 @@ function ProductionPage() {
                                   : "Cerrar producción"}
                               </button>
                             </form>
+                          ) : batch.status === "cancelled" &&
+                            canManageOperations ? (
+                            <button
+                              disabled={transitioningBatchId === batch.id}
+                              onClick={() => void replanProductionBatch(batch)}
+                              type="button"
+                            >
+                              {transitioningBatchId === batch.id
+                                ? "Replanificando..."
+                                : "Volver a planificar"}
+                            </button>
                           ) : (
                             "—"
                           )}

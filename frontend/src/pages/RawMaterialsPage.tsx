@@ -41,7 +41,7 @@ function RawMaterialsPage() {
       setError(null);
 
       const [rawMaterialsData, categoriesData, unitsData] = await Promise.all([
-        apiGet<RawMaterial[]>("/raw-materials/"),
+        apiGet<RawMaterial[]>("/raw-materials/?include_inactive=true"),
         apiGet<Category[]>("/categories/"),
         apiGet<Unit[]>("/units/"),
       ]);
@@ -181,20 +181,61 @@ function RawMaterialsPage() {
       setIsSaving(false);
     }
   }
+
+  async function handleReactivate(rawMaterial: RawMaterial) {
+    const confirmed = window.confirm(
+      `¿Reactivar el insumo "${rawMaterial.name}"?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setError(null);
+      setSuccess(null);
+
+      await apiPost<RawMaterial>(
+        `/raw-materials/${encodeURIComponent(rawMaterial.code)}/reactivate`,
+      );
+
+      setSuccess("Insumo reactivado correctamente.");
+      await loadData();
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "No se pudo reactivar el insumo.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
   const unitSymbol = (unitId: number) =>
     units.find((unit) => unit.id === unitId)?.symbol ?? "—";
 
   const categoryName = (categoryIdValue: number) =>
     categories.find((category) => category.id === categoryIdValue)?.name ?? "—";
 
+  const activeRawMaterials = useMemo(
+    () => rawMaterials.filter((rawMaterial) => rawMaterial.active),
+    [rawMaterials],
+  );
+
+  const inactiveRawMaterials = useMemo(
+    () => rawMaterials.filter((rawMaterial) => !rawMaterial.active),
+    [rawMaterials],
+  );
+
   const filteredRawMaterials = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase("es");
 
     if (!normalizedSearch) {
-      return rawMaterials;
+      return activeRawMaterials;
     }
 
-    return rawMaterials.filter((rawMaterial) =>
+    return activeRawMaterials.filter((rawMaterial) =>
       [
         rawMaterial.code,
         rawMaterial.name,
@@ -203,7 +244,7 @@ function RawMaterialsPage() {
         value.toLocaleLowerCase("es").includes(normalizedSearch),
       ),
     );
-  }, [categories, rawMaterials, search]);
+  }, [categories, activeRawMaterials, search]);
 
   return (
     <main className="dashboard">
@@ -335,8 +376,8 @@ function RawMaterialsPage() {
 
         {isLoading ? (
           <p>Cargando insumos...</p>
-        ) : rawMaterials.length === 0 ? (
-          <p className="empty-state">Todavía no hay insumos registrados.</p>
+        ) : activeRawMaterials.length === 0 ? (
+          <p className="empty-state">No hay insumos activos registrados.</p>
         ) : filteredRawMaterials.length === 0 ? (
           <p className="empty-state">
             No se encontraron insumos para la búsqueda indicada.
@@ -384,6 +425,49 @@ function RawMaterialsPage() {
                           Desactivar
                         </button>
                       </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+      <section className="panel">
+        <h2>Insumos desactivados</h2>
+
+        {isLoading ? (
+          <p>Cargando insumos...</p>
+        ) : inactiveRawMaterials.length === 0 ? (
+          <p className="empty-state">No hay insumos desactivados.</p>
+        ) : (
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Insumo</th>
+                  <th>Categoría</th>
+                  <th>Unidad</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {inactiveRawMaterials.map((rawMaterial) => (
+                  <tr key={rawMaterial.id}>
+                    <td>{rawMaterial.code}</td>
+                    <td>{rawMaterial.name}</td>
+                    <td>{categoryName(rawMaterial.category_id)}</td>
+                    <td>{unitSymbol(rawMaterial.unit_id)}</td>
+                    <td>
+                      <button
+                        disabled={isSaving}
+                        onClick={() => void handleReactivate(rawMaterial)}
+                        type="button"
+                      >
+                        Reactivar
+                      </button>
                     </td>
                   </tr>
                 ))}

@@ -11,6 +11,7 @@ from app.crud.raw_material import (
     get_raw_material_references,
     get_raw_materials,
     get_raw_materials_at_or_below_minimum_stock,
+    reactivate_raw_material,
     update_raw_material,
 )
 from app.crud.unit import get_unit_by_id
@@ -25,9 +26,14 @@ from sqlalchemy.orm import Session
 
 class RawMaterialService:
     @staticmethod
-    def get_all(db: Session):
-
-        return get_raw_materials(db)
+    def get_all(
+        db: Session,
+        include_inactive: bool = False,
+    ):
+        return get_raw_materials(
+            db,
+            include_inactive=include_inactive,
+        )
 
     @staticmethod
     def create(db: Session, raw_material_data: RawMaterialCreate):
@@ -88,6 +94,18 @@ class RawMaterialService:
         return deactivate_raw_material(db, raw_material)
 
     @staticmethod
+    def reactivate(
+        db: Session,
+        code: str,
+    ):
+        raw_material = RawMaterialService.get_by_code(db, code)
+
+        if raw_material.active:
+            return raw_material
+
+        return reactivate_raw_material(db, raw_material)
+
+    @staticmethod
     def get_low_stock_alerts(
         db: Session,
     ) -> list[RawMaterialLowStockResponse]:
@@ -107,7 +125,6 @@ class RawMaterialService:
             )
             for raw_material, unit in rows
         ]
-
 
     @staticmethod
     def get_references(

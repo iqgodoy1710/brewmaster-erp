@@ -38,7 +38,6 @@ def create_test_recipe_with_ingredient(client):
     beer_response = client.post(
         "/beers/",
         json={
-           
             "name": "New England IPA",
         },
     )
@@ -101,7 +100,6 @@ def test_create_production_batch_without_recipe_ingredients_returns_conflict(
     beer_response = client.post(
         "/beers/",
         json={
-            
             "name": "Dry Stout",
         },
     )
@@ -536,3 +534,30 @@ def test_manual_production_consumption_is_rejected(client):
             "a production batch."
         )
     }
+
+
+def test_cancelled_production_batch_can_be_replanned(client):
+    recipe = create_test_recipe_with_ingredient(client)
+
+    creation_response = client.post(
+        "/production-batches/",
+        json={
+            "code": "PB-REPLAN-001",
+            "recipe_id": recipe["id"],
+            "planned_volume_liters": "500.000",
+        },
+    )
+    assert creation_response.status_code == 201
+
+    cancellation_response = client.post("/production-batches/PB-REPLAN-001/cancel")
+    assert cancellation_response.status_code == 200
+    assert cancellation_response.json()["status"] == "cancelled"
+
+    replan_response = client.post("/production-batches/PB-REPLAN-001/replan")
+
+    assert replan_response.status_code == 200
+    assert replan_response.json()["status"] == "planned"
+    assert replan_response.json()["produced_volume_liters"] is None
+    assert Decimal(replan_response.json()["available_bulk_volume_liters"]) == Decimal(
+        "0.000"
+    )

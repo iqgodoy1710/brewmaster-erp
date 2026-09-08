@@ -77,6 +77,7 @@ def get_planned_production_batch_requirements(
         .filter(
             ProductionBatch.active.is_(True),
             ProductionBatch.status == ProductionBatchStatus.PLANNED,
+            RecipeIngredient.active.is_(True),
         )
         .all()
     )
@@ -111,6 +112,16 @@ def cancel_production_batch(
     production_batch: ProductionBatch,
 ) -> ProductionBatch:
     production_batch.status = ProductionBatchStatus.CANCELLED
+
+    db.flush()
+
+    return production_batch
+
+def replan_production_batch(
+    db: Session,
+    production_batch: ProductionBatch,
+) -> ProductionBatch:
+    production_batch.status = ProductionBatchStatus.PLANNED
 
     db.flush()
 

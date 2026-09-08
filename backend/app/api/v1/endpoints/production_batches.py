@@ -117,3 +117,22 @@ def complete_production_batch(
         code,
         completion,
     )
+
+
+@router.post(
+    "/{code:path}/replan",
+    response_model=ProductionBatchResponse,
+    dependencies=[
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+                UserRole.OPERATOR,
+            )
+        )
+    ],
+)
+def replan_production_batch(
+    code: str,
+    db: Session = Depends(get_db),
+):
+    return ProductionBatchService.replan(db, code)
