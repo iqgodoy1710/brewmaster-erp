@@ -31,7 +31,7 @@ function CostCalculatorPage() {
   const [formatFilter, setFormatFilter] = useState<"all" | "keg" | "bottle">(
     "all",
   );
-  const [styleFilter, setStyleFilter] = useState("");
+  const [beerFilter, setBeerFilter] = useState("");
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [presentationId, setPresentationId] = useState("");
   const [recipeId, setRecipeId] = useState("");
@@ -72,32 +72,18 @@ function CostCalculatorPage() {
     void loadData();
   }, []);
 
-  const availableStyles = useMemo(
-    () =>
-      [
-        ...new Set(
-          beers
-            .map((beer) => beer.style?.trim())
-            .filter((style): style is string => Boolean(style)),
-        ),
-      ].sort((a, b) => a.localeCompare(b, "es")),
-    [beers],
-  );
-
   const filteredPresentations = useMemo(() => {
-    const beerById = new Map(beers.map((beer) => [beer.id, beer]));
     const formatById = new Map(formats.map((format) => [format.id, format]));
 
     return presentations.filter((presentation) => {
       const format = formatById.get(presentation.packaging_format_id);
-      const beer = beerById.get(presentation.beer_id);
 
       return (
         (formatFilter === "all" || format?.format_type === formatFilter) &&
-        (!styleFilter || beer?.style === styleFilter)
+        (!beerFilter || presentation.beer_id === Number(beerFilter))
       );
     });
-  }, [beers, formats, formatFilter, presentations, styleFilter]);
+  }, [beerFilter, formats, formatFilter, presentations]);
 
   const selectedPresentation = presentations.find(
     (presentation) => presentation.id === Number(presentationId),
@@ -223,20 +209,23 @@ function CostCalculatorPage() {
               </label>
 
               <label>
-                Estilo
+                Cerveza
                 <select
                   onChange={(event) => {
-                    setStyleFilter(event.target.value);
-                    handlePresentationChange("");
+                    setBeerFilter(event.target.value);
+                    // Solo en CostCalculatorPage.tsx:
+                    // handlePresentationChange("");
                   }}
-                  value={styleFilter}
+                  value={beerFilter}
                 >
-                  <option value="">Todos los estilos</option>
-                  {availableStyles.map((style) => (
-                    <option key={style} value={style}>
-                      {style}
-                    </option>
-                  ))}
+                  <option value="">Todas las cervezas</option>
+                  {[...beers]
+                    .sort((a, b) => a.name.localeCompare(b.name, "es"))
+                    .map((beer) => (
+                      <option key={beer.id} value={beer.id}>
+                        {beer.name}
+                      </option>
+                    ))}
                 </select>
               </label>
             </div>
