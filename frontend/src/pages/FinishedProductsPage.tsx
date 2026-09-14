@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 import "../App.css";
 import { apiGet, apiPatch } from "../lib/api";
-import type { BeerPresentation } from "../types/api";
+import type { BeerPresentation, Beer, PackagingFormat } from "../types/api";
 import { hasRole, useCurrentUser } from "../lib/auth";
 
 function FinishedProductsPage() {
@@ -10,6 +10,12 @@ function FinishedProductsPage() {
 
   const canManageMinimumStock = hasRole(currentUser, "admin", "management");
   const [presentations, setPresentations] = useState<BeerPresentation[]>([]);
+  const [beers, setBeers] = useState<Beer[]>([]);
+  const [formats, setFormats] = useState<PackagingFormat[]>([]);
+  const [formatFilter, setFormatFilter] = useState<"all" | "keg" | "bottle">(
+    "all",
+  );
+  const [styleFilter, setStyleFilter] = useState("");
   const [minimumStockInputs, setMinimumStockInputs] = useState<
     Record<string, string>
   >({});
@@ -20,7 +26,14 @@ function FinishedProductsPage() {
   useEffect(() => {
     async function loadPresentations() {
       try {
-        const data = await apiGet<BeerPresentation[]>("/beer-presentations/");
+        const [data, beersData, formatsData] = await Promise.all([
+          apiGet<BeerPresentation[]>("/beer-presentations/"),
+          apiGet<Beer[]>("/beers/"),
+          apiGet<PackagingFormat[]>("/packaging-formats/"),
+        ]);
+
+        setBeers(beersData);
+        setFormats(formatsData);
 
         setPresentations(data);
         setMinimumStockInputs(
@@ -95,6 +108,32 @@ function FinishedProductsPage() {
       setSavingCode(null);
     }
   }
+  const availableStyles = useMemo(
+    () =>
+      [
+        ...new Set(
+          beers
+            .map((beer) => beer.style?.trim())
+            .filter((style): style is string => Boolean(style)),
+        ),
+      ].sort((a, b) => a.localeCompare(b, "es")),
+    [beers],
+  );
+
+  const filteredPresentations = useMemo(() => {
+    const beerById = new Map(beers.map((beer) => [beer.id, beer]));
+    const formatById = new Map(formats.map((format) => [format.id, format]));
+
+    return presentations.filter((presentation) => {
+      const format = formatById.get(presentation.packaging_format_id);
+      const beer = beerById.get(presentation.beer_id);
+
+      return (
+        (formatFilter === "all" || format?.format_type === formatFilter) &&
+        (!styleFilter || beer?.style === styleFilter)
+      );
+    });
+  }, [beers, formats, formatFilter, presentations, styleFilter]);
 
   return (
     <main className="dashboard">
@@ -116,9 +155,45 @@ function FinishedProductsPage() {
 
       {!isLoading && (presentations.length > 0 || !error) && (
         <section className="panel">
+          <div className="table-toolbar">
+            <label>
+              Tipo de presentación
+              <select
+                onChange={(event) =>
+                  setFormatFilter(
+                    event.target.value as "all" | "keg" | "bottle",
+                  )
+                }
+                value={formatFilter}
+              >
+                <option value="all">Todos</option>
+                <option value="keg">Barriles</option>
+                <option value="bottle">Botellas</option>
+              </select>
+            </label>
+
+            <label>
+              Estilo
+              <select
+                onChange={(event) => setStyleFilter(event.target.value)}
+                value={styleFilter}
+              >
+                <option value="">Todos los estilos</option>
+                {availableStyles.map((style) => (
+                  <option key={style} value={style}>
+                    {style}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
           {presentations.length === 0 ? (
             <p className="empty-state">
               Todavía no hay presentaciones registradas.
+            </p>
+          ) : filteredPresentations.length === 0 ? (
+            <p className="empty-state">
+              No hay presentaciones para los filtros seleccionados.
             </p>
           ) : (
             <div className="table-wrapper">
@@ -132,7 +207,7 @@ function FinishedProductsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {presentations.map((presentation) => (
+                  {filteredPresentations.map((presentation) => (
                     <tr key={presentation.id}>
                       <td>{presentation.code}</td>
                       <td>{presentation.name}</td>

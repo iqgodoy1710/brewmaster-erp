@@ -6,6 +6,8 @@ import type {
   BeerPresentation,
   BeerPresentationCostEstimate,
   Recipe,
+  Beer,
+  PackagingFormat,
 } from "../types/api";
 import { Link } from "react-router-dom";
 
@@ -24,6 +26,12 @@ const formatQuantity = (value: string) =>
 
 function CostCalculatorPage() {
   const [presentations, setPresentations] = useState<BeerPresentation[]>([]);
+  const [beers, setBeers] = useState<Beer[]>([]);
+  const [formats, setFormats] = useState<PackagingFormat[]>([]);
+  const [formatFilter, setFormatFilter] = useState<"all" | "keg" | "bottle">(
+    "all",
+  );
+  const [styleFilter, setStyleFilter] = useState("");
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [presentationId, setPresentationId] = useState("");
   const [recipeId, setRecipeId] = useState("");
@@ -38,13 +46,18 @@ function CostCalculatorPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [presentationsData, recipesData] = await Promise.all([
-          apiGet<BeerPresentation[]>("/beer-presentations/"),
-          apiGet<Recipe[]>("/recipes/"),
-        ]);
+        const [presentationsData, recipesData, beersData, formatsData] =
+          await Promise.all([
+            apiGet<BeerPresentation[]>("/beer-presentations/"),
+            apiGet<Recipe[]>("/recipes/"),
+            apiGet<Beer[]>("/beers/"),
+            apiGet<PackagingFormat[]>("/packaging-formats/"),
+          ]);
 
         setPresentations(presentationsData);
         setRecipes(recipesData);
+        setBeers(beersData);
+        setFormats(formatsData);
       } catch (caughtError) {
         setError(
           caughtError instanceof Error
@@ -58,6 +71,33 @@ function CostCalculatorPage() {
 
     void loadData();
   }, []);
+
+  const availableStyles = useMemo(
+    () =>
+      [
+        ...new Set(
+          beers
+            .map((beer) => beer.style?.trim())
+            .filter((style): style is string => Boolean(style)),
+        ),
+      ].sort((a, b) => a.localeCompare(b, "es")),
+    [beers],
+  );
+
+  const filteredPresentations = useMemo(() => {
+    const beerById = new Map(beers.map((beer) => [beer.id, beer]));
+    const formatById = new Map(formats.map((format) => [format.id, format]));
+
+    return presentations.filter((presentation) => {
+      const format = formatById.get(presentation.packaging_format_id);
+      const beer = beerById.get(presentation.beer_id);
+
+      return (
+        (formatFilter === "all" || format?.format_type === formatFilter) &&
+        (!styleFilter || beer?.style === styleFilter)
+      );
+    });
+  }, [beers, formats, formatFilter, presentations, styleFilter]);
 
   const selectedPresentation = presentations.find(
     (presentation) => presentation.id === Number(presentationId),
@@ -87,6 +127,25 @@ function CostCalculatorPage() {
 
     return Number(estimate.total_unit_cost) / (1 - marginAsPercentage / 100);
   }, [estimate, marginAsPercentage]);
+
+  const costPerLiter = useMemo(() => {
+    if (!estimate) {
+      return null;
+    }
+
+    const volume = Number(estimate.packaging_volume_liters);
+    const totalCost = Number(estimate.total_unit_cost);
+
+    if (
+      !Number.isFinite(volume) ||
+      volume <= 0 ||
+      !Number.isFinite(totalCost)
+    ) {
+      return null;
+    }
+
+    return totalCost / volume;
+  }, [estimate]);
 
   function handlePresentationChange(value: string) {
     setPresentationId(value);
@@ -145,7 +204,42 @@ function CostCalculatorPage() {
         <>
           <section className="panel sales-form-panel">
             <h2>Datos del cálculo</h2>
+            <div className="table-toolbar">
+              <label>
+                Tipo de presentación
+                <select
+                  onChange={(event) => {
+                    setFormatFilter(
+                      event.target.value as "all" | "keg" | "bottle",
+                    );
+                    handlePresentationChange("");
+                  }}
+                  value={formatFilter}
+                >
+                  <option value="all">Todos</option>
+                  <option value="keg">Barriles</option>
+                  <option value="bottle">Botellas</option>
+                </select>
+              </label>
 
+              <label>
+                Estilo
+                <select
+                  onChange={(event) => {
+                    setStyleFilter(event.target.value);
+                    handlePresentationChange("");
+                  }}
+                  value={styleFilter}
+                >
+                  <option value="">Todos los estilos</option>
+                  {availableStyles.map((style) => (
+                    <option key={style} value={style}>
+                      {style}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
             <div className="form-grid">
               <label>
                 Presentación
@@ -156,7 +250,7 @@ function CostCalculatorPage() {
                   value={presentationId}
                 >
                   <option value="">Seleccioná una presentación</option>
-                  {presentations.map((presentation) => (
+                  {filteredPresentations.map((presentation) => (
                     <option key={presentation.id} value={presentation.id}>
                       {presentation.code} · {presentation.name}
                     </option>
@@ -201,6 +295,11 @@ function CostCalculatorPage() {
                 />
               </label>
             </div>
+            {filteredPresentations.length === 0 && (
+              <p className="empty-state">
+                No hay presentaciones para los filtros seleccionados.
+              </p>
+            )}
 
             {selectedPresentation && compatibleRecipes.length === 0 && (
               <p className="empty-state">
@@ -235,6 +334,15 @@ function CostCalculatorPage() {
                 <article className="summary-card">
                   <p>Costo unitario estimado</p>
                   <strong>{formatCurrency(estimate.total_unit_cost)}</strong>
+                </article>
+
+                <article className="summary-card">
+                  <p>Costo estimado por litro</p>
+                  <strong>
+                    {costPerLiter === null
+                      ? "—"
+                      : `${formatCurrency(costPerLiter)} / L`}
+                  </strong>
                 </article>
               </section>
 
