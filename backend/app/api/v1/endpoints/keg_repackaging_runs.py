@@ -49,13 +49,12 @@ def create_keg_repackaging_run(
         require_roles(
             UserRole.ADMIN,
             UserRole.OPERATOR,
+            UserRole.MANAGEMENT,
         )
     ),
 ):
     return KegRepackagingRunService.create(
         db,
         repackaging_run,
-        performed_by_user_id=(
-            current_user.id if current_user else None
-        ),
+        performed_by_user_id=(current_user.id if current_user else None),
     )

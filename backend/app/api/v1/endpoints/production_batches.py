@@ -54,6 +54,7 @@ def read_raw_material_planning_projection(
             require_roles(
                 UserRole.ADMIN,
                 UserRole.OPERATOR,
+                UserRole.MANAGEMENT,
             )
         )
     ],
@@ -73,6 +74,7 @@ def create_production_batch(
             require_roles(
                 UserRole.ADMIN,
                 UserRole.OPERATOR,
+                UserRole.MANAGEMENT,
             )
         )
     ],
@@ -92,6 +94,7 @@ def start_production_batch(
             require_roles(
                 UserRole.ADMIN,
                 UserRole.OPERATOR,
+                UserRole.MANAGEMENT,
             )
         )
     ],
@@ -127,6 +130,7 @@ def complete_production_batch(
             require_roles(
                 UserRole.ADMIN,
                 UserRole.OPERATOR,
+                UserRole.MANAGEMENT,
             )
         )
     ],

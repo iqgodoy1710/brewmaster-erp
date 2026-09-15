@@ -38,9 +38,7 @@ function KegQrPage() {
   const { code } = useParams();
   const currentUser = useCurrentUser();
 
-  const canOperate =
-    hasRole(currentUser, "admin") || hasRole(currentUser, "operator");
-
+  const canOperate = hasRole(currentUser, "admin", "management", "operator");
   const [keg, setKeg] = useState<Keg | null>(null);
   const [formats, setFormats] = useState<PackagingFormat[]>([]);
 

@@ -1,4 +1,6 @@
+from app.api.auth_dependencies import require_roles
 from app.db.dependencies import get_db
+from app.models.enums import UserRole
 from app.schemas.packaging_format import (
     PackagingFormatCreate,
     PackagingFormatResponse,
@@ -13,7 +15,19 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=list[PackagingFormatResponse])
+@router.get(
+    "/",
+    response_model=list[PackagingFormatResponse],
+    dependencies=[
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+                UserRole.MANAGEMENT,
+                UserRole.OPERATOR,
+            )
+        )
+    ],
+)
 def read_packaging_formats(
     db: Session = Depends(get_db),
 ):
@@ -24,6 +38,7 @@ def read_packaging_formats(
     "/",
     response_model=PackagingFormatResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles(UserRole.ADMIN))],
 )
 def create_packaging_format(
     packaging_format: PackagingFormatCreate,

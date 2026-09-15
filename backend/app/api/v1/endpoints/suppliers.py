@@ -10,6 +10,30 @@ from sqlalchemy.orm import Session
 router = APIRouter(
     prefix="/suppliers",
     tags=["Suppliers"],
+
+)
+
+
+@router.get(
+    "/",
+    response_model=list[SupplierResponse],
+    dependencies=[
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+                UserRole.MANAGEMENT,
+                UserRole.OPERATOR,
+            )
+        )
+    ],
+)
+def read_suppliers(db: Session = Depends(get_db)):
+    return SupplierService.get_all(db)
+
+
+@router.post(
+    "/",
+    response_model=SupplierResponse,
     dependencies=[
         Depends(
             require_roles(
@@ -19,14 +43,6 @@ router = APIRouter(
         )
     ],
 )
-
-
-@router.get("/", response_model=list[SupplierResponse])
-def read_suppliers(db: Session = Depends(get_db)):
-    return SupplierService.get_all(db)
-
-
-@router.post("/", response_model=SupplierResponse)
 def create_supplier(
     supplier: SupplierCreate,
     db: Session = Depends(get_db),

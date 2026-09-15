@@ -65,7 +65,7 @@ function KegsPage() {
   const currentUser = useCurrentUser();
 
   const canOperateKegs =
-    hasRole(currentUser, "admin") || hasRole(currentUser, "operator");
+    hasRole(currentUser, "admin", "management", "operator");
   const canRegisterKegs = hasRole(currentUser, "admin");
 
   const [kegs, setKegs] = useState<Keg[]>([]);

@@ -26,6 +26,7 @@ router = APIRouter(prefix="/raw-materials", tags=["Raw Materials"])
             require_roles(
                 UserRole.ADMIN,
                 UserRole.MANAGEMENT,
+                UserRole.OPERATOR,
             )
         )
     ],

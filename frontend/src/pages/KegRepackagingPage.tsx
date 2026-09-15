@@ -26,8 +26,7 @@ const formatDate = (value: string) =>
 
 function KegRepackagingPage() {
   const currentUser = useCurrentUser();
-  const canOperate =
-    hasRole(currentUser, "admin") || hasRole(currentUser, "operator");
+  const canOperate = hasRole(currentUser, "admin", "management", "operator");
 
   const [kegs, setKegs] = useState<Keg[]>([]);
   const [beers, setBeers] = useState<Beer[]>([]);

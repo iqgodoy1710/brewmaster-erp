@@ -39,7 +39,7 @@ def read_recipe_ingredients(
     "/recipe-ingredients/",
     response_model=RecipeIngredientResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles(UserRole.ADMIN, UserRole.OPERATOR))],
+    dependencies=[Depends(require_roles(UserRole.ADMIN, ))],
 )
 def create_recipe_ingredient(
     ingredient: RecipeIngredientCreate,
@@ -55,7 +55,7 @@ def create_recipe_ingredient(
         Depends(
             require_roles(
                 UserRole.ADMIN,
-                UserRole.OPERATOR,
+
             )
         )
     ],
@@ -79,7 +79,7 @@ def update_recipe_ingredient(
         Depends(
             require_roles(
                 UserRole.ADMIN,
-                UserRole.OPERATOR,
+
             )
         )
     ],

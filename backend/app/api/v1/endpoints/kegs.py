@@ -45,7 +45,7 @@ def read_kegs(
         Depends(
             require_roles(
                 UserRole.ADMIN,
-                UserRole.OPERATOR,
+
             )
         )
     ],

@@ -203,6 +203,7 @@ function DeliveryOrdersPage() {
   useEffect(() => {
     async function loadPrices() {
       if (
+        !canCloseOrders ||
         !selectedOrder ||
         selectedOrder.status !== "delivered_pending_pricing"
       ) {
@@ -237,7 +238,7 @@ function DeliveryOrdersPage() {
     }
 
     void loadPrices();
-  }, [selectedOrder]);
+  }, [canCloseOrders, selectedOrder]);
 
   useEffect(() => {
     if (!selectedOrder) {

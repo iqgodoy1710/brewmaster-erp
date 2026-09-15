@@ -43,7 +43,7 @@ const batchFilterLabels: Record<ProductionBatchFilter, string> = {
 function ProductionPage() {
   const currentUser = useCurrentUser();
 
-  const canManageOperations = hasRole(currentUser, "admin", "operator");
+  const canManageOperations = hasRole(currentUser, "admin", "management", "operator");
 
   const [batches, setBatches] = useState<ProductionBatch[]>([]);
   const [packagingRuns, setPackagingRuns] = useState<PackagingRun[]>([]);

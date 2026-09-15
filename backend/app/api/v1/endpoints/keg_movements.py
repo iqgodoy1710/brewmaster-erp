@@ -31,7 +31,11 @@ def fill_keg(
     filling_data: KegFillCreate,
     db: Session = Depends(get_db),
     current_user: User | None = Depends(
-        require_roles(UserRole.ADMIN, UserRole.OPERATOR)
+        require_roles(
+            UserRole.ADMIN,
+            UserRole.OPERATOR,
+            UserRole.MANAGEMENT,
+        )
     ),
 ):
     return KegMovementService.fill(
@@ -50,7 +54,11 @@ def fill_keg_from_bulk(
     filling_data: KegFillFromBulkCreate,
     db: Session = Depends(get_db),
     current_user: User | None = Depends(
-        require_roles(UserRole.ADMIN, UserRole.OPERATOR)
+        require_roles(
+            UserRole.ADMIN,
+            UserRole.OPERATOR,
+            UserRole.MANAGEMENT,
+        )
     ),
 ):
     return KegMovementService.fill_from_bulk(
@@ -69,7 +77,11 @@ def transfer_keg(
     transfer_data: KegTransferCreate,
     db: Session = Depends(get_db),
     current_user: User | None = Depends(
-        require_roles(UserRole.ADMIN, UserRole.OPERATOR)
+        require_roles(
+            UserRole.ADMIN,
+            UserRole.OPERATOR,
+            UserRole.MANAGEMENT,
+        )
     ),
 ):
     return KegMovementService.transfer(
@@ -88,7 +100,11 @@ def return_keg(
     return_data: KegReturnCreate,
     db: Session = Depends(get_db),
     current_user: User | None = Depends(
-        require_roles(UserRole.ADMIN, UserRole.OPERATOR)
+        require_roles(
+            UserRole.ADMIN,
+            UserRole.OPERATOR,
+            UserRole.MANAGEMENT,
+        )
     ),
 ):
     return KegMovementService.return_keg(
@@ -107,7 +123,11 @@ def wash_keg(
     washing_data: KegWashCreate,
     db: Session = Depends(get_db),
     current_user: User | None = Depends(
-        require_roles(UserRole.ADMIN, UserRole.OPERATOR)
+        require_roles(
+            UserRole.ADMIN,
+            UserRole.OPERATOR,
+            UserRole.MANAGEMENT,
+        )
     ),
 ):
     return KegMovementService.wash(
@@ -126,7 +146,11 @@ def transfer_keg_remnants(
     transfer_data: KegRemnantTransferCreate,
     db: Session = Depends(get_db),
     current_user: User | None = Depends(
-        require_roles(UserRole.ADMIN, UserRole.OPERATOR)
+        require_roles(
+            UserRole.ADMIN,
+            UserRole.OPERATOR,
+            UserRole.MANAGEMENT,
+        )
     ),
 ):
     return KegMovementService.transfer_remnants(

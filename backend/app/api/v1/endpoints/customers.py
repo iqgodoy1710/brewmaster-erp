@@ -9,18 +9,23 @@ from sqlalchemy.orm import Session
 router = APIRouter(
     prefix="/customers",
     tags=["Customers"],
+
+)
+
+
+@router.get(
+    "/",
+    response_model=list[CustomerResponse],
     dependencies=[
         Depends(
             require_roles(
                 UserRole.ADMIN,
                 UserRole.MANAGEMENT,
+                UserRole.OPERATOR,
             )
         )
     ],
 )
-
-
-@router.get("/", response_model=list[CustomerResponse])
 def read_customers(
     db: Session = Depends(get_db),
 ):
@@ -31,6 +36,14 @@ def read_customers(
     "/",
     response_model=CustomerResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+                UserRole.MANAGEMENT,
+            )
+        )
+    ],
 )
 def create_customer(
     customer: CustomerCreate,

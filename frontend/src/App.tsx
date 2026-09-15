@@ -150,15 +150,15 @@ function AppContent() {
 
   const hasFinancialAccess = !isAuthRequired || isAdministrator || isManagement;
 
-  const canOperate = !isAuthRequired || isAdministrator || isOperator;
+  const canOperate =
+    !isAuthRequired || isAdministrator || isManagement || isOperator;
 
-  const canViewKegs =
-    !isAuthRequired || isAdministrator || isOperator || isManagement;
+  const canViewKegs = canOperate;
 
-  const canManageCatalogs = !isAuthRequired || isAdministrator || isOperator;
+  const canManageCatalogs = !isAuthRequired || isAdministrator;
 
   const canViewFinishedProducts =
-    !isAuthRequired || isAdministrator || isOperator || isManagement;
+    !isAuthRequired || isAdministrator || isManagement;
 
   function closeMenu() {
     setIsMenuOpen(false);
@@ -243,7 +243,7 @@ function AppContent() {
                 <summary>Operación</summary>
 
                 <div className="nav-group-menu">
-                  {hasFinancialAccess && (
+                  {canOperate && (
                     <NavLink
                       className={({ isActive }) =>
                         isActive ? "nav-link active" : "nav-link"
@@ -308,55 +308,60 @@ function AppContent() {
                   >
                     Pedidos
                   </NavLink>
-                  <NavLink
-                    className={({ isActive }) =>
-                      isActive ? "nav-link active" : "nav-link"
-                    }
-                    to="/cuentas-corrientes"
-                    onClick={closeMenu}
-                  >
-                    Ctas. corrientes
-                  </NavLink>
 
-                  <NavLink
-                    className={({ isActive }) =>
-                      isActive ? "nav-link active" : "nav-link"
-                    }
-                    to="/ventas"
-                    onClick={closeMenu}
-                  >
-                    Ventas
-                  </NavLink>
+                  {hasFinancialAccess && (
+                    <>
+                      <NavLink
+                        className={({ isActive }) =>
+                          isActive ? "nav-link active" : "nav-link"
+                        }
+                        to="/cuentas-corrientes"
+                        onClick={closeMenu}
+                      >
+                        Ctas. corrientes
+                      </NavLink>
 
-                  <NavLink
-                    className={({ isActive }) =>
-                      isActive ? "nav-link active" : "nav-link"
-                    }
-                    to="/detalle-ventas"
-                    onClick={closeMenu}
-                  >
-                    Detalle ventas
-                  </NavLink>
+                      <NavLink
+                        className={({ isActive }) =>
+                          isActive ? "nav-link active" : "nav-link"
+                        }
+                        to="/ventas"
+                        onClick={closeMenu}
+                      >
+                        Ventas
+                      </NavLink>
 
-                  <NavLink
-                    className={({ isActive }) =>
-                      isActive ? "nav-link active" : "nav-link"
-                    }
-                    to="/precios"
-                    onClick={closeMenu}
-                  >
-                    Precios
-                  </NavLink>
+                      <NavLink
+                        className={({ isActive }) =>
+                          isActive ? "nav-link active" : "nav-link"
+                        }
+                        to="/detalle-ventas"
+                        onClick={closeMenu}
+                      >
+                        Detalle ventas
+                      </NavLink>
 
-                  <NavLink
-                    className={({ isActive }) =>
-                      isActive ? "nav-link active" : "nav-link"
-                    }
-                    to="/costos"
-                    onClick={closeMenu}
-                  >
-                    Costos
-                  </NavLink>
+                      <NavLink
+                        className={({ isActive }) =>
+                          isActive ? "nav-link active" : "nav-link"
+                        }
+                        to="/precios"
+                        onClick={closeMenu}
+                      >
+                        Precios
+                      </NavLink>
+
+                      <NavLink
+                        className={({ isActive }) =>
+                          isActive ? "nav-link active" : "nav-link"
+                        }
+                        to="/costos"
+                        onClick={closeMenu}
+                      >
+                        Costos
+                      </NavLink>
+                    </>
+                  )}
                 </div>
               </details>
             )}
@@ -629,7 +634,7 @@ function AppContent() {
           <Route
             path="/movimientos-insumos"
             element={
-              hasFinancialAccess ? (
+              canOperate ? (
                 <RawMaterialMovementsPage />
               ) : (
                 <Navigate to="/" replace />
