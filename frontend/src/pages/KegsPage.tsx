@@ -64,8 +64,12 @@ const formatDate = (value: string) =>
 function KegsPage() {
   const currentUser = useCurrentUser();
 
-  const canOperateKegs =
-    hasRole(currentUser, "admin", "management", "operator");
+  const canOperateKegs = hasRole(
+    currentUser,
+    "admin",
+    "management",
+    "operator",
+  );
   const canRegisterKegs = hasRole(currentUser, "admin");
 
   const [kegs, setKegs] = useState<Keg[]>([]);
@@ -386,6 +390,15 @@ function KegsPage() {
     return (
       customers.find((customer) => customer.id === customerId)?.name ??
       "Cliente no encontrado"
+    );
+  }
+
+  function getKegBatchLabel(keg: Keg): string {
+    if (keg.production_batch_id === null) return "—";
+
+    return (
+      productionBatches.find((batch) => batch.id === keg.production_batch_id)
+        ?.code ?? "Lote no encontrado"
     );
   }
 
@@ -1018,7 +1031,8 @@ function KegsPage() {
 
                         {customerKegs.map((keg) => (
                           <option key={keg.id} value={keg.id}>
-                            {keg.code} ·{" "}
+                            {keg.code} · {getKegBeerLabel(keg)} ·{" "}
+                            {getCustomerName(keg.customer_id)} ·{" "}
                             {formatVolume(keg.current_volume_liters)} L
                           </option>
                         ))}
@@ -1141,7 +1155,7 @@ function KegsPage() {
 
                         {transferSourceKegs.map((keg) => (
                           <option key={keg.id} value={keg.id}>
-                            {keg.code} ·{" "}
+                            {keg.code} · {getKegBeerLabel(keg)} ·{" "}
                             {formatVolume(keg.current_volume_liters)} L ·{" "}
                             {getFormatLabel(keg.packaging_format_id)}
                           </option>
@@ -1374,6 +1388,7 @@ function KegsPage() {
                       <th>Variante</th>
                       <th>Estado</th>
                       <th>Cerveza</th>
+                      <th>Lote</th>
                       <th>Cliente</th>
                       <th>Volumen actual</th>
                       <th>Etiqueta</th>
@@ -1388,6 +1403,7 @@ function KegsPage() {
                         <td>{formFactorLabels[keg.form_factor]}</td>
                         <td>{statusLabels[keg.status]}</td>
                         <td>{getKegBeerLabel(keg)}</td>
+                        <td>{getKegBatchLabel(keg)}</td>
                         <td>{getCustomerName(keg.customer_id)}</td>
                         <td>{formatVolume(keg.current_volume_liters)} L</td>
                         <td>

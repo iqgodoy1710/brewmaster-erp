@@ -36,11 +36,7 @@ def get_auth_headers(
 
     assert response.status_code == 200
 
-    return {
-        "Authorization": (
-            f"Bearer {response.json()['access_token']}"
-        )
-    }
+    return {"Authorization": (f"Bearer {response.json()['access_token']}")}
 
 
 def test_login_returns_token_and_current_user_without_password_hash(
@@ -156,6 +152,7 @@ def test_sales_require_management_or_administrator_when_auth_is_enabled(
         == 403
     )
 
+
 def test_administrator_can_deactivate_another_user_but_not_self(
     client,
     db,
@@ -192,9 +189,8 @@ def test_administrator_can_deactivate_another_user_but_not_self(
     )
 
     assert response.status_code == 409
-    assert response.json() == {
-        "detail": "You cannot deactivate your own account."
-    }
+    assert response.json() == {"detail": "You cannot deactivate your own account."}
+
 
 def test_operator_can_read_operational_catalogs_but_cannot_modify_them(
     client,
@@ -249,7 +245,6 @@ def test_operator_can_read_operational_catalogs_but_cannot_modify_them(
                 "symbol": "fu",
             },
         ),
-        ("/customers/", {"name": "Forbidden Customer"}),
         (
             "/suppliers/",
             {
@@ -266,6 +261,14 @@ def test_operator_can_read_operational_catalogs_but_cannot_modify_them(
             json=payload,
         )
         assert response.status_code == 403, path
+
+    response = client.post(
+        "/customers/",
+        headers=headers,
+        json={"name": "Cliente creado por operario"},
+    )
+    assert response.status_code == 201
+    assert response.json()["name"] == "Cliente creado por operario"
 
 
 def test_only_administrator_can_register_kegs(
@@ -329,6 +332,7 @@ def test_only_administrator_can_register_kegs(
     assert management_response.status_code == 403
     assert operator_response.status_code == 403
     assert admin_response.status_code == 201
+
 
 def test_all_roles_can_register_raw_material_movements(
     client,

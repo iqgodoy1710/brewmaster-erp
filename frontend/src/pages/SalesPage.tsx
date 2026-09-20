@@ -46,18 +46,25 @@ function SalesPage() {
   const [allSales, setAllSales] = useState<Sale[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [presentations, setPresentations] = useState<BeerPresentation[]>([]);
-  const [packagingFormats, setPackagingFormats] = useState<
-    PackagingFormat[]
-  >([]);
+  const [packagingFormats, setPackagingFormats] = useState<PackagingFormat[]>(
+    [],
+  );
   const [kegs, setKegs] = useState<Keg[]>([]);
 
   const [lines, setLines] = useState<SaleLine[]>([]);
   const [customerId, setCustomerId] = useState("");
   const [notes, setNotes] = useState("");
   const [presentationId, setPresentationId] = useState("");
+  const [presentationSearch, setPresentationSearch] = useState("");
+  const [presentationType, setPresentationType] = useState<
+    "all" | "keg" | "bottle"
+  >("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [quantity, setQuantity] = useState("1");
-  const [activePrice, setActivePrice] =
-    useState<BeerPresentationPrice | null>(null);
+  const [activePrice, setActivePrice] = useState<BeerPresentationPrice | null>(
+    null,
+  );
   const [isPriceLoading, setIsPriceLoading] = useState(false);
 
   const [createdSale, setCreatedSale] = useState<Sale | null>(null);
@@ -143,14 +150,61 @@ function SalesPage() {
     void loadActivePrice();
   }, [presentationId]);
 
+  const filteredPresentations = useMemo(() => {
+    const search = presentationSearch.trim().toLocaleLowerCase();
+
+    const allowedFormatIds = new Set(
+      packagingFormats
+        .filter(
+          (format) =>
+            presentationType === "all" ||
+            format.format_type === presentationType,
+        )
+        .map((format) => format.id),
+    );
+
+    return presentations.filter((presentation) => {
+      const matchesType =
+        presentationType === "all" ||
+        allowedFormatIds.has(presentation.packaging_format_id);
+
+      const matchesSearch =
+        !search ||
+        `${presentation.code} ${presentation.name}`
+          .toLocaleLowerCase()
+          .includes(search);
+
+      return matchesType && matchesSearch;
+    });
+  }, [presentations, packagingFormats, presentationSearch, presentationType]);
+
+  const filteredSales = useMemo(() => {
+    return sales.filter((sale) => {
+      const date = new Date(sale.completed_at);
+      const saleDate = [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, "0"),
+        String(date.getDate()).padStart(2, "0"),
+      ].join("-");
+
+      return (
+        (!dateFrom || saleDate >= dateFrom) && (!dateTo || saleDate <= dateTo)
+      );
+    });
+  }, [sales, dateFrom, dateTo]);
+
   const totalUnits = useMemo(
-    () => sales.reduce((total, sale) => total + sale.total_units, 0),
-    [sales],
+    () => filteredSales.reduce((total, sale) => total + sale.total_units, 0),
+    [filteredSales],
   );
 
   const totalAmount = useMemo(
-    () => sales.reduce((total, sale) => total + Number(sale.total_amount), 0),
-    [sales],
+    () =>
+      filteredSales.reduce(
+        (total, sale) => total + Number(sale.total_amount),
+        0,
+      ),
+    [filteredSales],
   );
 
   const draftTotal = useMemo(
@@ -188,9 +242,7 @@ function SalesPage() {
 
   const kegLines = useMemo(
     () =>
-      lines.filter((line) =>
-        kegPresentationIds.has(line.beerPresentationId),
-      ),
+      lines.filter((line) => kegPresentationIds.has(line.beerPresentationId)),
     [kegPresentationIds, lines],
   );
 
@@ -217,9 +269,8 @@ function SalesPage() {
     beerPresentationId: number,
   ): number {
     return (
-      kegLines.find(
-        (line) => line.beerPresentationId === beerPresentationId,
-      )?.quantity ?? 0
+      kegLines.find((line) => line.beerPresentationId === beerPresentationId)
+        ?.quantity ?? 0
     );
   }
 
@@ -234,35 +285,34 @@ function SalesPage() {
   }
 
   function toggleKegSelection(kegId: number) {
-  const keg = kegs.find((item) => item.id === kegId);
-  const beerPresentationId = keg?.beer_presentation_id;
+    const keg = kegs.find((item) => item.id === kegId);
+    const beerPresentationId = keg?.beer_presentation_id;
 
-  if (beerPresentationId === null || beerPresentationId === undefined) {
-    return;
+    if (beerPresentationId === null || beerPresentationId === undefined) {
+      return;
+    }
+
+    setSelectedKegIds((currentIds) => {
+      if (currentIds.includes(kegId)) {
+        return currentIds.filter((id) => id !== kegId);
+      }
+
+      const requiredQuantity =
+        getRequiredKegQuantityForPresentation(beerPresentationId);
+
+      const selectedQuantity = currentIds.filter((id) => {
+        const selectedKeg = kegs.find((item) => item.id === id);
+
+        return selectedKeg?.beer_presentation_id === beerPresentationId;
+      }).length;
+
+      if (selectedQuantity >= requiredQuantity) {
+        return currentIds;
+      }
+
+      return [...currentIds, kegId];
+    });
   }
-
-  setSelectedKegIds((currentIds) => {
-    if (currentIds.includes(kegId)) {
-      return currentIds.filter((id) => id !== kegId);
-    }
-
-    const requiredQuantity = getRequiredKegQuantityForPresentation(
-      beerPresentationId,
-    );
-
-    const selectedQuantity = currentIds.filter((id) => {
-      const selectedKeg = kegs.find((item) => item.id === id);
-
-      return selectedKeg?.beer_presentation_id === beerPresentationId;
-    }).length;
-
-    if (selectedQuantity >= requiredQuantity) {
-      return currentIds;
-    }
-
-    return [...currentIds, kegId];
-  });
-}
 
   function addLine() {
     const selectedPresentation = presentations.find(
@@ -554,9 +604,7 @@ function SalesPage() {
                                 {" · "}
                                 {keg.current_volume_liters} L
                                 {keg.form_factor !== "standard" &&
-                                  ` · ${
-                                    kegFormFactorLabels[keg.form_factor]
-                                  }`}
+                                  ` · ${kegFormFactorLabels[keg.form_factor]}`}
                               </span>
                             </label>
                           );
@@ -624,6 +672,33 @@ function SalesPage() {
 
                 <div className="sale-line-editor">
                   <h3>Agregar ítem</h3>
+                  <label>
+                    Tipo de presentación
+                    <select
+                      onChange={(event) => {
+                        setPresentationType(
+                          event.target.value as "all" | "keg" | "bottle",
+                        );
+                        setPresentationId("");
+                      }}
+                      value={presentationType}
+                    >
+                      <option value="all">Todas</option>
+                      <option value="keg">Barriles</option>
+                      <option value="bottle">Botellas</option>
+                    </select>
+                  </label>
+                  <label>
+                    Buscar presentación
+                    <input
+                      onChange={(event) =>
+                        setPresentationSearch(event.target.value)
+                      }
+                      placeholder="Buscar por código o nombre"
+                      type="search"
+                      value={presentationSearch}
+                    />
+                  </label>
 
                   <div className="form-grid line-grid">
                     <label>
@@ -636,7 +711,7 @@ function SalesPage() {
                       >
                         <option value="">Seleccioná una presentación</option>
 
-                        {presentations.map((presentation) => (
+                        {filteredPresentations.map((presentation) => (
                           <option key={presentation.id} value={presentation.id}>
                             {presentation.code} · {presentation.name}
                             {" · Stock: "}
@@ -778,11 +853,47 @@ function SalesPage() {
               </form>
             )}
           </section>
+          <section className="panel">
+            <h2>Período de ventas</h2>
+
+            <div className="form-grid">
+              <label>
+                Desde
+                <input
+                  max={dateTo || undefined}
+                  onChange={(event) => setDateFrom(event.target.value)}
+                  type="date"
+                  value={dateFrom}
+                />
+              </label>
+
+              <label>
+                Hasta
+                <input
+                  min={dateFrom || undefined}
+                  onChange={(event) => setDateTo(event.target.value)}
+                  type="date"
+                  value={dateTo}
+                />
+              </label>
+            </div>
+
+            <button
+              className="secondary-button"
+              onClick={() => {
+                setDateFrom("");
+                setDateTo("");
+              }}
+              type="button"
+            >
+              Limpiar período
+            </button>
+          </section>
 
           <section className="summary-grid sales-summary">
             <article className="summary-card">
               <p>Ventas completadas</p>
-              <strong>{sales.length}</strong>
+              <strong>{filteredSales.length}</strong>
             </article>
 
             <article className="summary-card">
@@ -799,7 +910,7 @@ function SalesPage() {
           <section className="panel">
             <h2>Ventas completadas</h2>
 
-            {sales.length === 0 ? (
+            {filteredSales.length === 0 ? (
               <p className="empty-state">Todavía no hay ventas completadas.</p>
             ) : (
               <div className="table-wrapper">
@@ -815,7 +926,7 @@ function SalesPage() {
                   </thead>
 
                   <tbody>
-                    {sales.map((sale) => (
+                    {filteredSales.map((sale) => (
                       <tr key={sale.sale_id}>
                         <td>{sale.sale_code}</td>
                         <td>{sale.customer_name}</td>

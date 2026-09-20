@@ -132,6 +132,14 @@ function DashboardPage() {
       .sort((first, second) => first.beerName.localeCompare(second.beerName));
   }, [kegStock]);
 
+  const lowStockPresentationIds = useMemo(
+    () =>
+      new Set(
+        beerPresentationAlerts.map((alert) => alert.beer_presentation_id),
+      ),
+    [beerPresentationAlerts],
+  );
+
   const packagedStockGroups = useMemo(() => {
     const groups = new Map<string, PackagedFinishedProductStock[]>();
 
@@ -372,8 +380,26 @@ function DashboardPage() {
 
                           <tbody>
                             {group.items.map((item) => (
-                              <tr key={item.beer_presentation_id}>
-                                <td>{item.beer_presentation_name}</td>
+                              <tr
+                                className={
+                                  lowStockPresentationIds.has(
+                                    item.beer_presentation_id,
+                                  )
+                                    ? "stock-row-low"
+                                    : undefined
+                                }
+                                key={item.beer_presentation_id}
+                              >
+                                <td>
+                                  {item.beer_presentation_name}
+                                  {lowStockPresentationIds.has(
+                                    item.beer_presentation_id,
+                                  ) && (
+                                    <span className="stock-low-label">
+                                      Stock bajo
+                                    </span>
+                                  )}
+                                </td>
                                 <td>{item.packaging_format_name}</td>
                                 <td>{item.current_stock}</td>
                                 <td>

@@ -41,6 +41,7 @@ def read_customers(
             require_roles(
                 UserRole.ADMIN,
                 UserRole.MANAGEMENT,
+                UserRole.OPERATOR,
             )
         )
     ],

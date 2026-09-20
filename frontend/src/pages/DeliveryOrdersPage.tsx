@@ -112,6 +112,17 @@ function DeliveryOrdersPage() {
     presentations,
   ]);
 
+  const manageableOrders = useMemo(
+    () =>
+      orders.filter(
+        (order) =>
+          order.status === "draft" ||
+          order.status === "picking" ||
+          order.status === "delivered_pending_pricing",
+      ),
+    [orders],
+  );
+
   const compatibleFilledKegs = useMemo(() => {
     if (!selectedOrder) {
       return [];
@@ -1058,7 +1069,7 @@ function DeliveryOrdersPage() {
               >
                 <option value="">Seleccioná un pedido</option>
 
-                {orders.map((order) => (
+                {manageableOrders.map((order) => (
                   <option key={order.id} value={order.code}>
                     {order.code} · {getCustomerName(order.customer_id)} ·{" "}
                     {statusLabels[order.status]}
@@ -1095,19 +1106,6 @@ function DeliveryOrdersPage() {
 
                       <form className="sale-form" onSubmit={addItem}>
                         <div className="presentation-filter-controls">
-                          <label>
-                            Buscar presentación
-                            <input
-                              onChange={(event) => {
-                                setPresentationSearch(event.target.value);
-                                setPresentationId("");
-                              }}
-                              placeholder="Código o nombre de la presentación"
-                              type="search"
-                              value={presentationSearch}
-                            />
-                          </label>
-
                           <div
                             aria-label="Tipo de presentación"
                             className="status-filters"
@@ -1154,6 +1152,18 @@ function DeliveryOrdersPage() {
                               Barriles
                             </button>
                           </div>
+                          <label>
+                            Buscar presentación
+                            <input
+                              onChange={(event) => {
+                                setPresentationSearch(event.target.value);
+                                setPresentationId("");
+                              }}
+                              placeholder="Código o nombre de la presentación"
+                              type="search"
+                              value={presentationSearch}
+                            />
+                          </label>
                         </div>
                         <div className="form-grid line-grid">
                           <label>

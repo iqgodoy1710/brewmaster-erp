@@ -1,10 +1,5 @@
-import {
-  useCallback,
-  useEffect,
-  useState,
-  type FormEvent,
-} from "react";
-
+import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import "../App.css";
 import { apiGet, apiPost } from "../lib/api";
 import type {
@@ -50,9 +45,7 @@ function movementLabel(movement: CustomerAccountMovement) {
 function CustomerAccountsPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerId, setCustomerId] = useState("");
-  const [account, setAccount] = useState<CustomerAccount | null>(
-    null,
-  );
+  const [account, setAccount] = useState<CustomerAccount | null>(null);
   const [amount, setAmount] = useState("");
   const [paymentMethod, setPaymentMethod] =
     useState<CustomerPaymentMethod>("bank_transfer");
@@ -112,9 +105,7 @@ function CustomerAccountsPage() {
     void loadAccount(customerId);
   }, [customerId, loadAccount]);
 
-  async function registerPayment(
-    event: FormEvent<HTMLFormElement>,
-  ) {
+  async function registerPayment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!customerId) {
@@ -132,24 +123,19 @@ function CustomerAccountsPage() {
     setIsSaving(true);
 
     try {
-      const payment = await apiPost<CustomerPayment>(
-        "/customer-payments/",
-        {
-          customer_id: Number(customerId),
-          amount,
-          payment_method: paymentMethod,
-          reference: reference.trim() || null,
-          notes: notes.trim() || null,
-        },
-      );
+      const payment = await apiPost<CustomerPayment>("/customer-payments/", {
+        customer_id: Number(customerId),
+        amount,
+        payment_method: paymentMethod,
+        reference: reference.trim() || null,
+        notes: notes.trim() || null,
+      });
 
       setAmount("");
       setPaymentMethod("bank_transfer");
       setReference("");
       setNotes("");
-      setSuccess(
-        `El pago ${payment.code} fue registrado correctamente.`,
-      );
+      setSuccess(`El pago ${payment.code} fue registrado correctamente.`);
 
       await loadAccount(customerId);
     } catch (caughtError) {
@@ -170,9 +156,7 @@ function CustomerAccountsPage() {
       <section className="page-heading">
         <p className="eyebrow">Comercial</p>
         <h1>Cuentas corrientes</h1>
-        <p>
-          Consultá saldos de clientes y registrá pagos recibidos.
-        </p>
+        <p>Consultá saldos de clientes y registrá pagos recibidos.</p>
       </section>
 
       {error && (
@@ -226,9 +210,7 @@ function CustomerAccountsPage() {
                             : "Saldo actual"}
                       </p>
                       <strong>
-                        {formatCurrency(
-                          String(Math.abs(balance)),
-                        )}
+                        {formatCurrency(String(Math.abs(balance)))}
                       </strong>
                     </article>
                   </section>
@@ -236,18 +218,13 @@ function CustomerAccountsPage() {
                   <section className="panel sales-form-panel">
                     <h2>Registrar pago</h2>
 
-                    <form
-                      className="sale-form"
-                      onSubmit={registerPayment}
-                    >
+                    <form className="sale-form" onSubmit={registerPayment}>
                       <div className="form-grid">
                         <label>
                           Importe
                           <input
                             min="0.01"
-                            onChange={(event) =>
-                              setAmount(event.target.value)
-                            }
+                            onChange={(event) => setAmount(event.target.value)}
                             required
                             step="0.01"
                             type="number"
@@ -290,9 +267,7 @@ function CustomerAccountsPage() {
                       <label>
                         Notas
                         <textarea
-                          onChange={(event) =>
-                            setNotes(event.target.value)
-                          }
+                          onChange={(event) => setNotes(event.target.value)}
                           placeholder="Notas opcionales del pago."
                           rows={3}
                           value={notes}
@@ -300,9 +275,7 @@ function CustomerAccountsPage() {
                       </label>
 
                       <button disabled={isSaving} type="submit">
-                        {isSaving
-                          ? "Registrando..."
-                          : "Registrar pago"}
+                        {isSaving ? "Registrando..." : "Registrar pago"}
                       </button>
                     </form>
                   </section>
@@ -310,8 +283,7 @@ function CustomerAccountsPage() {
                   <section className="panel">
                     <h2>Movimientos</h2>
 
-                    {!account ||
-                    account.movements.length === 0 ? (
+                    {!account || account.movements.length === 0 ? (
                       <p className="empty-state">
                         Todavía no hay movimientos para este cliente.
                       </p>
@@ -331,19 +303,22 @@ function CustomerAccountsPage() {
                           <tbody>
                             {account.movements.map((movement) => {
                               const isCharge =
-                                movement.movement_type ===
-                                "sale_charge";
+                                movement.movement_type === "sale_charge";
 
                               return (
                                 <tr key={movement.id}>
-                                  <td>
-                                    {formatDate(movement.occurred_at)}
-                                  </td>
+                                  <td>{formatDate(movement.occurred_at)}</td>
                                   <td>{movementLabel(movement)}</td>
                                   <td>
-                                    {movement.sale_code ??
-                                      movement.payment_code ??
-                                      "—"}
+                                    {movement.sale_code ? (
+                                      <Link
+                                        to={`/detalle-ventas?venta=${encodeURIComponent(movement.sale_code)}`}
+                                      >
+                                        {movement.sale_code}
+                                      </Link>
+                                    ) : (
+                                      (movement.payment_code ?? "—")
+                                    )}
                                   </td>
                                   <td>
                                     {isCharge
@@ -355,9 +330,7 @@ function CustomerAccountsPage() {
                                       ? formatCurrency(movement.amount)
                                       : "—"}
                                   </td>
-                                  <td>
-                                    {movement.reference ?? "—"}
-                                  </td>
+                                  <td>{movement.reference ?? "—"}</td>
                                 </tr>
                               );
                             })}

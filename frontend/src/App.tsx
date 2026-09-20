@@ -368,12 +368,13 @@ function AppContent() {
 
             {(canManageCatalogs ||
               hasFinancialAccess ||
-              canViewFinishedProducts) && (
+              canViewFinishedProducts ||
+              canOperate) && (
               <details className="nav-group">
                 <summary>Configuración</summary>
 
                 <div className="nav-group-menu">
-                  {hasFinancialAccess && (
+                  {canOperate && (
                     <NavLink
                       className={({ isActive }) =>
                         isActive ? "nav-link active" : "nav-link"
@@ -645,11 +646,7 @@ function AppContent() {
           <Route
             path="/clientes"
             element={
-              hasFinancialAccess ? (
-                <CustomersPage />
-              ) : (
-                <Navigate to="/" replace />
-              )
+              canOperate ? <CustomersPage /> : <Navigate to="/" replace />
             }
           />
 

@@ -554,6 +554,14 @@ function KegQrPage() {
                   {kegBeer?.name ?? kegPresentation.name}
                 </p>
               )}
+              {keg.production_batch_id !== null && (
+                <p>
+                  <strong>Lote:</strong>{" "}
+                  {productionBatches.find(
+                    (batch) => batch.id === keg.production_batch_id,
+                  )?.code ?? "Lote no encontrado"}
+                </p>
+              )}
 
               {keg.customer_id !== null && (
                 <p>

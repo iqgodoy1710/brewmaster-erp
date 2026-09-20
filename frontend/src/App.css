@@ -1129,3 +1129,15 @@ select.emphasized-select option[value=""] {
     text-align: center;
   }
 }
+
+.stock-row-low {
+  background: #fff7ed;
+}
+
+.stock-low-label {
+  display: inline-block;
+  margin-left: 0.5rem;
+  color: #9a3412;
+  font-size: 0.8rem;
+  font-weight: 700;
+}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-
+import { useSearchParams } from "react-router-dom";
 import "../App.css";
 import { apiGet } from "../lib/api";
 import type { Sale, SaleDetail } from "../types/api";
@@ -29,6 +29,8 @@ const statusLabel = {
 };
 
 function SaleDetailsPage() {
+  const [searchParams] = useSearchParams();
+  const requestedSaleCode = searchParams.get("venta")?.trim() ?? "";
   const [sales, setSales] = useState<Sale[]>([]);
   const [saleCode, setSaleCode] = useState("");
   const [saleDetail, setSaleDetail] = useState<SaleDetail | null>(null);
@@ -70,7 +72,9 @@ function SaleDetailsPage() {
       setIsLoadingDetail(true);
       setError(null);
 
-      const data = await apiGet<SaleDetail>(`/sales/${nextSaleCode}/detail`);
+      const data = await apiGet<SaleDetail>(
+        `/sales/${encodeURIComponent(nextSaleCode)}/detail`,
+      );
 
       setSaleDetail(data);
     } catch (caughtError) {
@@ -83,6 +87,12 @@ function SaleDetailsPage() {
       setIsLoadingDetail(false);
     }
   }
+
+  useEffect(() => {
+    if (requestedSaleCode) {
+      void handleSaleChange(requestedSaleCode);
+    }
+  }, [requestedSaleCode]);
 
   return (
     <main className="dashboard">
