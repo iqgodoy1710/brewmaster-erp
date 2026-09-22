@@ -411,6 +411,20 @@ class DeliveryOrderService:
             delivery_order.id,
             delivery_order_item_id,
         )
+        beer_presentation = get_beer_presentation_by_id(
+            db,
+            item.beer_presentation_id,
+        )
+
+        if not beer_presentation or not beer_presentation.active:
+            raise InvalidDeliveryOrderItemError(
+                "The beer presentation is not available for picking."
+            )
+
+        if close_data.requested_quantity > beer_presentation.current_stock:
+            raise InvalidDeliveryOrderItemError(
+                "There is not enough finished product stock to close this item."
+            )
 
         try:
             update_delivery_order_item(

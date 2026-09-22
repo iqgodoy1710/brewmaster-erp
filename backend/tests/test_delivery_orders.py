@@ -487,3 +487,55 @@ def test_cannot_deliver_order_with_open_items(client):
             "before delivery."
         )
     }
+
+def test_delivery_order_item_cannot_be_closed_without_enough_stock(
+    client,
+):
+    context = create_delivery_order_context(client)
+
+    order = client.post(
+        "/delivery-orders/",
+        json={
+            "customer_id": context["customer"]["id"],
+        },
+    ).json()
+
+    item_response = client.post(
+        f"/delivery-orders/{order['code']}/items",
+        json={
+            "beer_presentation_id": context["presentation"]["id"],
+            "requested_quantity": 21,
+        },
+    )
+    assert item_response.status_code == 201
+
+    item = item_response.json()
+
+    start_response = client.post(
+        f"/delivery-orders/{order['code']}/start-picking",
+    )
+    assert start_response.status_code == 200
+
+    close_response = client.post(
+        (
+            f"/delivery-orders/{order['code']}"
+            f"/items/{item['id']}/close"
+        ),
+        json={
+            "requested_quantity": 21,
+        },
+    )
+
+    assert close_response.status_code == 409
+    assert close_response.json() == {
+        "detail": (
+            "There is not enough finished product stock "
+            "to close this item."
+        )
+    }
+
+    detail_response = client.get(
+        f"/delivery-orders/{order['code']}",
+    )
+    assert detail_response.status_code == 200
+    assert detail_response.json()["items"][0]["picked_quantity"] == 0

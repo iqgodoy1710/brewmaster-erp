@@ -284,6 +284,21 @@ function DeliveryOrdersPage() {
       )?.current_stock ?? 0
     );
   }
+  function canCloseItem(
+    itemId: number,
+    beerPresentationId: number,
+    requestedQuantity: number,
+  ): boolean {
+    const quantity = Number(
+      requestedQuantitiesByItemId[itemId] ?? String(requestedQuantity),
+    );
+
+    return (
+      Number.isInteger(quantity) &&
+      quantity > 0 &&
+      quantity <= getPresentationStock(beerPresentationId)
+    );
+  }
 
   function getCustomerName(customerIdToFind: number): string {
     return (
@@ -1263,8 +1278,21 @@ function DeliveryOrdersPage() {
                             <td data-label="Stock">
                               {getPresentationStock(item.beer_presentation_id)}
                             </td>
-                            <td data-label="Solicitado">
-                              {item.requested_quantity}
+                            <td
+                              className={
+                                item.requested_quantity >
+                                getPresentationStock(item.beer_presentation_id)
+                                  ? "requested-quantity-insufficient"
+                                  : "requested-quantity-sufficient"
+                              }
+                              data-label="Solicitado"
+                            >
+                              <strong>{item.requested_quantity}</strong>
+
+                              {item.requested_quantity >
+                                getPresentationStock(
+                                  item.beer_presentation_id,
+                                ) && <small>Stock insuficiente</small>}
                             </td>
                             <td data-label="Preparado">
                               {item.picked_quantity}
@@ -1363,7 +1391,14 @@ function DeliveryOrdersPage() {
                                     />
 
                                     <button
-                                      disabled={isSaving}
+                                      disabled={
+                                        isSaving ||
+                                        !canCloseItem(
+                                          item.id,
+                                          item.beer_presentation_id,
+                                          item.requested_quantity,
+                                        )
+                                      }
                                       onClick={() =>
                                         void closeDeliveryOrderItem(item.id)
                                       }

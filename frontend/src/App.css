@@ -1159,3 +1159,19 @@ select.emphasized-select option[value=""] {
     flex-direction: column;
   }
 }
+
+.requested-quantity-sufficient {
+  color: #166534;
+}
+
+.requested-quantity-insufficient {
+  color: #b91c1c;
+}
+
+.requested-quantity-insufficient small {
+  display: block;
+  margin-top: 0.2rem;
+  color: #b91c1c;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
