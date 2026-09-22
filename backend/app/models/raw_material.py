@@ -47,3 +47,9 @@ class RawMaterial(BaseModel):
         "BeerPresentationPackagingMaterial",
         back_populates="raw_material",
     )
+
+    cost_history = relationship(
+        "RawMaterialCostHistory",
+        back_populates="raw_material",
+        order_by="RawMaterialCostHistory.occurred_at.desc()",
+    )

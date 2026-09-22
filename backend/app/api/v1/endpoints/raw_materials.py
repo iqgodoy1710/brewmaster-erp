@@ -10,6 +10,9 @@ from app.schemas.raw_material import (
     RawMaterialResponse,
     RawMaterialUpdate,
 )
+from app.schemas.raw_material_cost_history import (
+    RawMaterialCostHistoryResponse,
+)
 from app.schemas.raw_material_reference import RawMaterialReferenceResponse
 from app.services.raw_material_service import RawMaterialService
 from fastapi import APIRouter, Depends, status
@@ -98,6 +101,23 @@ def read_raw_material_references(
 ):
     return RawMaterialService.get_references(db)
 
+@router.get(
+    "/{code}/cost-history",
+    response_model=list[RawMaterialCostHistoryResponse],
+    dependencies=[
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+                UserRole.MANAGEMENT,
+            )
+        )
+    ],
+)
+def read_raw_material_cost_history(
+    code: str,
+    db: Session = Depends(get_db),
+):
+    return RawMaterialService.get_cost_history(db, code)
 
 @router.get(
     "/{code}",

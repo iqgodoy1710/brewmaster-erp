@@ -28,6 +28,7 @@ from app.models.packaging_format import PackagingFormat
 from app.models.packaging_run import PackagingRun
 from app.models.production_batch import ProductionBatch
 from app.models.raw_material import RawMaterial
+from app.models.raw_material_cost_history import RawMaterialCostHistory
 from app.models.raw_material_stock_movement import RawMaterialStockMovement
 from app.models.recipe import Recipe
 from app.models.recipe_ingredient import RecipeIngredient

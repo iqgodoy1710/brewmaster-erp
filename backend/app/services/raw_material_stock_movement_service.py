@@ -11,12 +11,15 @@ from app.crud.raw_material import (
     update_raw_material_cost,
     update_raw_material_stock,
 )
+from app.crud.raw_material_cost_history import (
+    create_raw_material_cost_history,
+)
 from app.crud.raw_material_stock_movement import (
     create_raw_material_stock_movement,
     get_raw_material_stock_movements,
 )
 from app.crud.supplier import get_supplier_by_id
-from app.models.enums import RawMaterialMovementType
+from app.models.enums import RawMaterialCostChangeSource, RawMaterialMovementType
 from app.schemas.raw_material_stock_movement import (
     RawMaterialStockMovementCreate,
 )
@@ -74,11 +77,23 @@ class RawMaterialStockMovementService:
                 movement_data.movement_type == RawMaterialMovementType.PURCHASE_RECEIPT
                 and movement_data.unit_cost is not None
                 and movement_data.unit_cost > Decimal("0")
+                and movement_data.unit_cost != raw_material.current_cost
             ):
+                previous_cost = raw_material.current_cost
+
                 update_raw_material_cost(
                     db,
                     raw_material,
                     movement_data.unit_cost,
+                )
+
+                create_raw_material_cost_history(
+                    db,
+                    raw_material_id=raw_material.id,
+                    stock_movement_id=movement.id,
+                    previous_cost=previous_cost,
+                    new_cost=movement_data.unit_cost,
+                    source=(RawMaterialCostChangeSource.PURCHASE_RECEIPT),
                 )
             db.commit()
         except Exception:

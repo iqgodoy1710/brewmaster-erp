@@ -71,6 +71,22 @@ def test_purchase_receipt_increases_raw_material_stock(client):
     assert history[0]["id"] == movement["id"]
     assert history[0]["movement_type"] == "purchase_receipt"
 
+    cost_history_response = client.get(
+        f"/raw-materials/{raw_material['code']}/cost-history"
+    )
+
+    assert cost_history_response.status_code == 200
+
+    cost_history = cost_history_response.json()
+
+    assert len(cost_history) == 1
+    assert cost_history[0]["source"] == "purchase_receipt"
+    assert cost_history[0]["stock_movement_id"] == movement["id"]
+    assert Decimal(cost_history[0]["previous_cost"]) == Decimal("0.00")
+    assert Decimal(cost_history[0]["new_cost"]) == Decimal("2.50")
+    assert Decimal(cost_history[0]["variation_amount"]) == Decimal("2.50")
+    assert cost_history[0]["variation_percentage"] is None
+
 
 def test_outbound_movement_cannot_make_stock_negative(client):
     category = client.post(
@@ -170,22 +186,21 @@ def test_purchase_receipt_with_zero_cost_preserves_current_cost(
     )
 
     assert movement_response.status_code == 201
-    assert Decimal(
-        movement_response.json()["unit_cost"]
-    ) == Decimal("0.00")
+    assert Decimal(movement_response.json()["unit_cost"]) == Decimal("0.00")
 
-    raw_material_response = client.get(
-        f"/raw-materials/{raw_material['code']}"
-    )
+    raw_material_response = client.get(f"/raw-materials/{raw_material['code']}")
 
     assert raw_material_response.status_code == 200
 
     updated_raw_material = raw_material_response.json()
 
-    assert Decimal(
-        updated_raw_material["current_stock"]
-    ) == Decimal("500.000")
+    assert Decimal(updated_raw_material["current_stock"]) == Decimal("500.000")
 
-    assert Decimal(
-        updated_raw_material["current_cost"]
-    ) == Decimal("4.75")
+    assert Decimal(updated_raw_material["current_cost"]) == Decimal("4.75")
+
+    cost_history_response = client.get(
+        f"/raw-materials/{raw_material['code']}/cost-history"
+    )
+
+    assert cost_history_response.status_code == 200
+    assert cost_history_response.json() == []

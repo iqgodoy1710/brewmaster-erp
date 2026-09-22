@@ -1141,3 +1141,21 @@ select.emphasized-select option[value=""] {
   font-size: 0.8rem;
   font-weight: 700;
 }
+
+.panel-heading-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.panel-heading-actions h2,
+.panel-heading-actions p {
+  margin-top: 0;
+}
+
+@media (max-width: 720px) {
+  .panel-heading-actions {
+    flex-direction: column;
+  }
+}

@@ -95,3 +95,9 @@ class RawMaterialStockMovement(BaseModel):
         "KegRepackagingRun",
         back_populates="raw_material_stock_movements",
     )
+
+    cost_change = relationship(
+        "RawMaterialCostHistory",
+        back_populates="stock_movement",
+        uselist=False,
+    )

@@ -50,8 +50,7 @@ def update_raw_material(
     for field, value in update_data.items():
         setattr(raw_material, field, value)
 
-    db.commit()
-    db.refresh(raw_material)
+    db.flush()
 
     return raw_material
 

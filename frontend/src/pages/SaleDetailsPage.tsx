@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import "../App.css";
 import { apiGet } from "../lib/api";
 import type { Sale, SaleDetail } from "../types/api";
@@ -29,6 +29,7 @@ const statusLabel = {
 };
 
 function SaleDetailsPage() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const requestedSaleCode = searchParams.get("venta")?.trim() ?? "";
   const [sales, setSales] = useState<Sale[]>([]);
@@ -101,6 +102,13 @@ function SaleDetailsPage() {
         <h1>Detalle de venta</h1>
         <p>Consultá los artículos, importes y estado de cada venta.</p>
       </section>
+      <button
+        className="secondary-button"
+        onClick={() => navigate(-1)}
+        type="button"
+      >
+        Volver
+      </button>
 
       {error && (
         <p className="error-message" role="alert">

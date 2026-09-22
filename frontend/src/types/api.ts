@@ -42,6 +42,22 @@ export type RawMaterial = {
   updated_at: string;
 };
 
+export type RawMaterialCostChangeSource =
+  | "purchase_receipt"
+  | "manual_update";
+
+export type RawMaterialCostHistory = {
+  id: number;
+  raw_material_id: number;
+  stock_movement_id: number | null;
+  source: RawMaterialCostChangeSource;
+  previous_cost: string;
+  new_cost: string;
+  variation_amount: string;
+  variation_percentage: string | null;
+  occurred_at: string;
+};
+
 export type BeerPresentation = {
   id: number;
   code: string;

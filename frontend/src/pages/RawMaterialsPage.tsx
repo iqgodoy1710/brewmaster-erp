@@ -2,7 +2,12 @@ import { useCallback, useEffect, useState, useMemo } from "react";
 
 import "../App.css";
 import { apiDelete, apiGet, apiPatch, apiPost } from "../lib/api";
-import type { Category, RawMaterial, Unit } from "../types/api";
+import type {
+  Category,
+  RawMaterial,
+  RawMaterialCostHistory,
+  Unit,
+} from "../types/api";
 
 const formatNumber = (value: string) =>
   new Intl.NumberFormat("es-ES", {
@@ -16,6 +21,16 @@ const formatCurrency = (value: string) =>
     currency: "USD",
     currencyDisplay: "narrowSymbol",
   }).format(Number(value));
+const formatDate = (value: string) =>
+  new Intl.DateTimeFormat("es-ES", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+
+const costSourceLabels = {
+  purchase_receipt: "Recepción de compra",
+  manual_update: "Actualización manual",
+};
 
 function RawMaterialsPage() {
   const [editingRawMaterial, setEditingRawMaterial] =
@@ -34,6 +49,10 @@ function RawMaterialsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [costHistoryMaterial, setCostHistoryMaterial] =
+    useState<RawMaterial | null>(null);
+  const [costHistory, setCostHistory] = useState<RawMaterialCostHistory[]>([]);
+  const [isCostHistoryLoading, setIsCostHistoryLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -181,7 +200,28 @@ function RawMaterialsPage() {
       setIsSaving(false);
     }
   }
+  async function loadCostHistory(rawMaterial: RawMaterial) {
+    setCostHistoryMaterial(rawMaterial);
+    setCostHistory([]);
+    setIsCostHistoryLoading(true);
+    setError(null);
 
+    try {
+      const data = await apiGet<RawMaterialCostHistory[]>(
+        `/raw-materials/${encodeURIComponent(rawMaterial.code)}/cost-history`,
+      );
+
+      setCostHistory(data);
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "No se pudo cargar el historial de costos.",
+      );
+    } finally {
+      setIsCostHistoryLoading(false);
+    }
+  }
   async function handleReactivate(rawMaterial: RawMaterial) {
     const confirmed = window.confirm(
       `¿Reactivar el insumo "${rawMaterial.name}"?`,
@@ -410,6 +450,13 @@ function RawMaterialsPage() {
                     <td>
                       <div className="inline-actions">
                         <button
+                          disabled={isSaving || isCostHistoryLoading}
+                          onClick={() => void loadCostHistory(rawMaterial)}
+                          type="button"
+                        >
+                          Ver costos
+                        </button>
+                        <button
                           disabled={isSaving}
                           onClick={() => startEditing(rawMaterial)}
                           type="button"
@@ -433,6 +480,80 @@ function RawMaterialsPage() {
           </div>
         )}
       </section>
+      {costHistoryMaterial && (
+        <section className="panel">
+          <div className="panel-heading-actions">
+            <div>
+              <h2>Historial de costos</h2>
+              <p>
+                {costHistoryMaterial.code} · {costHistoryMaterial.name}
+              </p>
+            </div>
+
+            <button
+              className="secondary-button"
+              onClick={() => {
+                setCostHistoryMaterial(null);
+                setCostHistory([]);
+              }}
+              type="button"
+            >
+              Cerrar
+            </button>
+          </div>
+
+          {isCostHistoryLoading ? (
+            <p>Cargando historial...</p>
+          ) : costHistory.length === 0 ? (
+            <p className="empty-state">
+              Este insumo todavía no tiene cambios de costo registrados.
+            </p>
+          ) : (
+            <div className="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Origen</th>
+                    <th>Costo anterior</th>
+                    <th>Costo nuevo</th>
+                    <th>Variación</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {costHistory.map((costChange) => {
+                    const variation = Number(costChange.variation_amount);
+                    const variationPrefix = variation > 0 ? "+" : "";
+
+                    return (
+                      <tr key={costChange.id}>
+                        <td>{formatDate(costChange.occurred_at)}</td>
+                        <td>{costSourceLabels[costChange.source]}</td>
+                        <td>{formatCurrency(costChange.previous_cost)}</td>
+                        <td>{formatCurrency(costChange.new_cost)}</td>
+                        <td>
+                          {variationPrefix}
+                          {formatCurrency(costChange.variation_amount)}
+                          {" · "}
+                          {costChange.variation_percentage === null
+                            ? "Sin base anterior"
+                            : `${Number(
+                                costChange.variation_percentage,
+                              ).toLocaleString("es-ES", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}%`}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
       <section className="panel">
         <h2>Insumos desactivados</h2>
 

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from app.common.exceptions import (
     CategoryNotFoundError,
     RawMaterialNotFoundError,
@@ -14,9 +16,17 @@ from app.crud.raw_material import (
     reactivate_raw_material,
     update_raw_material,
 )
+from app.crud.raw_material_cost_history import (
+    create_raw_material_cost_history,
+    get_raw_material_cost_history,
+)
 from app.crud.unit import get_unit_by_id
+from app.models.enums import RawMaterialCostChangeSource
 from app.schemas.inventory_alert import RawMaterialLowStockResponse
 from app.schemas.raw_material import RawMaterialCreate, RawMaterialUpdate
+from app.schemas.raw_material_cost_history import (
+    RawMaterialCostHistoryResponse,
+)
 from app.schemas.raw_material_reference import (
     RawMaterialReferenceResponse,
 )
@@ -81,11 +91,38 @@ class RawMaterialService:
             if not unit:
                 raise UnitNotFoundError("The selected unit does not exist.")
 
-        return update_raw_material(
-            db,
-            raw_material,
-            raw_material_data,
-        )
+        previous_cost = raw_material.current_cost
+        new_cost = update_data.get("current_cost")
+
+        try:
+            update_raw_material(
+                db,
+                raw_material,
+                raw_material_data,
+            )
+
+            if (
+                new_cost is not None
+                and new_cost != previous_cost
+            ):
+                create_raw_material_cost_history(
+                    db,
+                    raw_material_id=raw_material.id,
+                    previous_cost=previous_cost,
+                    new_cost=new_cost,
+                    source=(
+                        RawMaterialCostChangeSource.MANUAL_UPDATE
+                    ),
+                )
+
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+
+        db.refresh(raw_material)
+
+        return raw_material
 
     @staticmethod
     def deactivate(db: Session, code: str):
@@ -141,4 +178,43 @@ class RawMaterialService:
                 unit_symbol=unit.symbol,
             )
             for raw_material, unit in rows
+        ]
+
+    @staticmethod
+    def get_cost_history(
+        db: Session,
+        code: str,
+    ) -> list[RawMaterialCostHistoryResponse]:
+        raw_material = RawMaterialService.get_by_code(db, code)
+        cost_changes = get_raw_material_cost_history(
+            db,
+            raw_material.id,
+        )
+
+        return [
+            RawMaterialCostHistoryResponse(
+                id=cost_change.id,
+                raw_material_id=cost_change.raw_material_id,
+                stock_movement_id=cost_change.stock_movement_id,
+                source=cost_change.source,
+                previous_cost=cost_change.previous_cost,
+                new_cost=cost_change.new_cost,
+                variation_amount=(
+                    cost_change.new_cost - cost_change.previous_cost
+                ),
+                variation_percentage=(
+                    (
+                        (
+                            cost_change.new_cost
+                            - cost_change.previous_cost
+                        )
+                        / cost_change.previous_cost
+                    )
+                    * Decimal("100")
+                    if cost_change.previous_cost > 0
+                    else None
+                ),
+                occurred_at=cost_change.occurred_at,
+            )
+            for cost_change in cost_changes
         ]

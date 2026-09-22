@@ -277,6 +277,13 @@ function DeliveryOrdersPage() {
       ? `${presentation.code} · ${presentation.name}`
       : "Presentación no encontrada";
   }
+  function getPresentationStock(presentationIdToFind: number): number {
+    return (
+      presentations.find(
+        (presentation) => presentation.id === presentationIdToFind,
+      )?.current_stock ?? 0
+    );
+  }
 
   function getCustomerName(customerIdToFind: number): string {
     return (
@@ -1232,6 +1239,7 @@ function DeliveryOrdersPage() {
                       <thead>
                         <tr>
                           <th>Presentación</th>
+                          <th>Stock</th>
                           <th>Solicitado</th>
                           <th>Preparado</th>
                           <th>Entregado</th>
@@ -1251,6 +1259,9 @@ function DeliveryOrdersPage() {
                           <tr key={item.id}>
                             <td data-label="Presentación">
                               {getPresentationName(item.beer_presentation_id)}
+                            </td>
+                            <td data-label="Stock">
+                              {getPresentationStock(item.beer_presentation_id)}
                             </td>
                             <td data-label="Solicitado">
                               {item.requested_quantity}

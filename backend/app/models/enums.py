@@ -98,3 +98,7 @@ class DeliveryOrderStatus(StrEnum):
     DELIVERED_PENDING_PRICING = "delivered_pending_pricing"
     CLOSED = "closed"
     CANCELLED = "cancelled"
+
+class RawMaterialCostChangeSource(StrEnum):
+    PURCHASE_RECEIPT = "purchase_receipt"
+    MANUAL_UPDATE = "manual_update"
