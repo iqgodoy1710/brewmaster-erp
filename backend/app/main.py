@@ -132,6 +132,7 @@ from app.common.exceptions import (
     InvalidKegPackagingFormatError,
     InvalidKegRemnantTransferError,
     InvalidKegRepackagingError,
+    InvalidKegRepackagingReversalError,
     InvalidKegReturnError,
     InvalidKegTransferError,
     InvalidKegWashingError,
@@ -504,6 +505,11 @@ app.add_exception_handler(
 
 app.add_exception_handler(
     InvalidKegRepackagingError,
+    keg_conflict_handler,
+)
+
+app.add_exception_handler(
+    InvalidKegRepackagingReversalError,
     keg_conflict_handler,
 )
 

@@ -55,6 +55,7 @@ def create_keg_repackaging_run(
 
     return repackaging_run
 
+
 def get_keg_repackaging_runs_by_keg(
     db: Session,
     keg_id: int,
@@ -64,6 +65,7 @@ def get_keg_repackaging_runs_by_keg(
         .filter(
             KegRepackagingRun.keg_id == keg_id,
             KegRepackagingRun.active.is_(True),
+            KegRepackagingRun.reversed_at.is_(None),
         )
         .order_by(
             KegRepackagingRun.occurred_at.desc(),
@@ -71,3 +73,27 @@ def get_keg_repackaging_runs_by_keg(
         )
         .all()
     )
+
+
+def get_keg_repackaging_run_by_code(
+    db: Session,
+    code: str,
+) -> KegRepackagingRun | None:
+    return db.query(KegRepackagingRun).filter(KegRepackagingRun.code == code).first()
+
+
+def reverse_keg_repackaging_run(
+    db: Session,
+    repackaging_run: KegRepackagingRun,
+    *,
+    reversed_at: datetime,
+    reversed_by_user_id: int | None,
+    reversal_reason: str,
+) -> KegRepackagingRun:
+    repackaging_run.reversed_at = reversed_at
+    repackaging_run.reversed_by_user_id = reversed_by_user_id
+    repackaging_run.reversal_reason = reversal_reason
+
+    db.flush()
+
+    return repackaging_run

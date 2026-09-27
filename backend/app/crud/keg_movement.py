@@ -82,3 +82,35 @@ def create_keg_movement(
     db.flush()
 
     return movement
+
+def get_latest_keg_movement(
+    db: Session,
+    keg_id: int,
+) -> KegMovement | None:
+    return (
+        db.query(KegMovement)
+        .filter(
+            KegMovement.keg_id == keg_id,
+            KegMovement.active.is_(True),
+        )
+        .order_by(KegMovement.id.desc())
+        .first()
+    )
+
+
+def get_repackaging_keg_movement(
+    db: Session,
+    keg_repackaging_run_id: int,
+) -> KegMovement | None:
+    return (
+        db.query(KegMovement)
+        .filter(
+            KegMovement.keg_repackaging_run_id
+            == keg_repackaging_run_id,
+            KegMovement.movement_type
+            == KegMovementType.REPACKAGING,
+            KegMovement.active.is_(True),
+        )
+        .order_by(KegMovement.id.desc())
+        .first()
+    )

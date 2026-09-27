@@ -286,6 +286,9 @@ class RecipeHasProductionBatchesError(Exception):
 class InvalidKegRepackagingError(Exception):
     pass
 
+class InvalidKegRepackagingReversalError(Exception):
+    pass
+
 # Exceptions related to DELIVERY ORDERS
 
 

@@ -108,3 +108,48 @@ def create_repackaging_material_consumption_movement(
     db.flush()
 
     return movement
+
+def get_repackaging_material_movements(
+    db: Session,
+    keg_repackaging_run_id: int,
+) -> list[RawMaterialStockMovement]:
+    return (
+        db.query(RawMaterialStockMovement)
+        .filter(
+            RawMaterialStockMovement.keg_repackaging_run_id
+            == keg_repackaging_run_id,
+            RawMaterialStockMovement.movement_type
+            == RawMaterialMovementType.PRODUCTION_CONSUMPTION,
+            RawMaterialStockMovement.active.is_(True),
+        )
+        .order_by(RawMaterialStockMovement.id)
+        .all()
+    )
+
+
+def create_repackaging_material_reversal_movement(
+    db: Session,
+    *,
+    raw_material_id: int,
+    keg_repackaging_run_id: int,
+    quantity: Decimal,
+    reference: str,
+    notes: str | None = None,
+    occurred_at: datetime | None = None,
+) -> RawMaterialStockMovement:
+    movement = RawMaterialStockMovement(
+        raw_material_id=raw_material_id,
+        keg_repackaging_run_id=keg_repackaging_run_id,
+        movement_type=(
+            RawMaterialMovementType.REPACKAGING_REVERSAL
+        ),
+        quantity=quantity,
+        reference=reference,
+        notes=notes,
+        occurred_at=occurred_at,
+    )
+
+    db.add(movement)
+    db.flush()
+
+    return movement

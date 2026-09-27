@@ -43,6 +43,7 @@ from app.common.exceptions import (
     InvalidKegPackagingFormatError,
     InvalidKegRemnantTransferError,
     InvalidKegRepackagingError,
+    InvalidKegRepackagingReversalError,
     InvalidKegReturnError,
     InvalidKegTransferError,
     InvalidKegWashingError,
@@ -369,6 +370,7 @@ async def keg_conflict_handler(
         | InvalidKegReturnError
         | InvalidKegWashingError
         | InvalidKegRemnantTransferError
+        | InvalidKegRepackagingReversalError
     ),
 ) -> JSONResponse:
     return JSONResponse(
@@ -386,6 +388,7 @@ async def keg_not_found_handler(
         content={"detail": str(error)},
     )
 
+
 async def delivery_order_conflict_handler(
     request: Request,
     error: (
@@ -402,6 +405,7 @@ async def delivery_order_conflict_handler(
         status_code=409,
         content={"detail": str(error)},
     )
+
 
 async def bottle_pasteurization_conflict_handler(
     request: Request,

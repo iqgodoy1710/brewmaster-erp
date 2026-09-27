@@ -37,5 +37,17 @@ class KegRepackagingRunResponse(BaseModel):
     active: bool
     created_at: datetime
     updated_at: datetime
+    reversed_at: datetime | None
+    reversed_by_user_id: int | None
+    reversal_reason: str | None
 
     model_config = ConfigDict(from_attributes=True)
+
+class KegRepackagingRunReverse(BaseModel):
+    reason: str = Field(
+        ...,
+        min_length=1,
+        max_length=500,
+    )
+
+    model_config = ConfigDict(extra="forbid")

@@ -27,6 +27,7 @@ const formatDate = (value: string) =>
 function KegRepackagingPage() {
   const currentUser = useCurrentUser();
   const canOperate = hasRole(currentUser, "admin", "management", "operator");
+  const canReverse = hasRole(currentUser, "admin");
 
   const [kegs, setKegs] = useState<Keg[]>([]);
   const [beers, setBeers] = useState<Beer[]>([]);
@@ -42,6 +43,7 @@ function KegRepackagingPage() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [reversingCode, setReversingCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -250,6 +252,56 @@ function KegRepackagingPage() {
     }
   }
 
+  async function handleReverse(run: KegRepackagingRun) {
+    const reason = window.prompt(`Indicá el motivo para deshacer ${run.code}:`);
+
+    if (reason === null) {
+      return;
+    }
+
+    const normalizedReason = reason.trim();
+
+    if (!normalizedReason) {
+      setError("Debés ingresar un motivo para deshacer el embotellado.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `¿Confirmás que querés deshacer ${run.code}? ` +
+        `Se restaurarán el barril y los materiales, y se ` +
+        `descontarán ${run.packaged_quantity} botellas.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setReversingCode(run.code);
+      setError(null);
+      setSuccess(null);
+
+      await apiPost<KegRepackagingRun>(
+        `/keg-repackaging-runs/${encodeURIComponent(run.code)}/reverse`,
+        {
+          reason: normalizedReason,
+        },
+      );
+
+      setSuccess(`El embotellado ${run.code} fue deshecho correctamente.`);
+
+      await loadData();
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "No se pudo deshacer el embotellado.",
+      );
+    } finally {
+      setReversingCode(null);
+    }
+  }
+
   return (
     <main className="dashboard">
       <section className="page-heading">
@@ -441,6 +493,8 @@ function KegRepackagingPage() {
                       <th>Merma</th>
                       <th>Remanente</th>
                       <th>Fecha</th>
+                      <th>Estado</th>
+                      {canReverse && <th>Acciones</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -460,6 +514,39 @@ function KegRepackagingPage() {
                         <td>{formatNumber(run.waste_volume_liters)} L</td>
                         <td>{formatNumber(run.remaining_volume_liters)} L</td>
                         <td>{formatDate(run.occurred_at)}</td>
+                        <td>
+                          {run.reversed_at ? (
+                            <span
+                              className="status-badge"
+                              title={
+                                run.reversal_reason ?? "Embotellado revertido"
+                              }
+                            >
+                              Revertido
+                            </span>
+                          ) : (
+                            <span className="status-badge">Vigente</span>
+                          )}
+                        </td>
+
+                        {canReverse && (
+                          <td>
+                            {run.reversed_at ? (
+                              <span className="form-help">Sin acciones</span>
+                            ) : (
+                              <button
+                                className="danger-button"
+                                disabled={reversingCode === run.code}
+                                onClick={() => void handleReverse(run)}
+                                type="button"
+                              >
+                                {reversingCode === run.code
+                                  ? "Deshaciendo..."
+                                  : "Deshacer"}
+                              </button>
+                            )}
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>

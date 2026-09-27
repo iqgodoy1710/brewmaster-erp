@@ -214,6 +214,7 @@ export type Beer = {
   active: boolean;
   created_at: string;
   updated_at: string;
+  minimum_stock_liters: string;
 };
 
 export type RecipeIngredient = {
@@ -489,6 +490,9 @@ export type KegRepackagingRun = {
   active: boolean;
   created_at: string;
   updated_at: string;
+    reversed_at: string | null;
+  reversed_by_user_id: number | null;
+  reversal_reason: string | null;
 };
 
 export type KegFinishedProductStock = {
@@ -576,4 +580,15 @@ export type BottlePasteurizationRun = {
   active: boolean;
   created_at: string;
   updated_at: string;
+};
+
+export type BeerKegStockCoverage = {
+  beer_id: number;
+  beer_name: string;
+  minimum_stock_liters: string;
+  available_keg_volume_liters: string;
+  in_production_volume_liters: string;
+  coverage_volume_liters: string;
+  shortage_volume_liters: string;
+  has_shortage: boolean;
 };

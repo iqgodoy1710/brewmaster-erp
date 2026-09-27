@@ -1,18 +1,24 @@
 import { useCallback, useEffect, useState } from "react";
 
 import "../App.css";
-import { apiGet, apiPost } from "../lib/api";
+import { apiGet, apiPost, apiPatch } from "../lib/api";
 import type { Beer } from "../types/api";
 import { hasRole, useCurrentUser } from "../lib/auth";
 
 function BeersPage() {
   const currentUser = useCurrentUser();
 
-  const canManageCatalog =
-  hasRole(currentUser, "admin") ||
-  hasRole(currentUser, "operator");
+  const canCreateBeer = hasRole(currentUser, "admin");
+
+  const canConfigureMinimumStock = hasRole(currentUser, "admin", "management");
   const [beers, setBeers] = useState<Beer[]>([]);
-  
+  const [minimumStockDrafts, setMinimumStockDrafts] = useState<
+    Record<number, string>
+  >({});
+
+  const [savingMinimumBeerId, setSavingMinimumBeerId] = useState<number | null>(
+    null,
+  );
   const [name, setName] = useState("");
   const [style, setStyle] = useState("");
   const [description, setDescription] = useState("");
@@ -26,6 +32,11 @@ function BeersPage() {
     try {
       const data = await apiGet<Beer[]>("/beers/");
       setBeers(data);
+      setMinimumStockDrafts(
+        Object.fromEntries(
+          data.map((beer) => [beer.id, beer.minimum_stock_liters]),
+        ),
+      );
       setHasLoaded(true);
     } catch (caughtError) {
       setError(
@@ -45,8 +56,6 @@ function BeersPage() {
   async function createBeer(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    
-
     if (!name.trim()) {
       setError("Ingresá el nombre de la cerveza.");
       return;
@@ -58,13 +67,11 @@ function BeersPage() {
 
     try {
       const beer = await apiPost<Beer>("/beers/", {
-        
         name: name.trim(),
         style: style.trim() || null,
         description: description.trim() || null,
       });
 
-      
       setName("");
       setStyle("");
       setDescription("");
@@ -79,6 +86,39 @@ function BeersPage() {
       );
     } finally {
       setIsSaving(false);
+    }
+  }
+  async function updateMinimumStock(beer: Beer) {
+    const value = Number(minimumStockDrafts[beer.id] ?? "0");
+
+    if (!Number.isFinite(value) || value < 0) {
+      setError("El stock mínimo debe ser un número igual o mayor a cero.");
+      return;
+    }
+
+    try {
+      setSavingMinimumBeerId(beer.id);
+      setError(null);
+      setSuccess(null);
+
+      const updatedBeer = await apiPatch<Beer>(
+        `/beers/${encodeURIComponent(beer.code)}/minimum-stock`,
+        {
+          minimum_stock_liters: minimumStockDrafts[beer.id] ?? "0",
+        },
+      );
+
+      setSuccess(`El stock mínimo de ${updatedBeer.name} fue actualizado.`);
+
+      await loadBeers();
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "No se pudo actualizar el stock mínimo.",
+      );
+    } finally {
+      setSavingMinimumBeerId(null);
     }
   }
 
@@ -102,14 +142,12 @@ function BeersPage() {
 
       {!isLoading && hasLoaded && (
         <>
-          {canManageCatalog ? (
+          {canCreateBeer ? (
             <section className="panel sales-form-panel">
               <h2>Nueva cerveza</h2>
 
               <form className="sale-form" onSubmit={createBeer}>
                 <div className="form-grid">
-                  
-
                   <label>
                     Nombre
                     <input
@@ -171,6 +209,8 @@ function BeersPage() {
                       <th>Cerveza</th>
                       <th>Estilo</th>
                       <th>Descripción</th>
+                      <th>Stock mínimo</th>
+                      {canConfigureMinimumStock && <th>Acciones</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -180,6 +220,39 @@ function BeersPage() {
                         <td>{beer.name}</td>
                         <td>{beer.style ?? "—"}</td>
                         <td>{beer.description ?? "—"}</td>
+                        <td>
+                          {canConfigureMinimumStock ? (
+                            <input
+                              min="0"
+                              onChange={(event) =>
+                                setMinimumStockDrafts((current) => ({
+                                  ...current,
+                                  [beer.id]: event.target.value,
+                                }))
+                              }
+                              step="0.001"
+                              type="number"
+                              value={minimumStockDrafts[beer.id] ?? "0"}
+                            />
+                          ) : (
+                            `${Number(beer.minimum_stock_liters).toFixed(2)} L`
+                          )}
+                        </td>
+
+                        {canConfigureMinimumStock && (
+                          <td>
+                            <button
+                              className="secondary-button"
+                              disabled={savingMinimumBeerId === beer.id}
+                              onClick={() => void updateMinimumStock(beer)}
+                              type="button"
+                            >
+                              {savingMinimumBeerId === beer.id
+                                ? "Guardando..."
+                                : "Guardar mínimo"}
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>

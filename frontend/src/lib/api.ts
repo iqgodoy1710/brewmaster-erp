@@ -59,7 +59,7 @@ const API_ERROR_TRANSLATIONS: Record<string, string> = {
     "No hay stock suficiente para preparar esta cantidad.",
   "There is not enough finished product stock to close this item.":
     "No hay stock suficiente para cerrar este ítem.",
-      "Cannot pasteurize an inactive beer presentation.":
+  "Cannot pasteurize an inactive beer presentation.":
     "No se puede pasteurizar una presentación inactiva.",
   "Only bottle presentations can be pasteurized.":
     "Solo se pueden pasteurizar presentaciones de botella.",
@@ -67,6 +67,17 @@ const API_ERROR_TRANSLATIONS: Record<string, string> = {
     "La cantidad aprobada no puede superar la cantidad procesada.",
   "There is not enough bottle stock for this pasteurization.":
     "No hay stock suficiente de botellas para esta pasteurización.",
+  "The keg repackaging run does not exist.": "El embotellado no existe.",
+  "The keg repackaging run has already been reversed.":
+    "El embotellado ya fue revertido.",
+  "The keg has subsequent movements and the repackaging cannot be reversed.":
+    "El barril tiene movimientos posteriores y el embotellado no puede deshacerse.",
+  "There is not enough bottle stock to reverse this repackaging.":
+    "No hay stock suficiente de botellas para deshacer este embotellado.",
+  "The original bottle stock movement does not exist.":
+    "No se encontró el movimiento original de las botellas.",
+  "The original keg movement does not exist.":
+    "No se encontró el movimiento original del barril.",
 };
 
 function getDefaultErrorMessage(status: number): string {
@@ -157,7 +168,7 @@ async function apiRequest<T>(
       }
 
       throw error;
-        } catch (caughtError) {
+    } catch (caughtError) {
       const isNetworkError = caughtError instanceof TypeError;
 
       const requestError = isNetworkError
@@ -168,11 +179,7 @@ async function apiRequest<T>(
           ? caughtError
           : new Error("No se pudo completar la operación.");
 
-      if (
-        shouldRetry &&
-        isNetworkError &&
-        attempt < delays.length - 1
-      ) {
+      if (shouldRetry && isNetworkError && attempt < delays.length - 1) {
         lastTemporaryError = requestError;
         continue;
       }

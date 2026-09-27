@@ -75,6 +75,21 @@ class KegRepackagingRun(BaseModel):
         ForeignKey("users.id"),
         nullable=True,
     )
+    reversed_at = Column(
+        TIMESTAMP,
+        nullable=True,
+    )
+
+    reversed_by_user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=True,
+    )
+
+    reversal_reason = Column(
+        Text,
+        nullable=True,
+    )
     occurred_at = Column(
         TIMESTAMP,
         nullable=False,
@@ -92,7 +107,15 @@ class KegRepackagingRun(BaseModel):
         foreign_keys=[target_beer_presentation_id],
     )
     production_batch = relationship("ProductionBatch")
-    performed_by_user = relationship("User")
+    performed_by_user = relationship(
+        "User",
+        foreign_keys=[performed_by_user_id],
+    )
+
+    reversed_by_user = relationship(
+        "User",
+        foreign_keys=[reversed_by_user_id],
+    )
     beer_presentation_stock_movements = relationship(
         "BeerPresentationStockMovement",
         back_populates="keg_repackaging_run",

@@ -9,6 +9,7 @@ class RawMaterialMovementType(StrEnum):
     EXPIRATION = "expiration"
     INVENTORY_ADJUSTMENT_IN = "inventory_adjustment_in"
     INVENTORY_ADJUSTMENT_OUT = "inventory_adjustment_out"
+    REPACKAGING_REVERSAL = "repackaging_reversal"
 
 
 class ProductionBatchStatus(StrEnum):
@@ -32,6 +33,8 @@ class BeerPresentationStockMovementType(StrEnum):
     KEG_TRANSFER_CONSUMPTION = "keg_transfer_consumption"
     KEG_TRANSFER_RECEIPT = "keg_transfer_receipt"
     PASTEURIZATION_WASTE = "pasteurization_waste"
+    REPACKAGING_REVERSAL_IN = "repackaging_reversal_in"
+    REPACKAGING_REVERSAL_OUT = "repackaging_reversal_out"
 
 
 class SaleStatus(StrEnum):
@@ -92,6 +95,7 @@ class KegMovementType(StrEnum):
     OUT_OF_SERVICE = "out_of_service"
     REPACKAGING = "repackaging"
     TRANSFER = "transfer"
+    REPACKAGING_REVERSAL = "repackaging_reversal"
 
 class DeliveryOrderStatus(StrEnum):
     DRAFT = "draft"

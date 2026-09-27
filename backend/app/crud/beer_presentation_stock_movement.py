@@ -254,3 +254,73 @@ def create_pasteurization_waste_movement(
     db.flush()
 
     return movement
+
+def get_repackaging_stock_movements(
+    db: Session,
+    keg_repackaging_run_id: int,
+) -> list[BeerPresentationStockMovement]:
+    return (
+        db.query(BeerPresentationStockMovement)
+        .filter(
+            BeerPresentationStockMovement.keg_repackaging_run_id
+            == keg_repackaging_run_id,
+            BeerPresentationStockMovement.active.is_(True),
+        )
+        .order_by(BeerPresentationStockMovement.id)
+        .all()
+    )
+
+def create_repackaging_reversal_out_movement(
+    db: Session,
+    *,
+    beer_presentation_id: int,
+    keg_repackaging_run_id: int,
+    quantity: int,
+    reference: str,
+    notes: str | None = None,
+    occurred_at: datetime | None = None,
+) -> BeerPresentationStockMovement:
+    movement = BeerPresentationStockMovement(
+        beer_presentation_id=beer_presentation_id,
+        keg_repackaging_run_id=keg_repackaging_run_id,
+        movement_type=(
+            BeerPresentationStockMovementType.REPACKAGING_REVERSAL_OUT
+        ),
+        quantity=quantity,
+        reference=reference,
+        notes=notes,
+        occurred_at=occurred_at,
+    )
+
+    db.add(movement)
+    db.flush()
+
+    return movement
+
+
+def create_repackaging_reversal_in_movement(
+    db: Session,
+    *,
+    beer_presentation_id: int,
+    keg_repackaging_run_id: int,
+    quantity: int,
+    reference: str,
+    notes: str | None = None,
+    occurred_at: datetime | None = None,
+) -> BeerPresentationStockMovement:
+    movement = BeerPresentationStockMovement(
+        beer_presentation_id=beer_presentation_id,
+        keg_repackaging_run_id=keg_repackaging_run_id,
+        movement_type=(
+            BeerPresentationStockMovementType.REPACKAGING_REVERSAL_IN
+        ),
+        quantity=quantity,
+        reference=reference,
+        notes=notes,
+        occurred_at=occurred_at,
+    )
+
+    db.add(movement)
+    db.flush()
+
+    return movement

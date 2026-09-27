@@ -4,6 +4,7 @@ from app.models.enums import UserRole
 from app.schemas.finished_product_stock import (
     KegFinishedProductStockResponse,
     PackagedFinishedProductStockResponse,
+    BeerKegStockCoverageResponse,
 )
 from app.services.finished_product_stock_service import (
     FinishedProductStockService,
@@ -44,3 +45,12 @@ def read_packaged_finished_product_stock(
     db: Session = Depends(get_db),
 ):
     return FinishedProductStockService.get_packaged(db)
+
+@router.get(
+    "/keg-coverage",
+    response_model=list[BeerKegStockCoverageResponse],
+)
+def read_beer_keg_stock_coverage(
+    db: Session = Depends(get_db),
+):
+    return FinishedProductStockService.get_keg_coverage(db)

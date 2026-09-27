@@ -1696,3 +1696,315 @@ def test_transfer_beer_from_fifty_liter_keg_into_two_twenty_liter_kegs(
 
     assert source_presentation_result["current_stock"] == 0
     assert target_presentation_result["current_stock"] == 2
+
+def test_reverse_repackaging_restores_all_stocks_and_keg(client):
+    context = create_keg_repackaging_context(client)
+
+    raw_materials_before = {
+        raw_material["id"]: Decimal(raw_material["current_stock"])
+        for raw_material in client.get("/raw-materials/").json()
+    }
+
+    create_response = client.post(
+        "/keg-repackaging-runs/",
+        json={
+            "keg_id": context["keg"]["id"],
+            "target_beer_presentation_id": (
+                context["target_presentation"]["id"]
+            ),
+            "packaged_quantity": 36,
+            "remaining_volume_liters": "1.500",
+        },
+    )
+    assert create_response.status_code == 201
+    repackaging_run = create_response.json()
+
+    reverse_response = client.post(
+        (
+            f"/keg-repackaging-runs/"
+            f"{repackaging_run['code']}/reverse"
+        ),
+        json={
+            "reason": "Incorrect bottle quantity.",
+        },
+    )
+
+    assert reverse_response.status_code == 200
+
+    reversed_run = reverse_response.json()
+
+    assert reversed_run["reversed_at"] is not None
+    assert reversed_run["reversal_reason"] == (
+        "Incorrect bottle quantity."
+    )
+
+    source_presentation = get_beer_presentation_by_id(
+        client,
+        context["data"]["beer_presentation"]["id"],
+    )
+    target_presentation = get_beer_presentation_by_id(
+        client,
+        context["target_presentation"]["id"],
+    )
+
+    assert source_presentation["current_stock"] == 1
+    assert target_presentation["current_stock"] == 0
+
+    restored_keg = get_keg_by_id(
+        client,
+        context["keg"]["id"],
+    )
+
+    assert restored_keg["status"] == "filled"
+    assert Decimal(
+        restored_keg["current_volume_liters"]
+    ) == Decimal("20.000")
+
+    assert (
+        restored_keg["beer_presentation_id"]
+        == context["data"]["beer_presentation"]["id"]
+    )
+    assert (
+        restored_keg["production_batch_id"]
+        == context["data"]["production_batch"]["id"]
+    )
+
+    raw_materials_after = {
+        raw_material["id"]: Decimal(raw_material["current_stock"])
+        for raw_material in client.get("/raw-materials/").json()
+    }
+
+    assert raw_materials_after == raw_materials_before
+
+    target_movements = client.get(
+        (
+            f"/beer-presentations/"
+            f"{context['target_presentation']['id']}"
+            "/stock-movements"
+        )
+    ).json()
+
+    assert any(
+        movement["movement_type"]
+        == "repackaging_reversal_out"
+        and movement["quantity"] == 36
+        for movement in target_movements
+    )
+
+    source_movements = client.get(
+        (
+            f"/beer-presentations/"
+            f"{context['data']['beer_presentation']['id']}"
+            "/stock-movements"
+        )
+    ).json()
+
+    assert any(
+        movement["movement_type"]
+        == "repackaging_reversal_in"
+        and movement["quantity"] == 1
+        for movement in source_movements
+    )
+
+
+def test_repackaging_cannot_be_reversed_twice(client):
+    context = create_keg_repackaging_context(client)
+
+    create_response = client.post(
+        "/keg-repackaging-runs/",
+        json={
+            "keg_id": context["keg"]["id"],
+            "target_beer_presentation_id": (
+                context["target_presentation"]["id"]
+            ),
+            "packaged_quantity": 36,
+            "remaining_volume_liters": "1.500",
+        },
+    )
+    assert create_response.status_code == 201
+
+    code = create_response.json()["code"]
+
+    first_reverse_response = client.post(
+        f"/keg-repackaging-runs/{code}/reverse",
+        json={"reason": "Incorrect data."},
+    )
+    assert first_reverse_response.status_code == 200
+
+    second_reverse_response = client.post(
+        f"/keg-repackaging-runs/{code}/reverse",
+        json={"reason": "Second attempt."},
+    )
+
+    assert second_reverse_response.status_code == 409
+    assert second_reverse_response.json() == {
+        "detail": (
+            "The keg repackaging run has already been reversed."
+        )
+    }
+
+
+def test_cannot_reverse_repackaging_after_another_keg_movement(
+    client,
+):
+    context = create_keg_repackaging_context(client)
+
+    first_response = client.post(
+        "/keg-repackaging-runs/",
+        json={
+            "keg_id": context["keg"]["id"],
+            "target_beer_presentation_id": (
+                context["target_presentation"]["id"]
+            ),
+            "packaged_quantity": 36,
+            "remaining_volume_liters": "1.500",
+        },
+    )
+    assert first_response.status_code == 201
+    first_run = first_response.json()
+
+    second_response = client.post(
+        "/keg-repackaging-runs/",
+        json={
+            "keg_id": context["keg"]["id"],
+            "target_beer_presentation_id": (
+                context["target_presentation"]["id"]
+            ),
+            "packaged_quantity": 2,
+            "remaining_volume_liters": "0.500",
+        },
+    )
+    assert second_response.status_code == 201
+
+    reverse_response = client.post(
+        (
+            f"/keg-repackaging-runs/"
+            f"{first_run['code']}/reverse"
+        ),
+        json={
+            "reason": "Attempt after a later movement.",
+        },
+    )
+
+    assert reverse_response.status_code == 409
+    assert reverse_response.json() == {
+        "detail": (
+            "The keg has subsequent movements and "
+            "the repackaging cannot be reversed."
+        )
+    }
+
+def test_keg_stock_coverage_includes_in_progress_production(
+    client,
+):
+    data = create_completed_batch_with_presentation(
+        client,
+        packaging_format_type="keg",
+        capacity_liters="20.000",
+    )
+
+    beer = next(
+        beer
+        for beer in client.get("/beers/").json()
+        if beer["id"]
+        == data["beer_presentation"]["beer_id"]
+    )
+
+    minimum_response = client.patch(
+        f"/beers/{beer['code']}/minimum-stock",
+        json={
+            "minimum_stock_liters": "100.000",
+        },
+    )
+    assert minimum_response.status_code == 200
+
+    packaging_run_response = client.post(
+        "/packaging-runs/",
+        json={
+            "production_batch_id": (
+                data["production_batch"]["id"]
+            ),
+            "beer_presentation_id": (
+                data["beer_presentation"]["id"]
+            ),
+            "packaged_quantity": 1,
+        },
+    )
+    assert packaging_run_response.status_code == 201
+
+    keg_response = client.post(
+        "/kegs/",
+        json={
+            "code": "K20-COVERAGE-001",
+            "packaging_format_id": (
+                data["beer_presentation"][
+                    "packaging_format_id"
+                ]
+            ),
+            "form_factor": "flat",
+        },
+    )
+    assert keg_response.status_code == 201
+
+    filling_response = client.post(
+        "/keg-movements/fill",
+        json={
+            "keg_id": keg_response.json()["id"],
+            "packaging_run_id": (
+                packaging_run_response.json()["id"]
+            ),
+        },
+    )
+    assert filling_response.status_code == 201
+
+    production_response = client.post(
+        "/production-batches/",
+        json={
+            "code": "PB-COVERAGE-IN-PROGRESS",
+            "recipe_id": (
+                data["production_batch"]["recipe_id"]
+            ),
+            "planned_volume_liters": "30.000",
+        },
+    )
+    assert production_response.status_code == 201
+
+    start_response = client.post(
+        "/production-batches/"
+        "PB-COVERAGE-IN-PROGRESS/start"
+    )
+    assert start_response.status_code == 200
+
+    coverage_response = client.get(
+        "/finished-product-stock/keg-coverage"
+    )
+
+    assert coverage_response.status_code == 200
+
+    coverage = next(
+        item
+        for item in coverage_response.json()
+        if item["beer_id"] == beer["id"]
+    )
+
+    assert Decimal(
+        coverage["minimum_stock_liters"]
+    ) == Decimal("100.000")
+
+    assert Decimal(
+        coverage["available_keg_volume_liters"]
+    ) == Decimal("20.000")
+
+    assert Decimal(
+        coverage["in_production_volume_liters"]
+    ) == Decimal("30.000")
+
+    assert Decimal(
+        coverage["coverage_volume_liters"]
+    ) == Decimal("50.000")
+
+    assert Decimal(
+        coverage["shortage_volume_liters"]
+    ) == Decimal("50.000")
+
+    assert coverage["has_shortage"] is True

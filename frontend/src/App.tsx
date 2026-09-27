@@ -157,6 +157,8 @@ function AppContent() {
   const canViewKegs = canOperate;
 
   const canManageCatalogs = !isAuthRequired || isAdministrator;
+  const canConfigureBeerMinimum =
+    !isAuthRequired || isAdministrator || isManagement;
 
   const canViewFinishedProducts =
     !isAuthRequired || isAdministrator || isManagement;
@@ -423,7 +425,7 @@ function AppContent() {
                     </NavLink>
                   )}
 
-                  {canManageCatalogs && (
+                  {canConfigureBeerMinimum && (
                     <>
                       <NavLink
                         className={({ isActive }) =>
@@ -711,7 +713,7 @@ function AppContent() {
           <Route
             path="/cervezas"
             element={
-              canManageCatalogs ? <BeersPage /> : <Navigate to="/" replace />
+              canConfigureBeerMinimum ? <BeersPage /> : <Navigate to="/" replace />
             }
           />
 

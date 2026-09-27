@@ -4,6 +4,7 @@ from app.models.enums import KegFormFactor
 from pydantic import BaseModel
 
 
+
 class KegFinishedProductStockResponse(BaseModel):
     beer_id: int
     beer_name: str
@@ -35,3 +36,13 @@ class KegFinishedProductStockResponse(BaseModel):
     keg_codes: list[str]
     keg_count: int
     total_volume_liters: Decimal
+
+class BeerKegStockCoverageResponse(BaseModel):
+    beer_id: int
+    beer_name: str
+    minimum_stock_liters: Decimal
+    available_keg_volume_liters: Decimal
+    in_production_volume_liters: Decimal
+    coverage_volume_liters: Decimal
+    shortage_volume_liters: Decimal
+    has_shortage: bool

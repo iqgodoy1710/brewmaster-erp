@@ -9,6 +9,7 @@ import type {
   KegFinishedProductStock,
   PackagedFinishedProductStock,
   DeliveryOrder,
+  BeerKegStockCoverage,
 } from "../types/api";
 import { hasRole, useCurrentUser } from "../lib/auth";
 
@@ -42,6 +43,7 @@ function DashboardPage() {
     BeerPresentationLowStock[]
   >([]);
   const [kegStock, setKegStock] = useState<KegFinishedProductStock[]>([]);
+  const [kegCoverage, setKegCoverage] = useState<BeerKegStockCoverage[]>([]);
   const [packagedStock, setPackagedStock] = useState<
     PackagedFinishedProductStock[]
   >([]);
@@ -61,6 +63,7 @@ function DashboardPage() {
           kegStockData,
           packagedStockData,
           deliveryOrdersData,
+          kegCoverageData,
         ] = await Promise.all([
           apiGet<RawMaterialLowStock[]>("/raw-materials/low-stock"),
           apiGet<BeerPresentationLowStock[]>("/beer-presentations/low-stock"),
@@ -69,6 +72,9 @@ function DashboardPage() {
             "/finished-product-stock/packaged",
           ),
           apiGet<DeliveryOrder[]>("/delivery-orders/"),
+          apiGet<BeerKegStockCoverage[]>(
+            "/finished-product-stock/keg-coverage",
+          ),
         ]);
 
         const completedSalesData = canViewSales
@@ -81,6 +87,7 @@ function DashboardPage() {
         setKegStock(kegStockData);
         setPackagedStock(packagedStockData);
         setDeliveryOrders(deliveryOrdersData);
+        setKegCoverage(kegCoverageData);
       } catch (caughtError) {
         setError(
           caughtError instanceof Error
@@ -165,6 +172,22 @@ function DashboardPage() {
       .sort((first, second) => first.beerName.localeCompare(second.beerName));
   }, [packagedStock]);
 
+  const kegCoverageAlerts = useMemo(
+    () => kegCoverage.filter((item) => item.has_shortage),
+    [kegCoverage],
+  );
+
+  const relevantKegCoverage = useMemo(
+    () =>
+      kegCoverage.filter(
+        (item) =>
+          Number(item.minimum_stock_liters) > 0 ||
+          Number(item.available_keg_volume_liters) > 0 ||
+          Number(item.in_production_volume_liters) > 0,
+      ),
+    [kegCoverage],
+  );
+
   return (
     <main className="dashboard">
       <section className="page-heading">
@@ -191,7 +214,9 @@ function DashboardPage() {
 
             <article className="summary-card">
               <p>Productos terminados en alerta</p>
-              <strong>{beerPresentationAlerts.length}</strong>
+              <strong>
+                {beerPresentationAlerts.length + kegCoverageAlerts.length}
+              </strong>
             </article>
 
             <article className="summary-card">
@@ -287,6 +312,74 @@ function DashboardPage() {
               )}
             </article>
           </section>
+          <section className="panel">
+            <h2>Cobertura de stock · Barriles</h2>
+
+            <p className="form-help">
+              La cobertura considera los litros disponibles y los lotes
+              actualmente en producción, manteniendo ambos valores separados.
+            </p>
+
+            {relevantKegCoverage.length === 0 ? (
+              <p className="empty-state">
+                No hay mínimos, stock ni producciones activas para mostrar.
+              </p>
+            ) : (
+              <div className="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Cerveza</th>
+                      <th>Disponibles</th>
+                      <th>En producción</th>
+                      <th>Cobertura</th>
+                      <th>Mínimo</th>
+                      <th>Estado</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {relevantKegCoverage.map((item) => (
+                      <tr
+                        className={
+                          item.has_shortage ? "stock-row-low" : undefined
+                        }
+                        key={item.beer_id}
+                      >
+                        <td>
+                          <strong>{item.beer_name}</strong>
+                        </td>
+
+                        <td>
+                          {formatQuantity(item.available_keg_volume_liters)} L
+                        </td>
+
+                        <td>
+                          {formatQuantity(item.in_production_volume_liters)} L
+                        </td>
+
+                        <td>{formatQuantity(item.coverage_volume_liters)} L</td>
+
+                        <td>{formatQuantity(item.minimum_stock_liters)} L</td>
+
+                        <td>
+                          {item.has_shortage ? (
+                            <span className="stock-low-label">
+                              Faltan{" "}
+                              {formatQuantity(item.shortage_volume_liters)} L
+                            </span>
+                          ) : (
+                            <span className="status-badge">Cubierto</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
           <section className="dashboard-grid">
             <article className="panel">
               <h2>Stock de producto terminado · Barriles</h2>

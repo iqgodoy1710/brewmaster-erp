@@ -5,6 +5,7 @@ from app.models.user import User
 from app.schemas.keg_repackaging_run import (
     KegRepackagingRunCreate,
     KegRepackagingRunResponse,
+    KegRepackagingRunReverse,
 )
 from app.services.keg_repackaging_run_service import (
     KegRepackagingRunService,
@@ -57,4 +58,29 @@ def create_keg_repackaging_run(
         db,
         repackaging_run,
         performed_by_user_id=(current_user.id if current_user else None),
+    )
+
+@router.post(
+    "/{code}/reverse",
+    response_model=KegRepackagingRunResponse,
+)
+def reverse_keg_repackaging_run(
+    code: str,
+    reversal_data: KegRepackagingRunReverse,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(
+        require_roles(
+            UserRole.ADMIN,
+        )
+    ),
+):
+    return KegRepackagingRunService.reverse(
+        db,
+        code,
+        reversal_data,
+        performed_by_user_id=(
+            current_user.id
+            if current_user is not None
+            else None
+        ),
     )
