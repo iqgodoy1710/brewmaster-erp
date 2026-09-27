@@ -8,6 +8,7 @@ from app.api.exception_handlers import (
     beer_already_exists_handler,
     beer_presentation_conflict_handler,
     beer_presentation_packaging_material_conflict_handler,
+    bottle_pasteurization_conflict_handler,
     category_name_already_exists_handler,
     cost_estimate_conflict_handler,
     customer_already_exists_handler,
@@ -49,6 +50,9 @@ from app.api.v1.endpoints.beer_presentations import (
     router as beer_presentation_router,
 )
 from app.api.v1.endpoints.beers import router as beer_router
+from app.api.v1.endpoints.bottle_pasteurization_runs import (
+    router as bottle_pasteurization_run_router,
+)
 from app.api.v1.endpoints.categories import router as category_router
 from app.api.v1.endpoints.customer_accounts import (
     router as customer_account_router,
@@ -117,6 +121,7 @@ from app.common.exceptions import (
     InsufficientStockError,
     InvalidBeerPresentationCostEstimateError,
     InvalidBeerPresentationStockMovementError,
+    InvalidBottlePasteurizationError,
     InvalidCredentialsError,
     InvalidDeliveryOrderCloseError,
     InvalidDeliveryOrderItemError,
@@ -543,6 +548,11 @@ app.add_exception_handler(
     keg_conflict_handler,
 )
 
+app.add_exception_handler(
+    InvalidBottlePasteurizationError,
+    bottle_pasteurization_conflict_handler,
+)
+
 
 @app.get("/health", tags=["Health"])
 def health():
@@ -607,3 +617,5 @@ app.include_router(keg_repackaging_runs_router)
 app.include_router(finished_product_stock_router)
 
 app.include_router(delivery_order_router)
+
+app.include_router(bottle_pasteurization_run_router)

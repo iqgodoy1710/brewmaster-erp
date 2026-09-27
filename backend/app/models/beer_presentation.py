@@ -90,3 +90,7 @@ class BeerPresentation(BaseModel):
         "BeerPresentationPrice",
         back_populates="beer_presentation",
     )
+    pasteurization_runs = relationship(
+        "BottlePasteurizationRun",
+        back_populates="beer_presentation",
+    )

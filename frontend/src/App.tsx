@@ -50,6 +50,7 @@ import KegQrLabelPage from "./pages/KegQrLabelPage";
 import KegQrLabelsPage from "./pages/KegQrLabelsPage";
 import KegRepackagingPage from "./pages/KegRepackagingPage";
 import DeliveryOrdersPage from "./pages/DeliveryOrdersPage";
+import BottlePasteurizationPage from "./pages/BottlePasteurizationPage";
 
 function AppContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -276,6 +277,18 @@ function AppContent() {
                       onClick={closeMenu}
                     >
                       Embotellado
+                    </NavLink>
+                  )}
+
+                  {canOperate && (
+                    <NavLink
+                      className={({ isActive }) =>
+                        isActive ? "nav-link active" : "nav-link"
+                      }
+                      to="/pasteurizacion"
+                      onClick={closeMenu}
+                    >
+                      Pasteurización
                     </NavLink>
                   )}
 
@@ -608,6 +621,18 @@ function AppContent() {
               canViewKegs ? <KegRepackagingPage /> : <Navigate to="/" replace />
             }
           />
+
+          <Route
+            path="/pasteurizacion"
+            element={
+              canOperate ? (
+                <BottlePasteurizationPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+
           <Route
             path="/barriles/qr/:code"
             element={canViewKegs ? <KegQrPage /> : <Navigate to="/" replace />}

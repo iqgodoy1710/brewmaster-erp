@@ -9,6 +9,9 @@ from app.models.beer_presentation_price import (
 from app.models.beer_presentation_stock_movement import (
     BeerPresentationStockMovement,
 )
+from app.models.bottle_pasteurization_run import (
+    BottlePasteurizationRun,
+)
 from app.models.category import Category
 from app.models.code_sequence import CodeSequence
 from app.models.customer import Customer

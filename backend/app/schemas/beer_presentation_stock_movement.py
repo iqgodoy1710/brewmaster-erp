@@ -15,15 +15,14 @@ class BeerPresentationStockMovementCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class BeerPresentationStockMovementResponse(
-    BeerPresentationStockMovementCreate
-):
+class BeerPresentationStockMovementResponse(BeerPresentationStockMovementCreate):
     id: int
     packaging_run_id: int | None
     sale_id: int | None
-    delivery_order_id : int | None
+    delivery_order_id: int | None
     active: bool
     created_at: datetime
     updated_at: datetime
+    pasteurization_run_id: int | None
 
     model_config = ConfigDict(from_attributes=True)

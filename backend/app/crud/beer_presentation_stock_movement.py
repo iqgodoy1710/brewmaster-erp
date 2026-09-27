@@ -229,3 +229,28 @@ def create_keg_transfer_receipt_movement(
     db.flush()
 
     return movement
+
+def create_pasteurization_waste_movement(
+    db: Session,
+    *,
+    beer_presentation_id: int,
+    pasteurization_run_id: int,
+    quantity: int,
+    reference: str,
+    notes: str | None = None,
+) -> BeerPresentationStockMovement:
+    movement = BeerPresentationStockMovement(
+        beer_presentation_id=beer_presentation_id,
+        pasteurization_run_id=pasteurization_run_id,
+        movement_type=(
+            BeerPresentationStockMovementType.PASTEURIZATION_WASTE
+        ),
+        quantity=quantity,
+        reference=reference,
+        notes=notes,
+    )
+
+    db.add(movement)
+    db.flush()
+
+    return movement

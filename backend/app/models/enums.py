@@ -31,6 +31,7 @@ class BeerPresentationStockMovementType(StrEnum):
     DELIVERY = "delivery"
     KEG_TRANSFER_CONSUMPTION = "keg_transfer_consumption"
     KEG_TRANSFER_RECEIPT = "keg_transfer_receipt"
+    PASTEURIZATION_WASTE = "pasteurization_waste"
 
 
 class SaleStatus(StrEnum):

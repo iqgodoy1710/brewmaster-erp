@@ -1264,7 +1264,7 @@ function DeliveryOrdersPage() {
                           )}
                           {selectedOrder.status ===
                             "delivered_pending_pricing" && (
-                            <th>Precio final</th>
+                            <th>Precio unitario</th>
                           )}
                         </tr>
                       </thead>
@@ -1424,7 +1424,7 @@ function DeliveryOrdersPage() {
 
                             {selectedOrder.status ===
                               "delivered_pending_pricing" && (
-                              <td data-label="Precio final">
+                              <td data-label="Precio unitario">
                                 {item.delivered_quantity > 0 ? (
                                   <input
                                     min="0.01"

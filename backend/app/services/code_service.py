@@ -17,6 +17,7 @@ _CODE_PREFIXES = {
     "delivery_order": "PED",
     "delivery_note": "REM",
     "keg_transfer": "TRB",
+    "bottle_pasteurization_run": "PAS",
 }
 
 

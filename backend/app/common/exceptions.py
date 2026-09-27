@@ -326,3 +326,9 @@ class InvalidDeliveryOrderCloseError(Exception):
 
 class InvalidKegTransferError(Exception):
     pass
+
+# Exceptions related to BOTTLE PASTEURIZATION
+
+
+class InvalidBottlePasteurizationError(Exception):
+    pass

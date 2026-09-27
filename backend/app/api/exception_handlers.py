@@ -32,6 +32,7 @@ from app.common.exceptions import (
     InsufficientStockError,
     InvalidBeerPresentationCostEstimateError,
     InvalidBeerPresentationStockMovementError,
+    InvalidBottlePasteurizationError,
     InvalidCredentialsError,
     InvalidDeliveryOrderCloseError,
     InvalidDeliveryOrderItemError,
@@ -396,6 +397,15 @@ async def delivery_order_conflict_handler(
         | InvalidDeliveryOrderKegError
         | InvalidDeliveryOrderCloseError
     ),
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=409,
+        content={"detail": str(error)},
+    )
+
+async def bottle_pasteurization_conflict_handler(
+    request: Request,
+    error: InvalidBottlePasteurizationError,
 ) -> JSONResponse:
     return JSONResponse(
         status_code=409,

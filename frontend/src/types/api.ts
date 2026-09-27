@@ -562,3 +562,18 @@ export type DeliveryOrderDetail = DeliveryOrder & {
   items: DeliveryOrderItem[];
   kegs: DeliveryOrderKeg[];
 };
+
+export type BottlePasteurizationRun = {
+  id: number;
+  code: string;
+  beer_presentation_id: number;
+  processed_quantity: number;
+  approved_quantity: number;
+  waste_quantity: number;
+  performed_by_user_id: number | null;
+  occurred_at: string;
+  notes: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};

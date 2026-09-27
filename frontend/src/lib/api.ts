@@ -35,19 +35,80 @@ function isTemporaryServerError(status: number): boolean {
   return status === 502 || status === 503 || status === 504;
 }
 
+const API_ERROR_TRANSLATIONS: Record<string, string> = {
+  "Authentication is required.": "Debés iniciar sesión para continuar.",
+  "Invalid or expired access token.":
+    "La sesión venció o no es válida. Volvé a iniciar sesión.",
+  "Invalid username or password.":
+    "El nombre de usuario o la contraseña son incorrectos.",
+  "You do not have permission to perform this action.":
+    "No tenés permisos para realizar esta acción.",
+
+  "The customer does not exist.": "El cliente no existe.",
+  "The raw material does not exist.": "El insumo no existe.",
+  "The beer presentation does not exist.": "La presentación no existe.",
+  "The production batch does not exist.": "El lote de producción no existe.",
+  "The recipe does not exist.": "La receta no existe.",
+  "The keg does not exist.": "El barril no existe.",
+  "The sale does not exist.": "La venta no existe.",
+  "The delivery order does not exist.": "El pedido no existe.",
+
+  "There is not enough stock for this movement.":
+    "No hay stock suficiente para registrar este movimiento.",
+  "There is not enough finished product stock for this picking quantity.":
+    "No hay stock suficiente para preparar esta cantidad.",
+  "There is not enough finished product stock to close this item.":
+    "No hay stock suficiente para cerrar este ítem.",
+      "Cannot pasteurize an inactive beer presentation.":
+    "No se puede pasteurizar una presentación inactiva.",
+  "Only bottle presentations can be pasteurized.":
+    "Solo se pueden pasteurizar presentaciones de botella.",
+  "The approved quantity cannot exceed the processed quantity.":
+    "La cantidad aprobada no puede superar la cantidad procesada.",
+  "There is not enough bottle stock for this pasteurization.":
+    "No hay stock suficiente de botellas para esta pasteurización.",
+};
+
+function getDefaultErrorMessage(status: number): string {
+  switch (status) {
+    case 400:
+      return "La solicitud contiene datos incorrectos.";
+    case 401:
+      return "Debés iniciar sesión para continuar.";
+    case 403:
+      return "No tenés permisos para realizar esta acción.";
+    case 404:
+      return "No se encontró el recurso solicitado.";
+    case 409:
+      return "La operación no pudo realizarse por un conflicto con los datos actuales.";
+    case 422:
+      return "Revisá los datos ingresados: hay campos inválidos o incompletos.";
+    default:
+      if (status >= 500) {
+        return "Ocurrió un error en el servidor. Intentá nuevamente.";
+      }
+
+      return "No se pudo completar la operación.";
+  }
+}
+
 async function getErrorMessage(response: Response): Promise<string> {
   const data = await response.json().catch(() => null);
 
-  if (
-    typeof data === "object" &&
-    data !== null &&
-    "detail" in data &&
-    typeof data.detail === "string"
-  ) {
-    return data.detail;
+  if (typeof data === "object" && data !== null && "detail" in data) {
+    if (typeof data.detail === "string") {
+      return (
+        API_ERROR_TRANSLATIONS[data.detail] ??
+        getDefaultErrorMessage(response.status)
+      );
+    }
+
+    if (Array.isArray(data.detail)) {
+      return "Revisá los datos ingresados: hay campos inválidos o incompletos.";
+    }
   }
 
-  return "The request could not be completed.";
+  return getDefaultErrorMessage(response.status);
 }
 
 async function apiRequest<T>(
@@ -96,27 +157,34 @@ async function apiRequest<T>(
       }
 
       throw error;
-    } catch (caughtError) {
-      const error =
-        caughtError instanceof Error
-          ? caughtError
-          : new Error("The request could not be completed.");
-
+        } catch (caughtError) {
       const isNetworkError = caughtError instanceof TypeError;
 
-      if (shouldRetry && isNetworkError && attempt < delays.length - 1) {
-        lastTemporaryError = error;
+      const requestError = isNetworkError
+        ? new Error(
+            "No se pudo conectar con el servidor. Esperá unos segundos y volvé a intentarlo.",
+          )
+        : caughtError instanceof Error
+          ? caughtError
+          : new Error("No se pudo completar la operación.");
+
+      if (
+        shouldRetry &&
+        isNetworkError &&
+        attempt < delays.length - 1
+      ) {
+        lastTemporaryError = requestError;
         continue;
       }
 
-      throw error;
+      throw requestError;
     }
   }
 
   throw new Error(
     lastTemporaryError
       ? "El servidor se está iniciando. Esperá un momento y reintentá."
-      : "The request could not be completed.",
+      : "No se pudo completar la operación.",
   );
 }
 
