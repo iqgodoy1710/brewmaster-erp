@@ -36,6 +36,10 @@ function RecipesPage() {
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [isCurrent, setIsCurrent] = useState(false);
+  const [settingCurrentRecipeId, setSettingCurrentRecipeId] = useState<
+    number | null
+  >(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -93,12 +97,14 @@ function RecipesPage() {
         version: parsedVersion,
         target_volume_liters: targetVolume,
         notes: notes.trim() || null,
+        is_current: isCurrent,
       });
 
       setBeerId("");
       setVersion("");
       setTargetVolume("");
       setNotes("");
+      setIsCurrent(false);
 
       setSuccess(`La receta #${recipe.id} fue creada correctamente.`);
 
@@ -147,13 +153,10 @@ function RecipesPage() {
     setIsUpdating(true);
 
     try {
-      const recipe = await apiPatch<Recipe>(
-        `/recipes/${editingRecipe.id}`,
-        {
-          target_volume_liters: editingTargetVolume,
-          notes: editingNotes.trim() || null,
-        },
-      );
+      const recipe = await apiPatch<Recipe>(`/recipes/${editingRecipe.id}`, {
+        target_volume_liters: editingTargetVolume,
+        notes: editingNotes.trim() || null,
+      });
 
       cancelEditing();
       setSuccess(`La receta #${recipe.id} fue actualizada correctamente.`);
@@ -172,6 +175,33 @@ function RecipesPage() {
 
   const beerName = (id: number) =>
     beers.find((beer) => beer.id === id)?.name ?? "—";
+  async function setCurrentRecipe(recipe: Recipe) {
+    try {
+      setSettingCurrentRecipeId(recipe.id);
+      setError(null);
+      setSuccess(null);
+
+      const updatedRecipe = await apiPatch<Recipe>(
+        `/recipes/${recipe.id}/set-current`,
+        {},
+      );
+
+      setSuccess(
+        `La versión ${updatedRecipe.version} de ` +
+          `${beerName(updatedRecipe.beer_id)} quedó vigente.`,
+      );
+
+      await loadData();
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "No se pudo cambiar la receta vigente.",
+      );
+    } finally {
+      setSettingCurrentRecipeId(null);
+    }
+  }
 
   return (
     <main className="dashboard">
@@ -258,6 +288,19 @@ function RecipesPage() {
                       />
                     </label>
                   </div>
+                  <label>
+                    <input
+                      checked={isCurrent}
+                      onChange={(event) => setIsCurrent(event.target.checked)}
+                      type="checkbox"
+                    />
+                    Usar como receta vigente
+                  </label>
+
+                  <p className="form-help">
+                    Si es la primera receta de la cerveza, quedará vigente
+                    automáticamente.
+                  </p>
 
                   <button disabled={isSaving} type="submit">
                     {isSaving ? "Creando receta..." : "Crear receta"}
@@ -336,9 +379,7 @@ function RecipesPage() {
             <h2>Recetas registradas</h2>
 
             {recipes.length === 0 ? (
-              <p className="empty-state">
-                Todavía no hay recetas registradas.
-              </p>
+              <p className="empty-state">Todavía no hay recetas registradas.</p>
             ) : (
               <div className="table-wrapper">
                 <table>
@@ -347,6 +388,7 @@ function RecipesPage() {
                       <th>ID</th>
                       <th>Cerveza</th>
                       <th>Versión</th>
+                      <th>Estado</th>
                       <th>Volumen objetivo</th>
                       <th>Notas</th>
                       {canManageRecipes && <th>Acciones</th>}
@@ -360,18 +402,40 @@ function RecipesPage() {
                         <td>{beerName(recipe.beer_id)}</td>
                         <td>{recipe.version}</td>
                         <td>
-                          {formatNumber(recipe.target_volume_liters)} L
+                          {recipe.is_current ? (
+                            <span className="status-badge">Receta vigente</span>
+                          ) : (
+                            <span className="form-help">Versión anterior</span>
+                          )}
                         </td>
+                        <td>{formatNumber(recipe.target_volume_liters)} L</td>
                         <td>{recipe.notes ?? "—"}</td>
 
                         {canManageRecipes && (
                           <td>
-                            <button
-                              onClick={() => startEditing(recipe)}
-                              type="button"
-                            >
-                              Editar
-                            </button>
+                            <div className="button-row">
+                              <button
+                                className="secondary-button"
+                                onClick={() => startEditing(recipe)}
+                                type="button"
+                              >
+                                Editar
+                              </button>
+
+                              {!recipe.is_current && (
+                                <button
+                                  disabled={
+                                    settingCurrentRecipeId === recipe.id
+                                  }
+                                  onClick={() => void setCurrentRecipe(recipe)}
+                                  type="button"
+                                >
+                                  {settingCurrentRecipeId === recipe.id
+                                    ? "Cambiando..."
+                                    : "Hacer vigente"}
+                                </button>
+                              )}
+                            </div>
                           </td>
                         )}
                       </tr>

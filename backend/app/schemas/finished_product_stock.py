@@ -46,3 +46,6 @@ class BeerKegStockCoverageResponse(BaseModel):
     coverage_volume_liters: Decimal
     shortage_volume_liters: Decimal
     has_shortage: bool
+    packaged_volume_liters: Decimal
+    available_bulk_volume_liters: Decimal
+    physical_stock_volume_liters: Decimal

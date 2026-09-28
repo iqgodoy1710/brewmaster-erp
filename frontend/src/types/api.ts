@@ -8,6 +8,33 @@ export type RawMaterialLowStock = {
   shortage_quantity: string;
 };
 
+export type StockCoverageRequirement = {
+  raw_material_id: number;
+  raw_material_code: string;
+  raw_material_name: string;
+  unit_symbol: string;
+  production_required_quantity: string;
+  packaging_required_quantity: string;
+  total_required_quantity: string;
+  current_stock: string;
+  minimum_stock: string;
+  projected_stock: string;
+  shortage_quantity: string;
+  has_shortage: boolean;
+};
+
+export type StockCoverageWarning = {
+  source_type: string;
+  source_code: string;
+  source_name: string;
+  detail: string;
+};
+
+export type StockCoveragePlan = {
+  requirements: StockCoverageRequirement[];
+  warnings: StockCoverageWarning[];
+};
+
 export type BeerPresentationLowStock = {
   beer_presentation_id: number;
   beer_presentation_code: string;
@@ -154,6 +181,7 @@ export type Recipe = {
   active: boolean;
   created_at: string;
   updated_at: string;
+  is_current: boolean;
 };
 
 export type PackagingRun = {
@@ -587,6 +615,9 @@ export type BeerKegStockCoverage = {
   beer_name: string;
   minimum_stock_liters: string;
   available_keg_volume_liters: string;
+  packaged_volume_liters: string;
+  available_bulk_volume_liters: string;
+  physical_stock_volume_liters: string;
   in_production_volume_liters: string;
   coverage_volume_liters: string;
   shortage_volume_liters: string;

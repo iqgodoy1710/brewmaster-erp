@@ -1988,12 +1988,20 @@ def test_keg_stock_coverage_includes_in_progress_production(
     )
 
     assert Decimal(
-        coverage["minimum_stock_liters"]
-    ) == Decimal("100.000")
-
-    assert Decimal(
         coverage["available_keg_volume_liters"]
     ) == Decimal("20.000")
+
+    assert Decimal(
+        coverage["packaged_volume_liters"]
+    ) == Decimal("0.000")
+
+    assert Decimal(
+        coverage["available_bulk_volume_liters"]
+    ) == Decimal("80.000")
+
+    assert Decimal(
+        coverage["physical_stock_volume_liters"]
+    ) == Decimal("100.000")
 
     assert Decimal(
         coverage["in_production_volume_liters"]
@@ -2001,10 +2009,10 @@ def test_keg_stock_coverage_includes_in_progress_production(
 
     assert Decimal(
         coverage["coverage_volume_liters"]
-    ) == Decimal("50.000")
+    ) == Decimal("130.000")
 
     assert Decimal(
         coverage["shortage_volume_liters"]
-    ) == Decimal("50.000")
+    ) == Decimal("0.000")
 
-    assert coverage["has_shortage"] is True
+    assert coverage["has_shortage"] is False

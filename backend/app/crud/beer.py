@@ -1,16 +1,17 @@
-from sqlalchemy.orm import Session
-
 from app.models.beer import Beer
-from app.schemas.beer import BeerCreate
 from app.models.beer_presentation import BeerPresentation
 from app.models.enums import (
     KegStatus,
     ProductionBatchStatus,
+    PackagingFormatType,
 )
 from app.models.keg import Keg
+from app.models.packaging_format import PackagingFormat
 from app.models.production_batch import ProductionBatch
 from app.models.recipe import Recipe
+from app.schemas.beer import BeerCreate
 from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 
 def get_beers(db: Session) -> list[Beer]:
@@ -102,6 +103,54 @@ def get_beer_keg_stock_coverage(db: Session):
         .subquery()
     )
 
+    packaged_stock = (
+        db.query(
+            BeerPresentation.beer_id.label("beer_id"),
+            func.sum(
+                BeerPresentation.current_stock
+                * PackagingFormat.capacity_liters
+            ).label("packaged_volume_liters"),
+        )
+        .join(
+            PackagingFormat,
+            BeerPresentation.packaging_format_id
+            == PackagingFormat.id,
+        )
+        .filter(
+            BeerPresentation.active.is_(True),
+            BeerPresentation.current_stock > 0,
+            PackagingFormat.format_type.in_(
+                [
+                    PackagingFormatType.BOTTLE,
+                    PackagingFormatType.CAN,
+                ]
+            ),
+        )
+        .group_by(BeerPresentation.beer_id)
+        .subquery()
+    )
+
+    available_bulk_stock = (
+        db.query(
+            Recipe.beer_id.label("beer_id"),
+            func.sum(
+                ProductionBatch.available_bulk_volume_liters
+            ).label("available_bulk_volume_liters"),
+        )
+        .join(
+            Recipe,
+            ProductionBatch.recipe_id == Recipe.id,
+        )
+        .filter(
+            ProductionBatch.active.is_(True),
+            ProductionBatch.status
+            == ProductionBatchStatus.COMPLETED,
+            ProductionBatch.available_bulk_volume_liters > 0,
+        )
+        .group_by(Recipe.beer_id)
+        .subquery()
+    )
+
     in_production = (
         db.query(
             Recipe.beer_id.label("beer_id"),
@@ -134,6 +183,14 @@ def get_beer_keg_stock_coverage(db: Session):
                 0,
             ).label("available_keg_volume_liters"),
             func.coalesce(
+                packaged_stock.c.packaged_volume_liters,
+                0,
+            ).label("packaged_volume_liters"),
+            func.coalesce(
+                available_bulk_stock.c.available_bulk_volume_liters,
+                0,
+            ).label("available_bulk_volume_liters"),
+            func.coalesce(
                 in_production.c.in_production_volume_liters,
                 0,
             ).label("in_production_volume_liters"),
@@ -141,6 +198,14 @@ def get_beer_keg_stock_coverage(db: Session):
         .outerjoin(
             available_keg_stock,
             available_keg_stock.c.beer_id == Beer.id,
+        )
+        .outerjoin(
+            packaged_stock,
+            packaged_stock.c.beer_id == Beer.id,
+        )
+        .outerjoin(
+            available_bulk_stock,
+            available_bulk_stock.c.beer_id == Beer.id,
         )
         .outerjoin(
             in_production,

@@ -26,6 +26,7 @@ router = APIRouter(
             require_roles(
                 UserRole.ADMIN,
                 UserRole.MANAGEMENT,
+                UserRole.OPERATOR,
             )
         )
     ],

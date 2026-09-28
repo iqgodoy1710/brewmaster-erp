@@ -245,6 +245,7 @@ def close_delivery_order(
         require_roles(
             UserRole.ADMIN,
             UserRole.MANAGEMENT,
+            UserRole.OPERATOR,
         )
     ),
 ):

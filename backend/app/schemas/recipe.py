@@ -18,6 +18,7 @@ class RecipeBase(BaseModel):
 
 class RecipeCreate(RecipeBase):
     model_config = ConfigDict(extra="forbid")
+    is_current: bool = False
 
 
 class RecipeResponse(RecipeBase):
@@ -25,6 +26,7 @@ class RecipeResponse(RecipeBase):
     active: bool
     created_at: datetime
     updated_at: datetime
+    is_current: bool
 
     model_config = ConfigDict(from_attributes=True)
 

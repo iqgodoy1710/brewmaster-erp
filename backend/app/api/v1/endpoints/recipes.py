@@ -69,3 +69,23 @@ def update_recipe(
         recipe_id,
         recipe_data,
     )
+
+@router.patch(
+    "/{recipe_id}/set-current",
+    response_model=RecipeResponse,
+    dependencies=[
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+            )
+        )
+    ],
+)
+def set_current_recipe(
+    recipe_id: int = Path(..., gt=0),
+    db: Session = Depends(get_db),
+):
+    return RecipeService.set_current(
+        db,
+        recipe_id,
+    )

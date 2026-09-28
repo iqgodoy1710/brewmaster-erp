@@ -10,6 +10,7 @@ import type {
   PackagedFinishedProductStock,
   DeliveryOrder,
   BeerKegStockCoverage,
+  StockCoveragePlan,
 } from "../types/api";
 import { hasRole, useCurrentUser } from "../lib/auth";
 
@@ -44,6 +45,12 @@ function DashboardPage() {
   >([]);
   const [kegStock, setKegStock] = useState<KegFinishedProductStock[]>([]);
   const [kegCoverage, setKegCoverage] = useState<BeerKegStockCoverage[]>([]);
+  const [stockCoveragePlan, setStockCoveragePlan] = useState<StockCoveragePlan>(
+    {
+      requirements: [],
+      warnings: [],
+    },
+  );
   const [packagedStock, setPackagedStock] = useState<
     PackagedFinishedProductStock[]
   >([]);
@@ -64,6 +71,7 @@ function DashboardPage() {
           packagedStockData,
           deliveryOrdersData,
           kegCoverageData,
+          stockCoveragePlanData,
         ] = await Promise.all([
           apiGet<RawMaterialLowStock[]>("/raw-materials/low-stock"),
           apiGet<BeerPresentationLowStock[]>("/beer-presentations/low-stock"),
@@ -74,6 +82,9 @@ function DashboardPage() {
           apiGet<DeliveryOrder[]>("/delivery-orders/"),
           apiGet<BeerKegStockCoverage[]>(
             "/finished-product-stock/keg-coverage",
+          ),
+          apiGet<StockCoveragePlan>(
+            "/finished-product-stock/raw-material-requirements",
           ),
         ]);
 
@@ -88,6 +99,7 @@ function DashboardPage() {
         setPackagedStock(packagedStockData);
         setDeliveryOrders(deliveryOrdersData);
         setKegCoverage(kegCoverageData);
+        setStockCoveragePlan(stockCoveragePlanData);
       } catch (caughtError) {
         setError(
           caughtError instanceof Error
@@ -182,11 +194,39 @@ function DashboardPage() {
       kegCoverage.filter(
         (item) =>
           Number(item.minimum_stock_liters) > 0 ||
-          Number(item.available_keg_volume_liters) > 0 ||
+          Number(item.physical_stock_volume_liters) > 0 ||
           Number(item.in_production_volume_liters) > 0,
       ),
     [kegCoverage],
   );
+  const stockCoverageShortages = useMemo(
+    () =>
+      stockCoveragePlan.requirements.filter(
+        (requirement) => requirement.has_shortage,
+      ),
+    [stockCoveragePlan.requirements],
+  );
+
+  const coverageRawMaterialIds = useMemo(
+    () =>
+      new Set(
+        stockCoveragePlan.requirements.map(
+          (requirement) => requirement.raw_material_id,
+        ),
+      ),
+    [stockCoveragePlan.requirements],
+  );
+
+  const independentRawMaterialAlerts = useMemo(
+    () =>
+      rawMaterialAlerts.filter(
+        (alert) => !coverageRawMaterialIds.has(alert.raw_material_id),
+      ),
+    [rawMaterialAlerts, coverageRawMaterialIds],
+  );
+
+  const totalRawMaterialAlerts =
+    stockCoverageShortages.length + independentRawMaterialAlerts.length;
 
   return (
     <main className="dashboard">
@@ -209,7 +249,7 @@ function DashboardPage() {
           <section className="summary-grid" aria-label="Resumen operativo">
             <article className="summary-card">
               <p>Insumos en alerta</p>
-              <strong>{rawMaterialAlerts.length}</strong>
+              <strong>{totalRawMaterialAlerts}</strong>
             </article>
 
             <article className="summary-card">
@@ -231,31 +271,117 @@ function DashboardPage() {
               </article>
             )}
           </section>
-
           <section className="dashboard-grid">
             <article className="panel">
               <h2>Alertas de insumos</h2>
 
-              {rawMaterialAlerts.length === 0 ? (
+              <p className="form-help">
+                Incluye los insumos necesarios para alcanzar la cobertura mínima
+                de cerveza y los materiales requeridos para completar el stock
+                mínimo de botellas.
+              </p>
+
+              {stockCoverageShortages.length === 0 &&
+              independentRawMaterialAlerts.length === 0 &&
+              stockCoveragePlan.warnings.length === 0 ? (
                 <p className="empty-state">
-                  No hay insumos en o bajo su stock mínimo.
+                  No hay faltantes de insumos para la cobertura configurada.
                 </p>
               ) : (
-                <ul className="alert-list">
-                  {rawMaterialAlerts.map((alert) => (
-                    <li key={alert.raw_material_id}>
-                      <div>
-                        <strong>{alert.raw_material_name}</strong>
-                        <span>
-                          {alert.raw_material_code} · {alert.unit_symbol}
-                        </span>
-                      </div>
-                      <span className="shortage">
-                        Faltan {formatQuantity(alert.shortage_quantity)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  {stockCoverageShortages.length > 0 && (
+                    <div>
+                      <h3>Requerimientos de cobertura</h3>
+
+                      <ul className="alert-list">
+                        {stockCoverageShortages.map((requirement) => (
+                          <li key={requirement.raw_material_id}>
+                            <div>
+                              <strong>{requirement.raw_material_name}</strong>
+
+                              <span>
+                                {requirement.raw_material_code} ·{" "}
+                                {requirement.unit_symbol}
+                              </span>
+
+                              <span>
+                                Producción:{" "}
+                                {formatQuantity(
+                                  requirement.production_required_quantity,
+                                )}{" "}
+                                · Envasado:{" "}
+                                {formatQuantity(
+                                  requirement.packaging_required_quantity,
+                                )}
+                              </span>
+
+                              <span>
+                                Stock actual:{" "}
+                                {formatQuantity(requirement.current_stock)} ·
+                                Necesidad total:{" "}
+                                {formatQuantity(
+                                  requirement.total_required_quantity,
+                                )}
+                              </span>
+                            </div>
+
+                            <span className="shortage">
+                              Faltan{" "}
+                              {formatQuantity(requirement.shortage_quantity)}{" "}
+                              {requirement.unit_symbol}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {independentRawMaterialAlerts.length > 0 && (
+                    <div>
+                      <h3>Stock mínimo propio</h3>
+
+                      <ul className="alert-list">
+                        {independentRawMaterialAlerts.map((alert) => (
+                          <li key={alert.raw_material_id}>
+                            <div>
+                              <strong>{alert.raw_material_name}</strong>
+                              <span>
+                                {alert.raw_material_code} · {alert.unit_symbol}
+                              </span>
+                            </div>
+
+                            <span className="shortage">
+                              Faltan {formatQuantity(alert.shortage_quantity)}{" "}
+                              {alert.unit_symbol}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {stockCoveragePlan.warnings.length > 0 && (
+                    <div>
+                      <h3>Configuraciones pendientes</h3>
+
+                      <ul className="alert-list">
+                        {stockCoveragePlan.warnings.map((warning) => (
+                          <li
+                            key={`${warning.source_type}-${warning.source_code}`}
+                          >
+                            <div>
+                              <strong>{warning.source_name}</strong>
+                              <span>{warning.source_code}</span>
+                              <span>{warning.detail}</span>
+                            </div>
+
+                            <span className="shortage">Revisar</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
               )}
             </article>
 
@@ -313,11 +439,12 @@ function DashboardPage() {
             </article>
           </section>
           <section className="panel">
-            <h2>Cobertura de stock · Barriles</h2>
+            <h2>Cobertura general de cerveza</h2>
 
             <p className="form-help">
-              La cobertura considera los litros disponibles y los lotes
-              actualmente en producción, manteniendo ambos valores separados.
+              El stock físico suma barriles llenos, botellas disponibles y
+              cerveza a granel terminada. La producción en curso se informa por
+              separado, pero también forma parte de la cobertura proyectada.
             </p>
 
             {relevantKegCoverage.length === 0 ? (
@@ -330,7 +457,10 @@ function DashboardPage() {
                   <thead>
                     <tr>
                       <th>Cerveza</th>
-                      <th>Disponibles</th>
+                      <th>Barriles</th>
+                      <th>Botellas</th>
+                      <th>Granel</th>
+                      <th>Stock físico</th>
                       <th>En producción</th>
                       <th>Cobertura</th>
                       <th>Mínimo</th>
@@ -354,11 +484,28 @@ function DashboardPage() {
                           {formatQuantity(item.available_keg_volume_liters)} L
                         </td>
 
+                        <td>{formatQuantity(item.packaged_volume_liters)} L</td>
+
+                        <td>
+                          {formatQuantity(item.available_bulk_volume_liters)} L
+                        </td>
+
+                        <td>
+                          <strong>
+                            {formatQuantity(item.physical_stock_volume_liters)}{" "}
+                            L
+                          </strong>
+                        </td>
+
                         <td>
                           {formatQuantity(item.in_production_volume_liters)} L
                         </td>
 
-                        <td>{formatQuantity(item.coverage_volume_liters)} L</td>
+                        <td>
+                          <strong>
+                            {formatQuantity(item.coverage_volume_liters)} L
+                          </strong>
+                        </td>
 
                         <td>{formatQuantity(item.minimum_stock_liters)} L</td>
 

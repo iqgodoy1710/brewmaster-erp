@@ -94,10 +94,16 @@ function CostCalculatorPage() {
       return [];
     }
 
-    return recipes.filter(
-      (recipe) => recipe.beer_id === selectedPresentation.beer_id,
-    );
-  }, [presentations, recipes, selectedPresentation]);
+    return recipes
+      .filter((recipe) => recipe.beer_id === selectedPresentation.beer_id)
+      .sort((first, second) => {
+        if (first.is_current !== second.is_current) {
+          return first.is_current ? -1 : 1;
+        }
+
+        return second.version - first.version;
+      });
+  }, [recipes, selectedPresentation]);
 
   const marginAsPercentage = Number(desiredMargin);
 
@@ -135,9 +141,23 @@ function CostCalculatorPage() {
 
   function handlePresentationChange(value: string) {
     setPresentationId(value);
-    setRecipeId("");
     setEstimate(null);
     setError(null);
+
+    const presentation = presentations.find(
+      (item) => item.id === Number(value),
+    );
+
+    if (!presentation) {
+      setRecipeId("");
+      return;
+    }
+
+    const currentRecipe = recipes.find(
+      (recipe) => recipe.beer_id === presentation.beer_id && recipe.is_current,
+    );
+
+    setRecipeId(currentRecipe ? String(currentRecipe.id) : "");
   }
 
   async function calculateEstimate() {
@@ -263,10 +283,12 @@ function CostCalculatorPage() {
                       ? "Seleccioná una receta"
                       : "Seleccioná primero una presentación"}
                   </option>
+
                   {compatibleRecipes.map((recipe) => (
                     <option key={recipe.id} value={recipe.id}>
                       Versión {recipe.version} ·{" "}
                       {formatQuantity(recipe.target_volume_liters)} L
+                      {recipe.is_current ? " · Receta vigente" : ""}
                     </option>
                   ))}
                 </select>

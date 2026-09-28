@@ -1,11 +1,14 @@
 from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
     Column,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     Text,
     UniqueConstraint,
-    CheckConstraint,
+    text,
 )
 from sqlalchemy.orm import relationship
 
@@ -29,6 +32,12 @@ class Recipe(BaseModel):
             "version",
             name="uq_recipes_beer_id_version",
         ),
+                Index(
+            "uq_recipes_current_per_beer",
+            "beer_id",
+            unique=True,
+            postgresql_where=text("is_current = true"),
+        ),
     )
 
     beer_id = Column(
@@ -37,6 +46,11 @@ class Recipe(BaseModel):
         nullable=False,
     )
     version = Column(Integer, nullable=False)
+    is_current = Column(
+        Boolean,
+        nullable=False,
+        server_default="false",
+    )
     target_volume_liters = Column(
         Numeric(10, 3),
         nullable=False,

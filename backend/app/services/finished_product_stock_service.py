@@ -65,13 +65,13 @@ class FinishedProductStockService:
 
         for row in rows:
             minimum = Decimal(row.minimum_stock_liters)
-            available = Decimal(
-                row.available_keg_volume_liters
-            )
-            in_production = Decimal(
-                row.in_production_volume_liters
-            )
-            coverage = available + in_production
+            available = Decimal(row.available_keg_volume_liters)
+            packaged = Decimal(row.packaged_volume_liters)
+            available_bulk = Decimal(row.available_bulk_volume_liters)
+            in_production = Decimal(row.in_production_volume_liters)
+            physical_stock = available + packaged + available_bulk
+
+            coverage = physical_stock + in_production
             shortage = max(
                 Decimal("0.000"),
                 minimum - coverage,
@@ -86,10 +86,10 @@ class FinishedProductStockService:
                     in_production_volume_liters=in_production,
                     coverage_volume_liters=coverage,
                     shortage_volume_liters=shortage,
-                    has_shortage=(
-                        minimum > 0
-                        and coverage < minimum
-                    ),
+                    has_shortage=(minimum > 0 and coverage < minimum),
+                    packaged_volume_liters=packaged,
+                    available_bulk_volume_liters=available_bulk,
+                    physical_stock_volume_liters=physical_stock,
                 )
             )
 

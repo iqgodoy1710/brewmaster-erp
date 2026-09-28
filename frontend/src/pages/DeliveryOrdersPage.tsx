@@ -60,7 +60,7 @@ function DeliveryOrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const canCloseOrders = hasRole(user, "admin", "management");
+  const canCloseOrders = hasRole(user, "admin", "management", "operator",);
 
   const kegPresentationIds = useMemo(() => {
     const kegFormatIds = new Set(

@@ -30,8 +30,7 @@ def create_recipe(
     recipe = Recipe(**recipe_data.model_dump())
 
     db.add(recipe)
-    db.commit()
-    db.refresh(recipe)
+    db.flush()
 
     return recipe
 
@@ -67,5 +66,51 @@ def update_recipe(
 
     db.commit()
     db.refresh(recipe)
+
+    return recipe
+
+def get_current_recipe_by_beer_id(
+    db: Session,
+    beer_id: int,
+) -> Recipe | None:
+    return (
+        db.query(Recipe)
+        .filter(
+            Recipe.beer_id == beer_id,
+            Recipe.is_current.is_(True),
+            Recipe.active.is_(True),
+        )
+        .first()
+    )
+
+
+def clear_current_recipe(
+    db: Session,
+    beer_id: int,
+) -> None:
+    (
+        db.query(Recipe)
+        .filter(
+            Recipe.beer_id == beer_id,
+            Recipe.is_current.is_(True),
+        )
+        .update(
+            {"is_current": False},
+            synchronize_session="fetch",
+        )
+    )
+
+
+def set_recipe_as_current(
+    db: Session,
+    recipe: Recipe,
+) -> Recipe:
+    clear_current_recipe(
+        db,
+        recipe.beer_id,
+    )
+
+    recipe.is_current = True
+    db.flush()
 
     return recipe
