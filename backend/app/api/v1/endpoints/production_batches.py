@@ -5,6 +5,7 @@ from app.schemas.production_batch import (
     ProductionBatchComplete,
     ProductionBatchCreate,
     ProductionBatchResponse,
+    ProductionBatchUpdate,
 )
 from app.schemas.production_planning import (
     RawMaterialPlanningProjectionResponse,
@@ -65,6 +66,30 @@ def create_production_batch(
 ):
     return ProductionBatchService.create(db, production_batch)
 
+
+@router.patch(
+    "/{code:path}",
+    response_model=ProductionBatchResponse,
+    dependencies=[
+        Depends(
+            require_roles(
+                UserRole.ADMIN,
+                UserRole.OPERATOR,
+                UserRole.MANAGEMENT,
+            )
+        )
+    ],
+)
+def update_production_batch(
+    code: str,
+    production_batch: ProductionBatchUpdate,
+    db: Session = Depends(get_db),
+):
+    return ProductionBatchService.update(
+        db,
+        code,
+        production_batch,
+    )
 
 @router.post(
     "/{code:path}/start",

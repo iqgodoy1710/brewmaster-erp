@@ -22,6 +22,7 @@ from app.crud.production_batch import (
     replan_production_batch,
     start_production_batch,
     update_available_bulk_volume,
+    update_planned_production_batch,
 )
 from app.crud.raw_material import (
     get_raw_material_by_id,
@@ -33,7 +34,11 @@ from app.crud.raw_material_stock_movement import (
 from app.crud.recipe import get_recipe_by_id
 from app.crud.recipe_ingredient import get_recipe_ingredients
 from app.models.enums import ProductionBatchStatus
-from app.schemas.production_batch import ProductionBatchComplete, ProductionBatchCreate
+from app.schemas.production_batch import (
+    ProductionBatchComplete,
+    ProductionBatchCreate,
+    ProductionBatchUpdate,
+)
 from app.schemas.production_planning import (
     RawMaterialPlanningProjectionResponse,
 )
@@ -81,6 +86,52 @@ class ProductionBatchService:
             )
 
         return create_production_batch(db, production_batch_data)
+
+    @staticmethod
+    def update(
+        db: Session,
+        current_code: str,
+        update_data: ProductionBatchUpdate,
+    ):
+        production_batch = get_production_batch_by_code(
+            db,
+            current_code,
+        )
+
+        if not production_batch:
+            raise ProductionBatchNotFoundError("The production batch does not exist.")
+
+        if not production_batch.active:
+            raise InvalidProductionBatchStatusError(
+                "Cannot modify an inactive production batch."
+            )
+
+        if production_batch.status != ProductionBatchStatus.PLANNED:
+            raise InvalidProductionBatchStatusError(
+                "Only planned production batches can be modified."
+            )
+
+        normalized_code = update_data.code.strip()
+
+        existing_production_batch = get_production_batch_by_code(
+            db,
+            normalized_code,
+        )
+
+        if (
+            existing_production_batch
+            and existing_production_batch.id != production_batch.id
+        ):
+            raise ProductionBatchCodeAlreadyExistsError(
+                "A production batch with this code already exists."
+            )
+
+        return update_planned_production_batch(
+            db,
+            production_batch,
+            normalized_code,
+            update_data.planned_volume_liters,
+        )
 
     @staticmethod
     def start(

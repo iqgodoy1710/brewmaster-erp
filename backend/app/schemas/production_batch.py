@@ -21,6 +21,21 @@ class ProductionBatchBase(BaseModel):
 class ProductionBatchCreate(ProductionBatchBase):
     model_config = ConfigDict(extra="forbid")
 
+class ProductionBatchUpdate(BaseModel):
+    code: str = Field(
+        ...,
+        min_length=1,
+        max_length=30,
+    )
+    planned_volume_liters: Decimal = Field(
+        ...,
+        gt=0,
+        max_digits=10,
+        decimal_places=3,
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
 
 class ProductionBatchResponse(ProductionBatchBase):
     id: int

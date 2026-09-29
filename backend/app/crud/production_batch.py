@@ -169,3 +169,19 @@ def get_packaged_volume_for_production_batch(
         )
         .scalar()
     )
+
+def update_planned_production_batch(
+    db: Session,
+    production_batch: ProductionBatch,
+    code: str,
+    planned_volume_liters: Decimal,
+) -> ProductionBatch:
+    production_batch.code = code
+    production_batch.planned_volume_liters = (
+        planned_volume_liters
+    )
+
+    db.commit()
+    db.refresh(production_batch)
+
+    return production_batch

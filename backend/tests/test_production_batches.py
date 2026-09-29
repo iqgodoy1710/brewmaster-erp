@@ -561,3 +561,107 @@ def test_cancelled_production_batch_can_be_replanned(client):
     assert Decimal(replan_response.json()["available_bulk_volume_liters"]) == Decimal(
         "0.000"
     )
+
+
+def test_update_planned_production_batch(client):
+    recipe = create_test_recipe_with_ingredient(client)
+
+    create_response = client.post(
+        "/production-batches/",
+        json={
+            "code": "PB-IPA-001",
+            "recipe_id": recipe["id"],
+            "planned_volume_liters": "500.000",
+        },
+    )
+    assert create_response.status_code == 201
+
+    response = client.patch(
+        "/production-batches/PB-IPA-001",
+        json={
+            "code": "PB-IPA-002",
+            "planned_volume_liters": "650.000",
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["code"] == "PB-IPA-002"
+    assert data["planned_volume_liters"] == "650.000"
+    assert data["recipe_id"] == recipe["id"]
+    assert data["status"] == "planned"
+
+
+def test_update_production_batch_rejects_duplicate_code(
+    client,
+):
+    recipe = create_test_recipe_with_ingredient(client)
+
+    first_response = client.post(
+        "/production-batches/",
+        json={
+            "code": "PB-IPA-001",
+            "recipe_id": recipe["id"],
+            "planned_volume_liters": "500.000",
+        },
+    )
+    assert first_response.status_code == 201
+
+    second_response = client.post(
+        "/production-batches/",
+        json={
+            "code": "PB-IPA-002",
+            "recipe_id": recipe["id"],
+            "planned_volume_liters": "400.000",
+        },
+    )
+    assert second_response.status_code == 201
+
+    response = client.patch(
+        "/production-batches/PB-IPA-002",
+        json={
+            "code": "PB-IPA-001",
+            "planned_volume_liters": "600.000",
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "detail": ("A production batch with this code already exists.")
+    }
+
+
+def test_cancelled_production_batch_cannot_be_modified(
+    client,
+):
+    recipe = create_test_recipe_with_ingredient(client)
+
+    create_response = client.post(
+        "/production-batches/",
+        json={
+            "code": "PB-IPA-001",
+            "recipe_id": recipe["id"],
+            "planned_volume_liters": "500.000",
+        },
+    )
+    assert create_response.status_code == 201
+
+    cancel_response = client.post(
+        "/production-batches/PB-IPA-001/cancel",
+    )
+    assert cancel_response.status_code == 200
+
+    response = client.patch(
+        "/production-batches/PB-IPA-001",
+        json={
+            "code": "PB-IPA-002",
+            "planned_volume_liters": "600.000",
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "detail": ("Only planned production batches can be modified.")
+    }

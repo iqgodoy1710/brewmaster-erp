@@ -199,21 +199,13 @@ function DashboardPage() {
       ),
     [kegCoverage],
   );
-  const stockCoverageRequirements = useMemo(
-    () =>
-      stockCoveragePlan.requirements.filter(
-        (requirement) => Number(requirement.total_required_quantity) > 0,
-      ),
-    [stockCoveragePlan.requirements],
-  );
-
   const stockCoverageShortages = useMemo(
-    () =>
-      stockCoverageRequirements.filter(
-        (requirement) => requirement.has_shortage,
-      ),
-    [stockCoverageRequirements],
-  );
+  () =>
+    stockCoveragePlan.requirements.filter(
+      (requirement) => requirement.has_shortage,
+    ),
+  [stockCoveragePlan.requirements],
+);
   const coverageRawMaterialIds = useMemo(
     () =>
       new Set(
@@ -288,7 +280,7 @@ function DashboardPage() {
                 mínimo de botellas.
               </p>
 
-              {stockCoverageRequirements.length === 0 &&
+              {stockCoverageShortages.length === 0 &&
               independentRawMaterialAlerts.length === 0 &&
               stockCoveragePlan.warnings.length === 0 ? (
                 <p className="empty-state">
@@ -296,12 +288,12 @@ function DashboardPage() {
                 </p>
               ) : (
                 <>
-                  {stockCoverageRequirements.length > 0 && (
+                 {stockCoverageShortages.length > 0 && (
                     <div>
                       <h3>Insumos necesarios para cubrir el stock objetivo</h3>
 
                       <ul className="alert-list">
-                        {stockCoverageRequirements.map((requirement) => (
+                        {stockCoverageShortages.map((requirement) => (
                           <li key={requirement.raw_material_id}>
                             <div>
                               <strong>{requirement.raw_material_name}</strong>

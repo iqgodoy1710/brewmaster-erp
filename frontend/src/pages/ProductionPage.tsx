@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 
 import "../App.css";
-import { apiGet, apiPost } from "../lib/api";
+import { apiGet, apiPost, apiPatch } from "../lib/api";
 import type {
   Beer,
   ProductionBatch,
@@ -43,7 +43,12 @@ const batchFilterLabels: Record<ProductionBatchFilter, string> = {
 function ProductionPage() {
   const currentUser = useCurrentUser();
 
-  const canManageOperations = hasRole(currentUser, "admin", "management", "operator");
+  const canManageOperations = hasRole(
+    currentUser,
+    "admin",
+    "management",
+    "operator",
+  );
 
   const [batches, setBatches] = useState<ProductionBatch[]>([]);
   const [packagingRuns, setPackagingRuns] = useState<PackagingRun[]>([]);
@@ -66,6 +71,12 @@ function ProductionPage() {
   const [transitioningBatchId, setTransitioningBatchId] = useState<
     number | null
   >(null);
+  const [editingBatchId, setEditingBatchId] = useState<number | null>(null);
+  const [editingBatchCode, setEditingBatchCode] = useState("");
+  const [editingPlannedVolume, setEditingPlannedVolume] = useState("");
+  const [savingEditedBatchId, setSavingEditedBatchId] = useState<number | null>(
+    null,
+  );
   const [success, setSuccess] = useState<string | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -204,6 +215,62 @@ function ProductionPage() {
       );
     } finally {
       setCompletingBatchId(null);
+    }
+  }
+
+  function beginEditingBatch(batch: ProductionBatch) {
+    setEditingBatchId(batch.id);
+    setEditingBatchCode(batch.code);
+    setEditingPlannedVolume(batch.planned_volume_liters);
+    setError(null);
+    setSuccess(null);
+  }
+
+  function cancelEditingBatch() {
+    setEditingBatchId(null);
+    setEditingBatchCode("");
+    setEditingPlannedVolume("");
+  }
+
+  async function updateProductionBatch(batch: ProductionBatch) {
+    const normalizedCode = editingBatchCode.trim();
+    const volume = Number(editingPlannedVolume);
+
+    if (!normalizedCode) {
+      setError("Ingresá un número de lote.");
+      return;
+    }
+
+    if (!Number.isFinite(volume) || volume <= 0) {
+      setError("El volumen planificado debe ser mayor a cero.");
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setSavingEditedBatchId(batch.id);
+
+    try {
+      const updatedBatch = await apiPatch<ProductionBatch>(
+        `/production-batches/${encodeURIComponent(batch.code)}`,
+        {
+          code: normalizedCode,
+          planned_volume_liters: editingPlannedVolume,
+        },
+      );
+
+      setSuccess(`El lote ${updatedBatch.code} fue actualizado correctamente.`);
+
+      cancelEditingBatch();
+      await loadProductionData();
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "No se pudo actualizar el lote de producción.",
+      );
+    } finally {
+      setSavingEditedBatchId(null);
     }
   }
 
@@ -495,10 +562,39 @@ function ProductionPage() {
                   <tbody>
                     {visibleBatches.map((batch) => (
                       <tr key={batch.id}>
-                        <td>{batch.code}</td>
+                        <td>
+                          {editingBatchId === batch.id ? (
+                            <input
+                              aria-label={`Número del lote ${batch.code}`}
+                              maxLength={30}
+                              onChange={(event) =>
+                                setEditingBatchCode(event.target.value)
+                              }
+                              type="text"
+                              value={editingBatchCode}
+                            />
+                          ) : (
+                            batch.code
+                          )}
+                        </td>
                         <td>{batchBeerName(batch)}</td>
                         <td>{statusLabels[batch.status]}</td>
-                        <td>{formatNumber(batch.planned_volume_liters)} L</td>
+                        <td>
+                          {editingBatchId === batch.id ? (
+                            <input
+                              aria-label={`Volumen planificado de ${batch.code}`}
+                              min="0.001"
+                              onChange={(event) =>
+                                setEditingPlannedVolume(event.target.value)
+                              }
+                              step="0.001"
+                              type="number"
+                              value={editingPlannedVolume}
+                            />
+                          ) : (
+                            `${formatNumber(batch.planned_volume_liters)} L`
+                          )}
+                        </td>
                         <td>
                           {batch.produced_volume_liters
                             ? `${formatNumber(batch.produced_volume_liters)} L`
@@ -518,25 +614,73 @@ function ProductionPage() {
                         <td>
                           {batch.status === "planned" && canManageOperations ? (
                             <div className="batch-actions">
-                              <button
-                                disabled={transitioningBatchId === batch.id}
-                                onClick={() => void startProductionBatch(batch)}
-                                type="button"
-                              >
-                                {transitioningBatchId === batch.id
-                                  ? "Iniciando..."
-                                  : "Iniciar producción"}
-                              </button>
+                              {editingBatchId === batch.id ? (
+                                <>
+                                  <button
+                                    disabled={savingEditedBatchId === batch.id}
+                                    onClick={() =>
+                                      void updateProductionBatch(batch)
+                                    }
+                                    type="button"
+                                  >
+                                    {savingEditedBatchId === batch.id
+                                      ? "Guardando..."
+                                      : "Guardar cambios"}
+                                  </button>
 
-                              <button
-                                disabled={transitioningBatchId === batch.id}
-                                onClick={() =>
-                                  void cancelProductionBatch(batch)
-                                }
-                                type="button"
-                              >
-                                Cancelar lote
-                              </button>
+                                  <button
+                                    className="secondary-button"
+                                    disabled={savingEditedBatchId === batch.id}
+                                    onClick={cancelEditingBatch}
+                                    type="button"
+                                  >
+                                    Cancelar edición
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    className="secondary-button"
+                                    disabled={
+                                      transitioningBatchId === batch.id ||
+                                      editingBatchId !== null
+                                    }
+                                    onClick={() => beginEditingBatch(batch)}
+                                    type="button"
+                                  >
+                                    Modificar
+                                  </button>
+
+                                  <button
+                                    disabled={
+                                      transitioningBatchId === batch.id ||
+                                      editingBatchId !== null
+                                    }
+                                    onClick={() =>
+                                      void startProductionBatch(batch)
+                                    }
+                                    type="button"
+                                  >
+                                    {transitioningBatchId === batch.id
+                                      ? "Iniciando..."
+                                      : "Iniciar producción"}
+                                  </button>
+
+                                  <button
+                                    className="secondary-button"
+                                    disabled={
+                                      transitioningBatchId === batch.id ||
+                                      editingBatchId !== null
+                                    }
+                                    onClick={() =>
+                                      void cancelProductionBatch(batch)
+                                    }
+                                    type="button"
+                                  >
+                                    Cancelar lote
+                                  </button>
+                                </>
+                              )}
                             </div>
                           ) : batch.status === "in_progress" &&
                             canManageOperations ? (
