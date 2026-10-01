@@ -116,3 +116,26 @@ class DeliveryOrderResponse(BaseModel):
 class DeliveryOrderDetailResponse(DeliveryOrderResponse):
     items: list[DeliveryOrderItemResponse]
     kegs: list[DeliveryOrderKegResponse]
+
+class DeliveryOrderInvoiceItemResponse(BaseModel):
+    beer_presentation_id: int
+    beer_presentation_code: str
+    beer_presentation_name: str
+    quantity: int
+    unit_price: Decimal
+    subtotal: Decimal
+
+
+class DeliveryOrderInvoiceResponse(BaseModel):
+    sale_code: str
+    delivery_order_code: str
+    delivery_note_code: str | None
+    customer_id: int
+    customer_code: str
+    customer_name: str
+    customer_tax_id: str | None
+    customer_address: str | None
+    issued_at: datetime
+    notes: str | None
+    items: list[DeliveryOrderInvoiceItemResponse]
+    total_amount: Decimal

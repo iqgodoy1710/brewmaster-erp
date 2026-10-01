@@ -234,6 +234,17 @@ def test_closing_delivered_order_creates_sale_and_account_charge(
         == 200
     )
 
+    invoice_before_closing_response = client.get(
+        f"/delivery-orders/{order['code']}/invoice",
+    )
+
+    assert invoice_before_closing_response.status_code == 409
+    assert invoice_before_closing_response.json() == {
+        "detail": (
+            "Only closed delivery orders have an invoice."
+        )
+    }
+
     close_response = client.post(
         f"/delivery-orders/{order['code']}/close",
         json={
@@ -270,6 +281,55 @@ def test_closing_delivered_order_creates_sale_and_account_charge(
     assert account["balance"] == "125.00"
     assert account["movements"][0]["movement_type"] == "sale_charge"
     assert account["movements"][0]["sale_code"] == sale["code"]
+    
+    invoice_response = client.get(
+        f"/delivery-orders/{order['code']}/invoice",
+    )
+
+    assert invoice_response.status_code == 200
+
+    invoice = invoice_response.json()
+
+    assert invoice["sale_code"] == sale["code"]
+    assert invoice["delivery_order_code"] == order["code"]
+    assert invoice["delivery_note_code"] == "REM-000001"
+
+    assert (
+        invoice["customer_id"]
+        == context["customer"]["id"]
+    )
+    assert (
+        invoice["customer_code"]
+        == context["customer"]["code"]
+    )
+    assert (
+        invoice["customer_name"]
+        == context["customer"]["name"]
+    )
+    assert invoice["customer_tax_id"] is None
+    assert invoice["customer_address"] is None
+    assert invoice["issued_at"] is not None
+
+    assert len(invoice["items"]) == 1
+
+    invoice_item = invoice["items"][0]
+
+    assert (
+        invoice_item["beer_presentation_id"]
+        == context["presentation"]["id"]
+    )
+    assert (
+        invoice_item["beer_presentation_code"]
+        == context["presentation"]["code"]
+    )
+    assert (
+        invoice_item["beer_presentation_name"]
+        == context["presentation"]["name"]
+    )
+    assert invoice_item["quantity"] == 10
+    assert invoice_item["unit_price"] == "12.50"
+    assert invoice_item["subtotal"] == "125.00"
+    assert invoice["total_amount"] == "125.00"
 
 
 def test_delivery_order_items_can_be_safely_edited_during_picking(

@@ -68,6 +68,8 @@ from app.schemas.delivery_order import (
     DeliveryOrderClose,
     DeliveryOrderCreate,
     DeliveryOrderDeliver,
+    DeliveryOrderInvoiceItemResponse,
+    DeliveryOrderInvoiceResponse,
     DeliveryOrderItemClose,
     DeliveryOrderItemCreate,
     DeliveryOrderItemUpdate,
@@ -99,6 +101,79 @@ class DeliveryOrderService:
             raise DeliveryOrderNotFoundError("The delivery order does not exist.")
 
         return delivery_order
+
+    @staticmethod
+    def get_invoice(
+        db: Session,
+        code: str,
+    ) -> DeliveryOrderInvoiceResponse:
+        delivery_order = DeliveryOrderService.get_detail(
+            db,
+            code,
+        )
+
+        if (
+            delivery_order.status
+            != DeliveryOrderStatus.CLOSED
+        ):
+            raise InvalidDeliveryOrderStatusError(
+                "Only closed delivery orders have an invoice."
+            )
+
+        sale = delivery_order.sale
+
+        if sale is None:
+            raise InvalidDeliveryOrderCloseError(
+                "The delivery order does not have a generated sale."
+            )
+
+        items = [
+            DeliveryOrderInvoiceItemResponse(
+                beer_presentation_id=(
+                    sale_item.beer_presentation.id
+                ),
+                beer_presentation_code=(
+                    sale_item.beer_presentation.code
+                ),
+                beer_presentation_name=(
+                    sale_item.beer_presentation.name
+                ),
+                quantity=sale_item.quantity,
+                unit_price=sale_item.unit_price,
+                subtotal=(
+                    Decimal(sale_item.quantity)
+                    * sale_item.unit_price
+                ),
+            )
+            for sale_item in sale.items
+            if sale_item.active
+        ]
+
+        total_amount = sum(
+            (item.subtotal for item in items),
+            Decimal("0.00"),
+        )
+
+        customer = delivery_order.customer
+
+        return DeliveryOrderInvoiceResponse(
+            sale_code=sale.code,
+            delivery_order_code=delivery_order.code,
+            delivery_note_code=(
+                delivery_order.delivery_note_code
+            ),
+            customer_id=customer.id,
+            customer_code=customer.code,
+            customer_name=customer.name,
+            customer_tax_id=customer.tax_id,
+            customer_address=customer.address,
+            issued_at=(
+                sale.completed_at or sale.created_at
+            ),
+            notes=sale.notes,
+            items=items,
+            total_amount=total_amount,
+        )
 
     @staticmethod
     def create(

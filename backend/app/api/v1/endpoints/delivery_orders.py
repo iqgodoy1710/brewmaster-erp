@@ -16,6 +16,7 @@ from app.schemas.delivery_order import (
     DeliveryOrderPickingUpdate,
     DeliveryOrderResponse,
     DeliveryOrderUpdate,
+    DeliveryOrderInvoiceResponse,
 )
 from app.schemas.sale import SaleResponse
 from app.services.delivery_order_service import DeliveryOrderService
@@ -46,6 +47,16 @@ def read_delivery_orders(
 ):
     return DeliveryOrderService.get_all(db)
 
+
+@router.get(
+    "/{code}/invoice",
+    response_model=DeliveryOrderInvoiceResponse,
+)
+def read_delivery_order_invoice(
+    code: str,
+    db: Session = Depends(get_db),
+):
+    return DeliveryOrderService.get_invoice(db, code)
 
 @router.get(
     "/{code}",

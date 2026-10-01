@@ -12,6 +12,7 @@ import type {
   DeliveryOrderDetail,
   Keg,
   PackagingFormat,
+  DeliveryOrderInvoice,
 } from "../types/api";
 
 const statusLabels = {
@@ -60,7 +61,7 @@ function DeliveryOrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const canCloseOrders = hasRole(user, "admin", "management", "operator",);
+  const canCloseOrders = hasRole(user, "admin", "management", "operator");
 
   const kegPresentationIds = useMemo(() => {
     const kegFormatIds = new Set(
@@ -575,8 +576,318 @@ function DeliveryOrdersPage() {
     printWindow.print();
   }
 
+  async function printInvoice() {
+    if (!selectedOrder || selectedOrder.status !== "closed") {
+      return;
+    }
+
+    const printWindow = window.open("", "_blank");
+
+    if (!printWindow) {
+      setError(
+        "El navegador bloqueó la ventana de impresión. Habilitá las ventanas emergentes e intentá nuevamente.",
+      );
+      return;
+    }
+
+    printWindow.document.write(
+      "<p style='font-family: Arial, sans-serif'>Cargando factura...</p>",
+    );
+
+    try {
+      const invoice = await apiGet<DeliveryOrderInvoice>(
+        `/delivery-orders/${encodeURIComponent(selectedOrder.code)}/invoice`,
+      );
+
+      const formatMoney = (value: string) =>
+        `$ ${new Intl.NumberFormat("es-AR", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }).format(Number(value))}`;
+
+      const issuedAt = new Intl.DateTimeFormat("es-AR", {
+        dateStyle: "long",
+        timeStyle: "short",
+      }).format(new Date(invoice.issued_at));
+
+      const itemRows = invoice.items
+        .map(
+          (item) => `
+          <tr>
+            <td>
+              <strong>${escapeHtml(item.beer_presentation_name)}</strong>
+              <br />
+              <span class="code">${escapeHtml(
+                item.beer_presentation_code,
+              )}</span>
+            </td>
+            <td class="number">${item.quantity}</td>
+            <td class="number">${formatMoney(item.unit_price)}</td>
+            <td class="number">${formatMoney(item.subtotal)}</td>
+          </tr>
+        `,
+        )
+        .join("");
+
+      printWindow.document.open();
+      printWindow.document.write(`
+      <!doctype html>
+      <html lang="es">
+        <head>
+          <meta charset="utf-8" />
+          <title>Factura ${escapeHtml(invoice.sale_code)}</title>
+
+          <style>
+            @page {
+              margin: 18mm;
+            }
+
+            * {
+              box-sizing: border-box;
+            }
+
+            body {
+              color: #172033;
+              font-family: Arial, sans-serif;
+              font-size: 12px;
+              margin: 0;
+            }
+
+            .header {
+              align-items: flex-start;
+              border-bottom: 2px solid #e5a400;
+              display: flex;
+              justify-content: space-between;
+              padding-bottom: 16px;
+            }
+
+            .brand {
+              color: #b66b00;
+              font-size: 22px;
+              font-weight: 800;
+              letter-spacing: 0.08em;
+              margin: 0;
+            }
+
+            .brand-subtitle,
+            .muted,
+            .code {
+              color: #52647f;
+            }
+
+            .document-number {
+              text-align: right;
+            }
+
+            .document-number p {
+              margin: 4px 0;
+            }
+
+            .document-title {
+              margin: 24px 0 16px;
+            }
+
+            .document-title h1 {
+              font-size: 24px;
+              margin: 0;
+            }
+
+            .non-fiscal {
+              color: #9a3412;
+              font-weight: 700;
+              margin-top: 6px;
+            }
+
+            .customer {
+              background: #f6f8fc;
+              border: 1px solid #d8e0ed;
+              border-radius: 8px;
+              display: grid;
+              gap: 6px;
+              margin: 18px 0;
+              padding: 14px;
+            }
+
+            table {
+              border-collapse: collapse;
+              margin-top: 18px;
+              width: 100%;
+            }
+
+            th,
+            td {
+              border-bottom: 1px solid #d8e0ed;
+              padding: 10px 8px;
+              text-align: left;
+              vertical-align: top;
+            }
+
+            th {
+              color: #52647f;
+              font-size: 10px;
+              text-transform: uppercase;
+            }
+
+            .number {
+              text-align: right;
+              white-space: nowrap;
+            }
+
+            .total {
+              align-items: center;
+              display: flex;
+              font-size: 18px;
+              justify-content: flex-end;
+              gap: 28px;
+              margin-top: 22px;
+            }
+
+            .notes {
+              margin-top: 24px;
+            }
+
+            .footer {
+              border-top: 1px solid #d8e0ed;
+              color: #52647f;
+              margin-top: 42px;
+              padding-top: 12px;
+            }
+          </style>
+        </head>
+
+        <body>
+          <header class="header">
+            <div>
+              <p class="brand">ELIXIA</p>
+              <p class="brand-subtitle">
+                art beer · Comprobante de venta
+              </p>
+            </div>
+
+            <div class="document-number">
+              <strong>${escapeHtml(invoice.sale_code)}</strong>
+              <p>
+                Pedido ${escapeHtml(invoice.delivery_order_code)}
+              </p>
+              ${
+                invoice.delivery_note_code
+                  ? `
+                    <p>
+                      Remito ${escapeHtml(invoice.delivery_note_code)}
+                    </p>
+                  `
+                  : ""
+              }
+            </div>
+          </header>
+
+          <section class="document-title">
+            <h1>Factura interna</h1>
+            <p>Fecha: ${escapeHtml(issuedAt)}</p>
+            <p class="non-fiscal">
+              Comprobante interno no válido como factura fiscal
+            </p>
+          </section>
+
+          <section class="customer">
+            <strong>
+              ${escapeHtml(invoice.customer_name)}
+            </strong>
+
+            <span>
+              Cliente: ${escapeHtml(invoice.customer_code)}
+            </span>
+
+            ${
+              invoice.customer_tax_id
+                ? `
+                  <span>
+                    CUIT / Identificación:
+                    ${escapeHtml(invoice.customer_tax_id)}
+                  </span>
+                `
+                : ""
+            }
+
+            ${
+              invoice.customer_address
+                ? `
+                  <span>
+                    Dirección:
+                    ${escapeHtml(invoice.customer_address)}
+                  </span>
+                `
+                : ""
+            }
+          </section>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Presentación</th>
+                <th class="number">Cantidad</th>
+                <th class="number">Precio unitario</th>
+                <th class="number">Subtotal</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              ${itemRows}
+            </tbody>
+          </table>
+
+          <section class="total">
+            <strong>Total</strong>
+            <strong>${formatMoney(invoice.total_amount)}</strong>
+          </section>
+
+          ${
+            invoice.notes
+              ? `
+                <section class="notes">
+                  <strong>Observaciones</strong>
+                  <p>${escapeHtml(invoice.notes)}</p>
+                </section>
+              `
+              : ""
+          }
+
+          <footer class="footer">
+            Documento interno generado por ELIXIA ERP.
+          </footer>
+        </body>
+      </html>
+    `);
+
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+    } catch (caughtError) {
+      printWindow.close();
+
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "No se pudo generar la factura.",
+      );
+    }
+  }
+
   async function refreshOrder(code: string) {
     await Promise.all([loadBaseData(), loadOrderDetail(code)]);
+  }
+
+  function viewRegisteredOrder(order: DeliveryOrder) {
+    setSelectedOrderCode(order.code);
+    setError(null);
+    setSuccess(null);
+
+    window.setTimeout(() => {
+      document.getElementById("manage-delivery-order")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 0);
   }
 
   async function createOrder(event: FormEvent<HTMLFormElement>) {
@@ -1080,7 +1391,10 @@ function DeliveryOrdersPage() {
             </form>
           </section>
 
-          <section className="panel sales-form-panel">
+          <section
+            className="panel sales-form-panel"
+            id="manage-delivery-order"
+          >
             <h2>Gestionar pedido</h2>
 
             <label>
@@ -1090,7 +1404,16 @@ function DeliveryOrdersPage() {
                 value={selectedOrderCode}
               >
                 <option value="">Seleccioná un pedido</option>
-
+                {selectedOrder &&
+                  !manageableOrders.some(
+                    (order) => order.code === selectedOrder.code,
+                  ) && (
+                    <option value={selectedOrder.code}>
+                      {selectedOrder.code} ·{" "}
+                      {getCustomerName(selectedOrder.customer_id)} ·{" "}
+                      {statusLabels[selectedOrder.status]}
+                    </option>
+                  )}
                 {manageableOrders.map((order) => (
                   <option key={order.id} value={order.code}>
                     {order.code} · {getCustomerName(order.customer_id)} ·{" "}
@@ -1566,6 +1889,15 @@ function DeliveryOrdersPage() {
                       Imprimir remito
                     </button>
                   )}
+                  {selectedOrder.status === "closed" && (
+                    <button
+                      className="secondary-button"
+                      onClick={() => void printInvoice()}
+                      type="button"
+                    >
+                      Imprimir factura
+                    </button>
+                  )}
 
                   {(selectedOrder.status === "draft" ||
                     selectedOrder.status === "picking") && (
@@ -1597,6 +1929,7 @@ function DeliveryOrdersPage() {
                       <th>Cliente</th>
                       <th>Estado</th>
                       <th>Remito</th>
+                      <th>Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1606,6 +1939,15 @@ function DeliveryOrdersPage() {
                         <td>{getCustomerName(order.customer_id)}</td>
                         <td>{statusLabels[order.status]}</td>
                         <td>{order.delivery_note_code ?? "—"}</td>
+                        <td>
+                          <button
+                            className="secondary-button"
+                            onClick={() => viewRegisteredOrder(order)}
+                            type="button"
+                          >
+                            Ver detalle
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

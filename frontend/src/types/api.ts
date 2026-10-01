@@ -595,6 +595,30 @@ export type DeliveryOrderDetail = DeliveryOrder & {
   kegs: DeliveryOrderKeg[];
 };
 
+export type DeliveryOrderInvoiceItem = {
+  beer_presentation_id: number;
+  beer_presentation_code: string;
+  beer_presentation_name: string;
+  quantity: number;
+  unit_price: string;
+  subtotal: string;
+};
+
+export type DeliveryOrderInvoice = {
+  sale_code: string;
+  delivery_order_code: string;
+  delivery_note_code: string | null;
+  customer_id: number;
+  customer_code: string;
+  customer_name: string;
+  customer_tax_id: string | null;
+  customer_address: string | null;
+  issued_at: string;
+  notes: string | null;
+  items: DeliveryOrderInvoiceItem[];
+  total_amount: string;
+};
+
 export type BottlePasteurizationRun = {
   id: number;
   code: string;
